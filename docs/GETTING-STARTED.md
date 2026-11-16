@@ -190,9 +190,9 @@ bugs, asking each lesson of a fixed list of ten on its own reached a pass rate o
 with the agent choosing its own ten, the review passed in 0.2 of its sessions (5 of 25, on 2 of the
 5 bugs) against none for the earlier one-pass review (REPORT §4az). Asking the ten in turn in one session, instead of a sub-agent each,
 did not work: the agent gave the lesson the change broke a one-line verdict (REPORT §4bg, a first
-look). On 43 graded past bugs it passed 0.27 of its sessions against 0.02 with no review, a gain of
-0.24, just under the 0.25 set in advance, and 0.15 on the bugs whose lesson was written before the
-change, at about 8.6 times a session's cost (REPORT §4bj). okl calls no model for it. It is on by
+look). On 43 graded past bugs it passed 0.267 of its sessions against 0.023 with no review, a gain
+of 0.244, just under the 0.25 set in advance, with an interval that includes it, and 0.145 on the bugs
+whose lesson was written before the change, at about 8.7 times a session's cost (REPORT §4bj). okl calls no model for it. It is on by
 default because I judge a missed lesson to cost more than the review does. It has been measured on
 one repository only ([REPORT §4at](../evals/REPORT.md)), the list costs about 60 tokens a lesson,
 and each lesson checked is a sub-agent session. Turn it

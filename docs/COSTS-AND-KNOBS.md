@@ -156,13 +156,14 @@ $0.73 API-priced on average and a median of 214 seconds, and passed in 0.2 of it
 on 2 of the 5 past bugs tested), against none for the earlier one-pass review: short of the bar for
 turning it on. Checking the ten in turn in one session would cost a single pass, but the agent then
 gave the lesson the change broke a one-line verdict (REPORT §4bg, a first look), so the review keeps a
-sub-agent per lesson. Since 0.17.0 it is on by default, as my decision: I judge a missed lesson to
-cost more than these sessions do. Its gain has since been measured on 43 graded past bugs of this
-repository (REPORT §4bj, receipt `review-graded-20261116-0254.json`): a session with the review cost
-$0.86 API-priced on average and a median of 281 seconds, against $0.10 and 108 seconds with none, and
-passed 0.27 of its sessions against 0.02, a gain of 0.24 (95% interval 0.14 to 0.36), just under the
-0.25 set in advance. On the 31 bugs whose lesson was written before the change the gain was 0.15.
-Turn it off if the cost matters more to you. The reasoning, its gap and what would reverse it are in
+sub-agent per lesson. It has been on by default since 0.17.0, and its gain has since been measured
+on 43 graded past bugs of this repository (REPORT §4bj, receipt `review-graded-20261116-0321.json`): a session with
+the review cost $0.85 API-priced on average and a median of 281 seconds, against $0.10 and 108 seconds
+with none, and passed 0.267 of its sessions against 0.023, a gain of 0.244 (95% interval 0.14 to 0.36),
+just under the 0.25 set in advance, with an interval that includes it. On the 31 bugs whose lesson was
+written before the change the gain was 0.145. Since the gain fell under that bar, the default rests on
+my judgement that a missed lesson costs more than these sessions do. Turn it off if the cost matters
+more to you. The reasoning, its gap and what would reverse it are in
 [the decision record](decisions/2026-11-15-review-after-writing-on-by-default.md).
 
 ### The log of what the review did

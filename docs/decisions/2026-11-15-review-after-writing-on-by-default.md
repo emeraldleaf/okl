@@ -44,7 +44,8 @@ none, about 6.9 times, and took a median of 214 seconds against 160 (§4az, rece
 `review-e2e-20261111-1543.json`). Those are estimates from replayed sessions at API prices: what a
 review costs a user depends on how much their sessions change and how they are billed (on a
 subscription it uses allowance, not money). Every session that changes files carries that extra
-work unless the review is turned off.
+work unless the review is turned off. (At the decision. On 43 graded past bugs since, it cost $0.85
+against $0.10, about 8.7 times; see the update below.)
 
 ## The gap this does not close
 
@@ -54,8 +55,8 @@ there less than half the time: the pick held 0.47 of the broken lessons across 5
 broken labels, so the figure rests on labels no person has checked (§4bh). End to end, picking its own lessons, the review passed in 0.2 of its sessions (5 of 25, on
 2 of 5 bugs) where no review passed in none (§4az). Its reach was 17.4% of the broken lessons
 against a 30% bar (§4au). It is the only measured step that turns lessons into changes, and today
-it runs at roughly a quarter of what it does when the right lesson is in its ten. All of this rests
-on five replayed tasks from one repository.
+it runs at roughly a quarter of what it does when the right lesson is in its ten. All of this rested
+on five replayed tasks from one repository at the decision; the update below adds 43 graded ones.
 
 ## What would reverse it
 
@@ -75,12 +76,13 @@ was turned on. Any of these would justify it:
    loses the whole loop costs more than the misses it prevents.
 
 **Update, 2026-11-16: the first condition was tested, and is not met.** On 43 graded past bugs
-(#457), large enough for 0.86 power at a gain of 0.25, a pre-registered comparison found the review
-passed 0.27 of its sessions against 0.02 with no review: a gain of 0.24, 95% interval 0.14 to 0.36,
-just under the 0.25 bar it was read against (REPORT §4bj, receipt `review-graded-20261116-0254.json`).
-On the 31 bugs whose lesson was written before the change, the gain was 0.15 (0.05 to 0.26). A
-session with the review cost about 8.6 times one without. The decision stands, now with its gain
-measured on this repository; the other two conditions are unchanged.
+(#457), with 0.86 power to find a gain of 0.25 (§4bi), a pre-registered comparison found the review
+passed 0.267 of its sessions against 0.023 with no review: a gain of 0.244, 95% interval 0.14 to 0.36,
+just under the 0.25 bar it was read against, with an interval that includes it (REPORT §4bj, receipt
+`review-graded-20261116-0321.json`). On the 31 bugs whose lesson was written before the change, the gain was 0.145 (0.048 to
+0.258). In the review's sessions the right lesson reached a sub-agent in 37 of 86. A session with the
+review cost about 8.7 times one without. The decision stands, now with its gain measured on this
+repository; the other two conditions are unchanged.
 
 ## What follows
 
@@ -91,7 +93,7 @@ The work below is laid out, with what, why and how, in
   lessons than ten (#456).
 - **Lessons with checks skip the pick:** an approved check runs after every edit (`okl on-edit`,
   0.17.0), and a lesson with a check needs no picking.
-- **A task set large enough to decide:** #457.
+- **A task set large enough to decide:** #457, built in #477 and tested in REPORT §4bj.
 - **Drift by omission:** the docs failed to mention this behaviour until a person noticed (#455).
 
 Related: REPORT §4at to §4bg; `docs/COSTS-AND-KNOBS.md`; issues #447, #450, #455, #456, #457.

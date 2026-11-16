@@ -6231,7 +6231,7 @@ What it means, not pre-registered:
 
 *Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
 
-*Note, 2026-11-16:* §4bj measured the same review against no review on 43 graded tasks: a gain of 0.244 (95% interval 0.14 to 0.36), just under this section's bar of 0.25, and 0.145 on the 31 tasks whose lesson existed before the change. This section's reading stands as registered.
+*Note, 2026-11-16:* §4bj measured the review as 0.18.0 prints it (these steps, with the Sonnet pin and §4bg's sentence added since) against no review on 43 graded tasks: a gain of 0.244 (95% interval 0.14 to 0.36), just under this section's bar of 0.25, and 0.145 on the 31 tasks whose lesson existed before the change. This section's reading stands as registered.
 
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 
@@ -7321,9 +7321,10 @@ worktree of its own, pinned at the commit that holds this section. It stops afte
 no result, which is what a usage limit looks like, and a rerun resumes where it stopped.
 
 **Result (2026-11-16): it helps, under the bar.** All 192 sessions ran (receipt
-`review-graded-20261116-0254.json`), from a worktree of its own at 6cb22b8, whose code the sessions ran,
-unchanged from start to end. It took 3 hours 43 minutes, with no usage limit hit. Every session and every
-sub-agent ran on Sonnet, and the longest session took 722 seconds.
+`review-graded-20261116-0321.json`), from a worktree of its own at 6cb22b8: each session's row in the
+receipt records that commit. The receipt was scored after the run by `review_graded.py score` as amended to
+copy each session's commit into it, a change to the scoring only; the sessions ran the script the check
+receipt hashes. Every session ran on Sonnet, and the longest took 722 seconds.
 
 | arm | pass rate, averaged over the 43 tasks | passes | tasks with a pass | sessions that edited | API-priced cost a session | median time |
 |---|---|---|---|---|---|---|
@@ -7353,14 +7354,18 @@ Beside the reading, not read:
    t12, t22 and t40): asked for the review, the agent read the list and fixed the defect itself.
 5. **No review mostly called the change ready.** It edited in 24 of 86 sessions and passed only on t43, in
    both sessions, where the review passed too.
-6. **Cost.** A session with the review cost 8.6 times one without, API-priced, and took 2.6 times as long at
-   the median; $91.54 in all, priced, not charged. §4az measured 6.9 times.
+6. **Cost.** A session with the review cost 8.7 times one without, API-priced ($0.8548 against $0.0988 a
+   session, from the rows), and took 2.6 times as long at the median; $91.54 in all, priced, not charged.
+   §4az measured 6.9 times.
 
-**What follows, as pre-registered.** The review stays on by default, as my decision. The docs and the site's
-okl page now say its gain was measured, and how large: 0.24 on 43 graded past bugs of this repository, and
-0.15 on the 31 whose lesson was written before the change, at about 8.6 times a session's cost. The decision
-record's first reversal condition, a decisive test whose interval of the gain lies below 0.1, is not met.
-Whether it holds in other repositories is still open (#413), and so is a better pick.
+**What follows, as pre-registered.** The review stays on by default, as my decision. Where the docs said it
+was on by decision rather than a measured result, they now give the measured gain: 0.244 on 43 graded past
+bugs of this repository, with an interval that includes the bar, and 0.145 on the 31 whose lesson was
+written before the change, at about 8.7 times a session's cost. They still say the default rests on my
+judgement that a missed lesson costs more than the review does, since the gain fell under the bar it was read
+against. The site's okl page follows in a site pull request once this merges. The decision record's first
+reversal condition, a decisive test whose interval of the gain lies below 0.1, is not met. Whether it holds
+in other repositories is still open (#413), and so is a better pick.
 
 ## 5. Findings
 
