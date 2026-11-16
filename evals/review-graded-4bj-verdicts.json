@@ -1,6 +1,6 @@
 {
  "about": "REPORT \u00a74bk: what the sub-agent handed \u00a74bj's right lesson concluded, for each review session on a broken task that handed it over. The rule: broken when it named something the changed code does that breaks the lesson, wholly or in part; not_broken when it found the code keeps the lesson, even where it added a test the lesson asks for. Read from each sub-agent's final message.",
- "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start. Six named a break in part and are classed broken (t04 review0 and review1, t09 review0, t32 review1, t46 review0 and review1); three found the code sound and added a test, and are classed not_broken (t03 review0 and review1, t09 review1). The architecture review of #480 moved t09 review1 to not_broken under this rule",
+ "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start. Six named a break in part and are classed broken (t04 review0 and review1, t09 review0, t32 review1, t46 review0 and review1); three found the code sound and added a test, and are classed not_broken (t03 review0 and review1, t09 review1). t09 review1 was moved to not_broken under this rule after the architecture review of #480 flagged it",
  "sessions": {
   "t02 review0": "broken",
   "t02 review1": "broken",
@@ -47,5 +47,8 @@
   "t32 review1",
   "t46 review0",
   "t46 review1"
- ]
+ ],
+ "off_target_fix": {
+  "t45 review1": "it fixed a mistyped path; the task's defect is an empty list of paths"
+ }
 }
