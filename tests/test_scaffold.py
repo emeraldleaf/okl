@@ -1070,6 +1070,7 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
         "tests/test_scaffold.py",                        # this test
         "evals/realwork/tasks.jsonl",                    # issues frozen as written (REPORT §4al)
         "evals/realwork/path-triggers.jsonl",            # drafts naming the redirect package's real path (§4an)
+        "evals/review-graded-4bj.json",                  # files past changes touched, frozen (§4bj)
     }
     tracked = subprocess.run(["git", "-C", str(root), "grep", "-l", "org-knowledge-layer"],
                              capture_output=True, text=True).stdout.split()

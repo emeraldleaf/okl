@@ -1,6 +1,7 @@
 # Plan: making the review after writing earn its default
 
-- **Status:** In progress, started 2026-11-15. Piece 3 is built in #464, and is true once that pull request merges.
+- **Status:** In progress, started 2026-11-15. Pieces 2 to 4 are done (piece 3 in #468; piece 4's set in #477,
+  and the review against none on it in REPORT §4bj); piece 1 is not done, by my decision.
 - **Follows:** [The review after writing is on by default](2026-11-15-review-after-writing-on-by-default.md),
   which turned it on by decision while it missed both of its measured bars. This plan is the work
   that decides whether that decision holds, and how the review gets to the result it shows when the
@@ -15,10 +16,11 @@ Four pieces of work, in this order:
 | 1 | Settle the answer key: a person labels the key's pairs blind | not done: I decided not to label them (2026-11-15), so the key stays unvalidated |
 | 2 | Run the review's checks on the model it was measured with | done in #463: Sonnet, in Claude Code |
 | 3 | Log what each review does in real use, and report it | done in #468, released in 0.18.0 |
-| 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); no run on them yet |
+| 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); the review against none ran on them: a gain of 0.244, just under the bar of 0.25 with an interval that includes it, and 0.145 where the lesson came before the change (REPORT §4bj) |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
-question only, worth testing once piece 4 makes a test decisive.
+question only, worth testing once piece 4 makes a test decisive; piece 4's test has now run (REPORT
+§4bj), so it can be tested on the same set.
 
 ## Why
 
@@ -28,7 +30,8 @@ lesson in a list of ten did 0.08 to 0.2 (§4ax), and asking the agent to check t
 session did 0.2 (§4bg). That is why the review is on by default.
 
 **But it reaches that result only when the right lesson is among the ones it checks.** Picking its
-own ten, end to end, it passed 0.2 of its sessions (§4az). Each piece of this plan answers one gap:
+own ten, end to end, it passed 0.2 of its sessions (§4az), and 0.267 against 0.023 with no review on
+the 43 graded tasks since (§4bj). Each piece of this plan answers one gap:
 
 1. **The ground truth under the picking results is unvalidated.** §4bc's "the pick holds 0.465 of
    the broken lessons", §4bd's "0 of 124 caught" and §4be's counts all score against a model's answer
@@ -38,12 +41,12 @@ own ten, end to end, it passed 0.2 of its sessions (§4az). Each piece of this p
 2. **The review ran on whatever model the session used.** Its evidence is all Sonnet. An Opus
    session started ten Opus sub-agents and cost more than measured; a smaller model was never
    tested.
-3. **The only evidence the review acts comes from five replayed tasks.** Every session that changes
+3. **When this plan was written, the only evidence the review acts came from five replayed tasks.** Every session that changes
    files now runs one, and what it did is lost when the session ends. The decision record's second
    condition for turning it off, real use showing it almost never acts, cannot be checked without
    this.
 4. **Every decisive test is short of tasks.** In §4az the review's whole gain sat in one task of five,
-   and a gain that concentrated needs many tasks to be found. On the 14 graded tasks there are now,
+   and a gain that concentrated needs many tasks to be found. On the 14 graded tasks there were then,
    a test of the review against no review would be a pilot, and the evaluation standard does not
    let a pilot set a default.
 

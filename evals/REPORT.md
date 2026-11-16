@@ -6231,6 +6231,8 @@ What it means, not pre-registered:
 
 *Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
 
+*Note, 2026-11-16:* §4bj measured the review as 0.18.0 prints it (these steps, with the Sonnet pin and §4bg's sentence added since) against no review on 43 graded tasks: a gain of 0.244 (95% interval 0.14 to 0.36), just under this section's bar of 0.25, and 0.145 on the 31 tasks whose lesson existed before the change. This section's reading stands as registered.
+
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 
 Written before any pick in this section. §4ax found the default briefing, built from a task's words,
@@ -7225,6 +7227,145 @@ nominal 0.05: percentile intervals from resampling few tasks are too narrow.
 
 What it is for: 43 broken tasks, §4bg's 14 and these 29, with five controls, on which the review's decisive tests
 can be pre-registered.
+
+## 4bj. PRE-REGISTERED: the review after writing against no review, on 43 graded broken tasks (2026-11-15)
+
+Written before any counted session. The review after writing has been on by default since 0.17.0, by my decision
+and not by a measure (§4az's note). On §4az's five tasks it passed 0.2 more often than no review, short of that
+section's bar of 0.25, and five tasks were too few to tell either way. §4bi built 43 graded broken tasks so the
+question could be decided. This measures the review as okl prints it today (`core.REVIEW_STEPS` at c74ea13, as
+0.18.0 shipped them), end to end, with the agent choosing its own lessons. An agent (Claude) built the harness,
+`evals/review_graded.py`, and I asked for the run.
+
+**Tasks.** §4bg's 14 broken tasks and §4bi's 29, from 33 distinct changes, and the two sets' five controls.
+Each session works in a copy of the repository at the task's frozen commit, with one commit of history. It is
+asked, in §4aw's words, to get the change in `CHANGE.diff` ready to merge.
+
+**Arms, two repeats each: 192 sessions in a seeded order.**
+- *none:* the request alone.
+- *review:* the same request, plus §4az's words asking the agent to run the repository's review after writing
+  before it finishes. The review is `okl check --change` as it renders today for that change, in `REVIEW.md`. Its
+  steps: pick the ten likeliest lessons, then check each in a fresh sub-agent on Sonnet. Each lesson's full text
+  is in a folder, because okl is not installed in the copy.
+
+Both arms run Sonnet at effort medium, pinned through `sandbox.ask`. Both have the same tools, the sub-agent tool
+among them, so the arms differ only by the request. Sub-agents are counted from each session's own event stream,
+with what each was handed.
+
+**The review each task is given.** `review_graded.py build` rendered each review once and recorded its hash in
+`evals/review-graded-4bj.json`, and the run refuses any review that differs. Each review holds the lessons as they
+stood at the frozen commit, as §4bg's lists define it: created by then, live and advice, in today's words, from a
+copy of this checkout's store (396 records). Three changes to that:
+- the right lesson is kept even where it was written later, which is so for 12 of the 43 (§4bi's and §4bg's
+  in-sample tasks), and the clauses §4bg and §4bi removed from its words are removed here too;
+- verification marks made after the frozen commit are removed;
+- any other lesson that cites the task's PR by number, its grader or its fixing commit is left out. That is one
+  lesson (`remote-timeout-not-a-deadline`, which cites #163), from the three tasks of #163.
+
+The reviews list 159 to 340 lessons (median 307). The right lesson governs a changed file in 2 of the 43 tasks
+(t12, t34), so the review lists it first there. Elsewhere it is one line among the rest, in id order.
+
+**Grading.** Each task's grader, as §4bi checked them, runs on the tree the session leaves, after the review's
+files are removed. Before any session, `review_graded.py check` ran every grader through this harness's own
+grading path: all 48 read as checked (receipt `review-graded-check-20261115-2310.json`). A session harms when a test the real fix touched
+passed at the frozen commit and fails after the session. A control counts as broken when its grader fails.
+
+**Reading, with at least 90% of each arm's broken-task sessions complete.** The contrast is review minus none,
+paired by task. Each task's pass rate over its two sessions is averaged over the 43 tasks, and the 95% interval
+comes from resampling tasks (10,000 seeded draws). A missing session counts against the review: a missing review
+session as a fail, and a missing no-review session as a pass.
+- If fewer than half the review sessions start a sub-agent, *the review's steps were not followed*, and this says
+  nothing about them.
+- If the interval's lower end is above 0, *the review helps*: *at the bar* when the mean gain is at least 0.25,
+  §4az's bar, and *under the bar* when it is less.
+- If the upper end is below 0.25, *no gain as large as the bar*.
+- Otherwise, *inconclusive*.
+- A gain is read *and breaks more* when the review's sessions that broke something (a control failed or a test
+  harmed) outnumber no review's by more than 2.
+
+**What follows.** The default stays my decision, and this reading does not change it on its own.
+- *Helps, at or under the bar:* the docs and the site say the review's gain was measured, and how large it was,
+  in place of "by decision".
+- *No gain as large as the bar:* I decide again whether the review stays on by default, with this figure in hand.
+- *Inconclusive or not followed:* nothing changes, and the docs keep saying the review is on by decision.
+
+**Reported beside the reading, not read:**
+- the interval resampling changes instead of tasks, since tasks that share a change move together;
+- the gain on in-sample and out-of-sample tasks, and on each set;
+- how often a review session handed the right lesson to a sub-agent, and the pass rate when it did and when it
+  did not, which separates picking from checking;
+- sub-agents a session, harm, controls broken, cost and time.
+
+**Power** (§4bi, `power-457-20261115-1927.json`). At a true gain of 0.25, the interval clears 0 with
+probability 0.858. At §4az's own gain of 0.14, the probability is 0.521. With no gain, a false alarm comes 0.028
+of the time.
+
+**Seen before this was written.** No counted session has run on any of these 48 tasks. One throwaway review session
+on control t48 was discarded, run to check the harness end to end. It took about six minutes. It started ten sub-agents on Sonnet, one of them handed the right lesson, edited two files, and left the control's grader passing and no test harmed.
+
+**Threats.**
+- **One repository**, and its own lessons. The graders were written by agents that had read the real fixes
+  (§4bi).
+- **The lessons read as they do today**, and 12 right lessons were written after their change, some from the
+  incident itself. The clauses that named it are removed.
+- **The review is asked for in the request.** In real use, the Stop hook asks once, after the work, as in §4az.
+- **okl is not installed in the copy**, so the agent reads a file where it would run `okl show`.
+- **No review also has the sub-agent tool**, as a plain Claude Code session does.
+- **Sonnet only**, at effort medium. A session that runs past 90 minutes is lost, and counts against the review.
+- **The tasks share changes:** 43 tasks come from 33 changes. The interval by change is reported beside.
+
+**Budget.** 192 sessions. The 96 with the review each start up to ten sub-agents (§4az's median was 10), which is
+up to about a thousand sub-agent sessions. At §4az's API-priced rates, that is about $10 for no review and $70 for
+the review, priced, not charged (the Max plan). Run three at a time, it takes about five hours. It runs from a
+worktree of its own, pinned at the commit that holds this section. It stops after three sessions in a row give
+no result, which is what a usage limit looks like, and a rerun resumes where it stopped.
+
+**Result (2026-11-16): it helps, under the bar.** All 192 sessions ran (receipt
+`review-graded-20261116-0321.json`), from a worktree of its own at 6cb22b8: each session's row in the
+receipt records that commit. The receipt was scored after the run by `review_graded.py score` as amended to
+copy each session's commit into it, a change to the scoring only; the sessions ran the script the check
+receipt hashes. Every session ran on Sonnet, and the longest took 722 seconds.
+
+| arm | pass rate, averaged over the 43 tasks | passes | tasks with a pass | sessions that edited | API-priced cost a session | median time |
+|---|---|---|---|---|---|---|
+| none | 0.023 | 2 of 86 | 1 | 24 of 86 | $0.099 | 108 s |
+| review | 0.267 | 23 of 86 | 15 | 74 of 86 | $0.855 | 281 s |
+
+As stated: 83 of the 96 review sessions (86.5%) started a sub-agent, a median of 9.5, so the steps were
+followed. Paired by task, the review passed 0.244 more often than no review, with a 95% interval of 0.14 to
+0.36. The lower end is above 0, so the review helps. The mean is 0.006 short of §4az's bar of 0.25, so it
+helps *under the bar*. The bar lies inside the interval: this run cannot tell a gain of 0.244 from one of
+0.25, and the reading is the rule, applied as written. No session in either arm broke a control (10 sessions
+each) or a test the real fix touched, so it does not *break more*. The review gained on 14 tasks, 7 of them in
+both sessions, and lost on none.
+
+Beside the reading, not read:
+1. **Most of the gain is on in-sample tasks.** On the 12 tasks whose right lesson was written after its
+   change, some from the incident itself, the review passed 0.5 against 0 (gain 0.5, 95% interval 0.25 to
+   0.75). On the 31 whose lesson existed before the change, it passed 0.177 against 0.032, a gain of 0.145
+   (0.048 to 0.258). The second is the case okl is for: a lesson on record before the change that breaks it.
+   By set, the gain is 0.357 on §4bg's 14 tasks and 0.19 on §4bi's 29.
+2. **By change, the interval is 0.138 to 0.352,** so tasks that share a change hardly widen it.
+3. **Picking still costs the most.** A review session handed the right lesson to a sub-agent in 37 of 86
+   (0.43). It passed 16 of those 37 (0.432) and 7 of the 49 that did not hand it over (0.143). This is
+   not randomized: a task whose lesson the pick finds may be easier anyway. Checking loses some too: 21 of the
+   37 that handed it over still failed.
+4. **Five passes came with no sub-agent.** 13 review sessions started none, and 5 of those passed (on t01,
+   t12, t22 and t40): asked for the review, the agent read the list and fixed the defect itself.
+5. **No review mostly called the change ready.** It edited in 24 of 86 sessions and passed only on t43, in
+   both sessions, where the review passed too.
+6. **Cost.** A session with the review cost 8.7 times one without, API-priced ($0.8548 against $0.0988 a
+   session, from the rows), and took 2.6 times as long at the median; $91.54 in all, priced, not charged.
+   §4az measured 6.9 times.
+
+**What follows, as pre-registered.** The review stays on by default, as my decision. Where the docs said it
+was on by decision rather than a measured result, they now give the measured gain: 0.244 on 43 graded past
+bugs of this repository, with an interval that includes the bar, and 0.145 on the 31 whose lesson was
+written before the change, at about 8.7 times a session's cost. They still say the default rests on my
+judgement that a missed lesson costs more than the review does, since the gain fell under the bar it was read
+against. The site's okl page follows in a site pull request once this merges. The decision record's first
+reversal condition, a decisive test whose interval of the gain lies below 0.1, is not met. Whether it holds
+in other repositories is still open (#413), and so is a better pick.
 
 ## 5. Findings
 
