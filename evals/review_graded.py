@@ -434,7 +434,12 @@ def contrast(rows: list[dict], ids: list[str]) -> dict[str, dict]:
 
 
 def reading(c: dict[str, dict], complete: bool, followed: float, quiet: bool) -> str:
-    """The stated reading, as pre-registered in REPORT §4bj."""
+    """The stated reading, as pre-registered in REPORT §4bj.
+
+    Three cases the pre-registration does not spell out, none of which arose in its run: an interval
+    above 0 and wholly under the bar reads *helps, under the bar*, the clauses taken in their stated
+    order; a control that fails and also harms a test counts twice towards *breaks more*; and a harm
+    that could not be measured (None) counts as none."""
     if not complete:
         return "not complete"
     if followed < FOLLOWED:
@@ -491,10 +496,12 @@ def score(write: bool) -> int:
            "median_seconds": {a: median(r["seconds"] for r in rows if r["arm"] == a) for a in ARMS
                               if any(r["arm"] == a for r in rows)},
            "api_priced_usd": round(sum(r["usd"] for r in rows), 2),
+           # The commit each session ran, from its own row: the guard's stamps below cover only this scoring.
+           "run_commits": sorted({r.get("okl_commit") or "?" for r in rows}),
            "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
            "rows": [{k: r.get(k) for k in ("id", "pr", "set", "arm", "rep", "passed", "grader_exit", "edited", "changed",
                                             "harm", "sub_agents", "right_checked", "seconds", "usd", "effort", "models",
-                                            "room", "summary")} for r in rows]}
+                                            "okl_commit", "room", "summary")} for r in rows]}
     out = guard.stamp(out)
     print(json.dumps({k: v for k, v in out.items() if k not in ("rows", "per_task")}, indent=1))
     if write:
