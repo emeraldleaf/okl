@@ -7367,6 +7367,65 @@ against. The site's okl page follows in a site pull request once this merges. Th
 reversal condition, a decisive test whose interval of the gain lies below 0.1, is not met. Whether it holds
 in other repositories is still open (#413), and so is a better pick.
 
+## 4bk. EXPLORATORY, NOT PRE-REGISTERED: where §4bj's review lost the tasks it failed (2026-11-16)
+
+Written after §4bj was scored. It reads the transcripts Claude Code saved for §4bj's 86 review sessions on
+broken tasks and for their sub-agents, and no model was called. An agent (Claude) wrote the reader,
+`evals/review_graded_diagnose.py`. The same agent classified what each sub-agent handed the right lesson
+concluded (`evals/review-graded-4bj-verdicts.json`), reading each final message after the run was scored, so
+not blind to the outcome. Every message stated its verdict at its start. The seven that said the change broke
+the lesson in part are classed as saying it breaks it. Receipt `review-graded-diagnosis-20261116-0444.json`. The reader matches the right lesson as the run's `right_checked`
+does, on the sub-agents' full inputs, and refuses any session whose transcript disagrees with its row. None did.
+
+| where the session went | sessions | passed |
+|---|---|---|
+| the right lesson reached no sub-agent | 49 | 7 |
+| of those, the session started no sub-agent | 13 | 5 |
+| of those, it started sub-agents and gave none the right lesson | 36 | 2 |
+| a sub-agent got it and said the change does not break it | 18 | 3 |
+| a sub-agent got it and said the change breaks it | 19 | 13 |
+
+Of the 63 failed sessions, 42 never gave the right lesson to a sub-agent. 15 gave it and were told the change
+does not break it. 6 were told it does, and their fix did not pass the grader.
+
+What it shows:
+1. **Picking loses the most.** On 20 of the 43 tasks the right lesson reached no sub-agent in either session; on
+   9 it did in one, and on 14 in both. In the 36 sessions that started sub-agents without it (a median of 10
+   each), the session never opened the right lesson's file. It was passed over at its one line. Its place in the
+   list made no difference: a median of 0.28 of the way down when it was handed, and 0.27 when it was not. In an
+   agent's reading, most of those 20 lessons fit their defect plainly as the task files state it. Among them are
+   three lessons this repository now briefs on every task: exit codes, stored data reaching a shell, and a gate
+   on gitignored state.
+2. **Checking loses about a quarter.** Handed the right lesson, the sub-agent said the change does not break it
+   in 18 of 37 sessions. Six tasks drew that answer in both sessions, and both failed: t14, t28, t29, t30, t33,
+   t36. An agent read each of those lessons beside the task file's defect. On five of the six the lesson fits,
+   and the sub-agent checked the path the change took, or the lesson's own example, not the path where the rule
+   broke:
+   - t28: the guarantee was a different one from the lesson's example. A lesson replacing itself was refused by
+     `okl retire` and accepted by `record`.
+   - t29: an existing command, which the change made report wrongly.
+   - t30 and t36: an error the code did not handle.
+   - t33: a fallback the harness did not stop on.
+
+   On t14 the lesson is about an older CLI and the defect about one that cannot start, a loose fit.
+3. **Fixing loses little.** Told the change breaks the lesson, 13 of 19 sessions passed.
+4. **Without sub-agents, reading helped.** Of the 13 sessions that started none, 7 opened the right lesson's
+   file themselves, and 4 of those passed.
+
+What it suggests, not tested:
+- **Picking is the larger loss, and three ways of picking better have failed (§4ba to §4bc).** A wider set held
+  more of the broken lessons in §4bc: a pool of about 30 held 0.586, against the pick's 0.465. A cheaper checker
+  per lesson (#456) could afford that set.
+- **The check's misses share a shape: the sub-agent confirms the path the change took.** A check step that asks
+  it to name every path the lesson's rule covers, and check each, is cheap to try on the same tasks. Those paths
+  include other entry points, error paths, and existing code the change makes reachable.
+
+**Threats.**
+- The verdict classes were not assigned blind.
+- The reading of each lesson's fit (points 1 and 2) is one agent's, against the task files' one-line defects.
+- 43 tasks from 33 changes, in one repository.
+- The in-sample tasks are counted with the rest.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
