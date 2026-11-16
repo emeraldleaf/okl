@@ -1,6 +1,6 @@
 {
- "about": "REPORT \u00a74bk: what the sub-agent handed \u00a74bj's right lesson concluded, for each review session on a broken task that handed it over. broken: it said the change breaks the lesson, wholly or in part; not_broken: it said the change does not. Read from each sub-agent's final message.",
- "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start, and the seven that said the change broke the lesson in part (t04 review0 and review1, t09 review0 and review1, t32 review1, t46 review0 and review1) are classed broken",
+ "about": "REPORT \u00a74bk: what the sub-agent handed \u00a74bj's right lesson concluded, for each review session on a broken task that handed it over. The rule: broken when it named something the changed code does that breaks the lesson, wholly or in part; not_broken when it found the code keeps the lesson, even where it added a test the lesson asks for. Read from each sub-agent's final message.",
+ "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start. Six named a break in part and are classed broken (t04 review0 and review1, t09 review0, t32 review1, t46 review0 and review1); three found the code sound and added a test, and are classed not_broken (t03 review0 and review1, t09 review1). The architecture review of #480 moved t09 review1 to not_broken under this rule",
  "sessions": {
   "t02 review0": "broken",
   "t02 review1": "broken",
@@ -11,7 +11,7 @@
   "t05 review1": "broken",
   "t07 review0": "broken",
   "t09 review0": "broken",
-  "t09 review1": "broken",
+  "t09 review1": "not_broken",
   "t12 review1": "broken",
   "t13 review0": "broken",
   "t14 review0": "not_broken",
@@ -39,5 +39,13 @@
   "t45 review1": "broken",
   "t46 review0": "broken",
   "t46 review1": "broken"
- }
+ },
+ "broken_in_part": [
+  "t04 review0",
+  "t04 review1",
+  "t09 review0",
+  "t32 review1",
+  "t46 review0",
+  "t46 review1"
+ ]
 }
