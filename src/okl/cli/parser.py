@@ -139,6 +139,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                            "model. A step under measurement (REPORT §4at). With --format hook, only the "
                            "Stop hook's note, unless `review_after_writing` is off in .okl/config.json "
                            "(OKL_REVIEW_AFTER_WRITING=1 or 0 for one session)")
+    pk.add_argument("--page", type=int, default=1,
+                    help="with --change: the page of the review to print (default 1). A list too long to "
+                         "arrive whole as one command's output is printed on pages, and page 1 names the "
+                         "command for each further page (REPORT §4bk)")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
                     help="with --format hook: the Claude Code event the output answers (default: "

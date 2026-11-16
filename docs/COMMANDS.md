@@ -159,8 +159,10 @@ okl check --change [BASE]
                      # the review after writing: the files changed since BASE (default: the
                      #   remote's default branch, then main, then master), committed or not,
                      #   untracked included, and every lesson in scope one line each (those
-                     #   governing a changed file first; about 60 tokens a lesson, never cut,
-                     #   its first line saying to read all of it), with the steps: say what
+                     #   governing a changed file first; about 60 tokens a lesson, never cut;
+                     #   a list past about 24,000 characters comes in pages, each short enough
+                     #   to arrive whole as one command's output, page 1 naming the command for
+                     #   each further one), with the steps: say what
                      #   the changed code does, pick the ten lessons it most likely breaks, check
                      #   each in its own fresh sub-agent (on Sonnet in Claude Code, the model it was
                      #   measured with) with one question (does this change break
@@ -171,6 +173,10 @@ okl check --change [BASE]
                      #   one session); on by default. A retracted lesson stays in the list as
                      #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
                      #   starts with '-'.
+okl check --change [BASE] --page N
+                     # page N of that review (REPORT §4bk: a list past Claude Code's ~30,000-
+                     #   character cap came back as a 2 KB preview). Exit 2 for a page the review
+                     #   does not have, --page without --change, or --page with --format json.
 okl recap --transcript <path> --log-review
                      # in Claude Code: read the session's transcript, and its sub-agents' under
                      #   ~/.claude/projects, and keep one row about its review after writing in the

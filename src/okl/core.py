@@ -14,6 +14,7 @@ import hashlib
 import math
 import os
 import re
+import shlex
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field, replace
@@ -1609,40 +1610,95 @@ REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the qu
                "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
 
 
-def render_review(result: dict[str, Any]) -> str:
+# The most characters one page of `okl check --change` holds. Claude Code saves a command's output past
+# about 30,000 characters to a file and shows the agent its first 2 KB; in 23 of §4bj's 86 review
+# sessions the list came back cut that way, and in 7 the right lesson's line never reached the agent,
+# all 7 failed (REPORT §4bk). A page under the cap arrives whole; the rest is a margin.
+REVIEW_PAGE_CHARS = 24_000
+
+
+def _pages(lines: list[str], budget: int) -> list[list[str]]:
+    """Lines packed in order into pages of at most `budget` characters, newlines counted, never
+    splitting a line; a line longer than the budget gets a page of its own."""
+    pages: list[list[str]] = [[]]
+    size = 0
+    for line in lines:
+        if pages[-1] and size + len(line) + 1 > budget:
+            pages.append([])
+            size = 0
+        pages[-1].append(line)
+        size += len(line) + 1
+    return pages
+
+
+def review_command(base: str | None, page: int) -> str:
+    """The command that prints one page of this review, the base quoted for a shell: the agent
+    pastes it, and a branch name is the user's text (lesson n_adea7f2c7373)."""
+    return f"okl check --change{' ' + shlex.quote(base) if base else ''} --page {page}"
+
+
+def render_review(result: dict[str, Any], page: int = 1) -> str:
     """`okl check --change` for the agent: the steps, the changed files, the lessons governing
-    them, and every other lesson in scope, one line each.
+    them, and every other lesson in scope, one line each, on pages of at most REVIEW_PAGE_CHARS.
 
     Nothing is cut. In id order a cut would drop lessons at random, and the list is what the
-    pick reads. A long list can reach the agent as a preview with the rest in a saved file, as
-    Claude Code shows long command output, which REPORT §4at's pick never met (it had every line
-    in its prompt): the header says how long the list is and to read all of it."""
+    pick reads. A list that fits on one page prints as one; a longer one prints page 1 with the
+    steps and the command for each further page, so no part reaches the agent as a preview with
+    the rest in a saved file, as Claude Code shows long output (REPORT §4bk). Raises ValueError
+    for a page the review does not have."""
     since = f"{result.get('base') or 'the default branch'} (merge base {str(result.get('merge_base') or '')[:7]})"
     files = result.get("files") or []
     head = f"## OKL review after writing — {result.get('repo')}"
     if not files:
+        if page != 1:
+            raise ValueError(f"page {page}: nothing changed, so this review has one page")
         return f"{head} · nothing changed since {since}, committed or not, so there is nothing to review.\n"
     lessons = result.get("lessons") or []
     governed = set(result.get("governing") or [])
     first = [_also_line(e) for e in lessons if e["id"] in governed]
     rest = [_also_line(e) for e in lessons if e["id"] not in governed]
-    size = sum(len(line) + 1 for line in first + rest)
-    lines = [f"{head} · {len(files)} file(s) changed since {since}, committed or not", "",
-             f"This review lists {len(lessons)} lesson(s) in about {max(1, round(size / 1000))} KB. Read all of "
-             "it before you pick: if your tool showed only part of this output, read the rest where it saved it.",
-             "", "Before you finish, check the code you wrote against this repo's lessons (a step under "
+    steps = ["", "Before you finish, check the code you wrote against this repo's lessons (a step under "
              "measurement, REPORT §4at to §4ay):"]
-    lines += [f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)]
-    lines += ["", "Changed: " + ", ".join(files), ""]
+    steps += [f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)]
+    steps += ["", "Changed: " + ", ".join(files), ""]
+    body: list[str] = []
     if not lessons:
-        lines.append("> No lesson in this store applies to this repo, so there is nothing to check against.")
-        return "\n".join(lines) + "\n"
-    if first:
-        lines.append(f"### Lessons that govern a file this change touched ({len(first)}): read each")
-        lines += first + [""]
-    lines.append(f"### {'Every other' if first else 'Every'} lesson in scope ({len(rest)}), one line each")
-    lines += rest
-    return "\n".join(lines) + "\n"
+        body.append("> No lesson in this store applies to this repo, so there is nothing to check against.")
+    else:
+        if first:
+            body.append(f"### Lessons that govern a file this change touched ({len(first)}): read each")
+            body += first + [""]
+        body.append(f"### {'Every other' if first else 'Every'} lesson in scope ({len(rest)}), one line each")
+        body += rest
+    title = f"{head} · {len(files)} file(s) changed since {since}, committed or not"
+    size = sum(len(line) + 1 for line in first + rest)
+    whole = [title, "", f"This review lists {len(lessons)} lesson(s) in about {max(1, round(size / 1000))} KB. "
+             "Read all of it before you pick: if your tool showed only part of this output, read the rest "
+             "where it saved it.", *steps, *body]
+    if sum(len(line) + 1 for line in whole) <= REVIEW_PAGE_CHARS:
+        if page != 1:
+            raise ValueError(f"page {page}: this review has one page")
+        return "\n".join(whole) + "\n"
+    # Page 1 carries the title, the paging note and the steps; each page ends saying what comes next.
+    # The note and the page heads are sized before packing, so no page passes the budget.
+    base = result.get("base") or None
+    margin = 600 + 2 * len(review_command(base, 999))
+    packed = _pages(body, REVIEW_PAGE_CHARS - margin - sum(len(line) + 1 for line in steps))
+    packed = [packed[0]] + _pages([line for p in packed[1:] for line in p], REVIEW_PAGE_CHARS - margin)
+    total = len(packed)
+    if not 1 <= page <= total:
+        raise ValueError(f"page {page}: this review has {total} pages")
+    further = (f"`{review_command(base, 2)}`" if total == 2
+               else f"`{review_command(base, 2)}` through `--page {total}`, one after another")
+    if page == 1:
+        out = [title, "", f"This review lists {len(lessons)} lesson(s) on {total} pages, each short enough to "
+               f"arrive whole. This is page 1. Before you pick, run {further}, and read every page.", *steps]
+    else:
+        out = [f"{head} · page {page} of {total}, the lessons continued", ""]
+    out += packed[page - 1]
+    nxt = (f"End of page {page} of {total}. Next: `{review_command(base, page + 1)}`." if page < total
+           else f"End of page {total} of {total}: that is every lesson. Now pick, and check each one.")
+    return "\n".join([*out, "", nxt]) + "\n"
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:

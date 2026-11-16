@@ -72,6 +72,9 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
 
 def _checked(client: Client, args: argparse.Namespace) -> dict[str, Any] | None:
     """The check's result, or None once it has said on stderr why none could be had."""
+    if getattr(args, "page", 1) != 1:
+        print("okl check: --page pages the review after writing; give it with --change", file=sys.stderr)
+        return None
     try:
         return client.check(args.task or "", repo=args.repo, limit=args.limit, paths=getattr(args, "path", None))
     except OKLUnreachableError as e:
@@ -145,9 +148,9 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     if args.format == "hook":
         _review_note(client, args)
         return 0
-    if getattr(args, "limit", None) is not None or getattr(args, "compact", False) or args.format == "actions":
-        print("okl check --change: --limit, --compact and --format actions shape a briefing; the review "
-              "lists every lesson in scope, so they do not apply", file=sys.stderr)
+    refused = _review_flags_refused(args)
+    if refused:
+        print(f"okl check --change: {refused}", file=sys.stderr)
         return 2
     try:
         merge_base, files = changes.touched(args.change or None)
@@ -169,11 +172,27 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
         governed = sorted(n.id for n in core.governing(nodes, repo, set(files)) if n.id in listed)
     result = {"repo": repo, "base": args.change or None, "merge_base": merge_base, "files": files,
               "governing": governed, "lessons": lessons}
-    if args.format == "json":
+    try:
+        text = None if args.format == "json" else core.render_review(result, getattr(args, "page", 1))
+    except ValueError as e:
+        print(f"okl check --change: {e}", file=sys.stderr)
+        return 2
+    if text is None:
         _print_json(result)
     else:
-        print(core.render_review(result), end="")
+        print(text, end="")
     return 0
+
+
+def _review_flags_refused(args: argparse.Namespace) -> str | None:
+    """Why a flag given with --change does not apply, or None: those that shape a briefing would be
+    ignored silently, and --format json holds every lesson, so a page of it means nothing."""
+    if getattr(args, "limit", None) is not None or getattr(args, "compact", False) or args.format == "actions":
+        return ("--limit, --compact and --format actions shape a briefing; the review lists every lesson in "
+                "scope, so they do not apply")
+    if getattr(args, "page", 1) != 1 and args.format == "json":
+        return "--page pages the review for the agent; --format json holds every lesson"
+    return None
 
 
 def _review_note(client: Client, args: argparse.Namespace) -> None:
