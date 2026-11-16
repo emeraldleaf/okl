@@ -6231,6 +6231,8 @@ What it means, not pre-registered:
 
 *Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
 
+*Note, 2026-11-16:* §4bj measured the same review against no review on 43 graded tasks: a gain of 0.244 (95% interval 0.14 to 0.36), just under this section's bar of 0.25, and 0.145 on the 31 tasks whose lesson existed before the change. This section's reading stands as registered.
+
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 
 Written before any pick in this section. §4ax found the default briefing, built from a task's words,
@@ -7317,6 +7319,48 @@ up to about a thousand sub-agent sessions. At §4az's API-priced rates, that is 
 the review, priced, not charged (the Max plan). Run three at a time, it takes about five hours. It runs from a
 worktree of its own, pinned at the commit that holds this section. It stops after three sessions in a row give
 no result, which is what a usage limit looks like, and a rerun resumes where it stopped.
+
+**Result (2026-11-16): it helps, under the bar.** All 192 sessions ran (receipt
+`review-graded-20261116-0254.json`), from a worktree of its own at 6cb22b8, whose code the sessions ran,
+unchanged from start to end. It took 3 hours 43 minutes, with no usage limit hit. Every session and every
+sub-agent ran on Sonnet, and the longest session took 722 seconds.
+
+| arm | pass rate, averaged over the 43 tasks | passes | tasks with a pass | sessions that edited | API-priced cost a session | median time |
+|---|---|---|---|---|---|---|
+| none | 0.023 | 2 of 86 | 1 | 24 of 86 | $0.099 | 108 s |
+| review | 0.267 | 23 of 86 | 15 | 74 of 86 | $0.855 | 281 s |
+
+As stated: 83 of the 96 review sessions (86.5%) started a sub-agent, a median of 9.5, so the steps were
+followed. Paired by task, the review passed 0.244 more often than no review, with a 95% interval of 0.14 to
+0.36. The lower end is above 0, so the review helps. The mean is 0.006 short of §4az's bar of 0.25, so it
+helps *under the bar*. The bar lies inside the interval: this run cannot tell a gain of 0.244 from one of
+0.25, and the reading is the rule, applied as written. No session in either arm broke a control (10 sessions
+each) or a test the real fix touched, so it does not *break more*. The review gained on 14 tasks, 7 of them in
+both sessions, and lost on none.
+
+Beside the reading, not read:
+1. **Most of the gain is on in-sample tasks.** On the 12 tasks whose right lesson was written after its
+   change, some from the incident itself, the review passed 0.5 against 0 (gain 0.5, 95% interval 0.25 to
+   0.75). On the 31 whose lesson existed before the change, it passed 0.177 against 0.032, a gain of 0.145
+   (0.048 to 0.258). The second is the case okl is for: a lesson on record before the change that breaks it.
+   By set, the gain is 0.357 on §4bg's 14 tasks and 0.19 on §4bi's 29.
+2. **By change, the interval is 0.138 to 0.352,** so tasks that share a change hardly widen it.
+3. **Picking still costs the most.** A review session handed the right lesson to a sub-agent in 37 of 86
+   (0.43). It passed 16 of those 37 (0.432) and 7 of the 49 that did not hand it over (0.143). This is
+   not randomized: a task whose lesson the pick finds may be easier anyway. Checking loses some too: 21 of the
+   37 that handed it over still failed.
+4. **Five passes came with no sub-agent.** 13 review sessions started none, and 5 of those passed (on t01,
+   t12, t22 and t40): asked for the review, the agent read the list and fixed the defect itself.
+5. **No review mostly called the change ready.** It edited in 24 of 86 sessions and passed only on t43, in
+   both sessions, where the review passed too.
+6. **Cost.** A session with the review cost 8.6 times one without, API-priced, and took 2.6 times as long at
+   the median; $91.54 in all, priced, not charged. §4az measured 6.9 times.
+
+**What follows, as pre-registered.** The review stays on by default, as my decision. The docs and the site's
+okl page now say its gain was measured, and how large: 0.24 on 43 graded past bugs of this repository, and
+0.15 on the 31 whose lesson was written before the change, at about 8.6 times a session's cost. The decision
+record's first reversal condition, a decisive test whose interval of the gain lies below 0.1, is not met.
+Whether it holds in other repositories is still open (#413), and so is a better pick.
 
 ## 5. Findings
 

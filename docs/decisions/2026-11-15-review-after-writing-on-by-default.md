@@ -74,6 +74,14 @@ was turned on. Any of these would justify it:
 3. **The cost drives people off.** If on-by-default leads users to remove okl, a default that
    loses the whole loop costs more than the misses it prevents.
 
+**Update, 2026-11-16: the first condition was tested, and is not met.** On 43 graded past bugs
+(#457), large enough for 0.86 power at a gain of 0.25, a pre-registered comparison found the review
+passed 0.27 of its sessions against 0.02 with no review: a gain of 0.24, 95% interval 0.14 to 0.36,
+just under the 0.25 bar it was read against (REPORT §4bj, receipt `review-graded-20261116-0254.json`).
+On the 31 bugs whose lesson was written before the change, the gain was 0.15 (0.05 to 0.26). A
+session with the review cost about 8.6 times one without. The decision stands, now with its gain
+measured on this repository; the other two conditions are unchanged.
+
 ## What follows
 
 The work below is laid out, with what, why and how, in

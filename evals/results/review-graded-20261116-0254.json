@@ -1,0 +1,4845 @@
+{
+ "section": "4bj",
+ "at": "2026-11-16T02:54Z",
+ "inputs": {
+  "tasks_4bg": "3426484f394e931f",
+  "graders_4bg": "7b572ccee9c11ed3",
+  "tasks_457": "21dcb47f8f3c6640",
+  "graders_457": "0e12f402938887ff",
+  "manifest": "584e9ffc38815af3",
+  "words": "941c159ee0452c0a"
+ },
+ "model": "sonnet",
+ "effort": "medium",
+ "sessions": 192,
+ "of": 192,
+ "done_per_arm": {
+  "none": 86,
+  "review": 86
+ },
+ "planned_per_arm": {
+  "none": 86,
+  "review": 86
+ },
+ "pass_rate": {
+  "none": 0.023,
+  "review": 0.267
+ },
+ "per_task": {
+  "none": {
+   "t01": 0.0,
+   "t02": 0.0,
+   "t03": 0.0,
+   "t04": 0.0,
+   "t05": 0.0,
+   "t06": 0.0,
+   "t07": 0.0,
+   "t08": 0.0,
+   "t09": 0.0,
+   "t10": 0.0,
+   "t11": 0.0,
+   "t12": 0.0,
+   "t13": 0.0,
+   "t14": 0.0,
+   "t19": 0.0,
+   "t20": 0.0,
+   "t21": 0.0,
+   "t22": 0.0,
+   "t23": 0.0,
+   "t24": 0.0,
+   "t25": 0.0,
+   "t26": 0.0,
+   "t27": 0.0,
+   "t28": 0.0,
+   "t29": 0.0,
+   "t30": 0.0,
+   "t31": 0.0,
+   "t32": 0.0,
+   "t33": 0.0,
+   "t34": 0.0,
+   "t35": 0.0,
+   "t36": 0.0,
+   "t37": 0.0,
+   "t38": 0.0,
+   "t39": 0.0,
+   "t40": 0.0,
+   "t41": 0.0,
+   "t42": 0.0,
+   "t43": 1.0,
+   "t44": 0.0,
+   "t45": 0.0,
+   "t46": 0.0,
+   "t47": 0.0
+  },
+  "review": {
+   "t01": 1.0,
+   "t02": 0.0,
+   "t03": 0.5,
+   "t04": 1.0,
+   "t05": 0.0,
+   "t06": 0.0,
+   "t07": 0.5,
+   "t08": 0.0,
+   "t09": 0.5,
+   "t10": 0.0,
+   "t11": 0.5,
+   "t12": 1.0,
+   "t13": 0.0,
+   "t14": 0.0,
+   "t19": 0.0,
+   "t20": 0.0,
+   "t21": 0.0,
+   "t22": 1.0,
+   "t23": 1.0,
+   "t24": 0.5,
+   "t25": 0.0,
+   "t26": 0.0,
+   "t27": 0.0,
+   "t28": 0.0,
+   "t29": 0.0,
+   "t30": 0.0,
+   "t31": 0.0,
+   "t32": 0.5,
+   "t33": 0.0,
+   "t34": 0.0,
+   "t35": 0.0,
+   "t36": 0.0,
+   "t37": 0.0,
+   "t38": 0.0,
+   "t39": 0.0,
+   "t40": 1.0,
+   "t41": 0.0,
+   "t42": 0.5,
+   "t43": 1.0,
+   "t44": 0.0,
+   "t45": 0.0,
+   "t46": 1.0,
+   "t47": 0.0
+  }
+ },
+ "contrast": {
+  "against": {
+   "mean": 0.244,
+   "ci95": [
+    0.14,
+    0.36
+   ],
+   "ci90": [
+    0.151,
+    0.349
+   ],
+   "ci95_by_change": [
+    0.138,
+    0.352
+   ]
+  },
+  "for": {
+   "mean": 0.244,
+   "ci95": [
+    0.14,
+    0.36
+   ],
+   "ci90": [
+    0.151,
+    0.337
+   ]
+  },
+  "as_run": {
+   "mean": 0.244,
+   "ci95": [
+    0.14,
+    0.36
+   ],
+   "ci90": [
+    0.151,
+    0.337
+   ]
+  }
+ },
+ "reading": "helps, under the bar",
+ "review_sessions_that_started_a_sub_agent": 0.865,
+ "sub_agents_median": 9.5,
+ "right_lesson_handed_to_a_sub_agent": 0.43,
+ "pass_rate_when_handed_and_not": {
+  "handed": 0.432,
+  "not_handed": 0.143
+ },
+ "sessions_that_broke_something": {
+  "none": 0,
+  "review": 0
+ },
+ "quiet": true,
+ "controls_broken": {
+  "none": 0,
+  "review": 0
+ },
+ "controls_sessions": {
+  "none": 10,
+  "review": 10
+ },
+ "sessions_with_harm": {
+  "none": 0,
+  "review": 0
+ },
+ "sessions_harm_unknown": {
+  "none": 0,
+  "review": 0
+ },
+ "edited": {
+  "none": 24,
+  "review": 74
+ },
+ "not_read": {
+  "in_sample": {
+   "mean": 0.5,
+   "ci95": [
+    0.25,
+    0.75
+   ],
+   "ci90": [
+    0.292,
+    0.708
+   ]
+  },
+  "out_of_sample": {
+   "mean": 0.145,
+   "ci95": [
+    0.048,
+    0.258
+   ],
+   "ci90": [
+    0.065,
+    0.242
+   ]
+  },
+  "set_4bg": {
+   "mean": 0.357,
+   "ci95": [
+    0.179,
+    0.571
+   ],
+   "ci90": [
+    0.179,
+    0.536
+   ]
+  },
+  "set_457": {
+   "mean": 0.19,
+   "ci95": [
+    0.069,
+    0.328
+   ],
+   "ci90": [
+    0.086,
+    0.31
+   ]
+  }
+ },
+ "usd_per_session": {
+  "none": 0.099,
+  "review": 0.855
+ },
+ "median_seconds": {
+  "none": 108.25,
+  "review": 281.04999999999995
+ },
+ "api_priced_usd": 91.54,
+ "script_sha256": "a7037b335dc9c0f49003382ddfbd7d28aea20ee79e6031223c04db02985fb142",
+ "rows": [
+  {
+   "id": "t17",
+   "pr": 262,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 14.5,
+   "usd": 0.06354839999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-acr8owft",
+   "summary": "2 passed in 0.10s"
+  },
+  {
+   "id": "t18",
+   "pr": 50,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 53.8,
+   "usd": 0.13178779999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-92x11ign",
+   "summary": "1 passed in 1.18s"
+  },
+  {
+   "id": "t44",
+   "pr": 383,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 2,
+   "right_checked": false,
+   "seconds": 55.3,
+   "usd": 0.2681701,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-zbd1lsov",
+   "summary": "4 failed, 4 passed in 0.94s"
+  },
+  {
+   "id": "t19",
+   "pr": 30,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 55.8,
+   "usd": 0.110723,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-44rh_1nt",
+   "summary": "6 failed in 1.02s"
+  },
+  {
+   "id": "t11",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 98.2,
+   "usd": 0.0331636,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0kb45neq",
+   "summary": "1 failed in 0.25s"
+  },
+  {
+   "id": "t05",
+   "pr": 259,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md",
+    "README.md",
+    "docs/render_pipeline_diagram.py",
+    "src/okl/core.py",
+    "tests/test_okl.py",
+    "tests/test_relevance_floor.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 294.9,
+   "usd": 0.3605724,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-x41k5wiq",
+   "summary": "2 failed, 1 passed in 0.11s"
+  },
+  {
+   "id": "t41",
+   "pr": 373,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 219.0,
+   "usd": 0.2579285,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-07rl3pp0",
+   "summary": "2 failed, 3 passed in 1.59s"
+  },
+  {
+   "id": "t40",
+   "pr": 50,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "src/okl/ownership.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 8,
+   "right_checked": true,
+   "seconds": 363.3,
+   "usd": 1.0456436,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-no03wgxl",
+   "summary": "7 passed in 5.52s"
+  },
+  {
+   "id": "t30",
+   "pr": 380,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 83.2,
+   "usd": 0.07661499999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-67tc9596",
+   "summary": "2 failed in 1.63s"
+  },
+  {
+   "id": "t27",
+   "pr": 299,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 91.2,
+   "usd": 0.18991639999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-5b4e03vj",
+   "summary": "2 failed in 0.27s"
+  },
+  {
+   "id": "t36",
+   "pr": 309,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 159.3,
+   "usd": 0.10688520000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-guhd72pb",
+   "summary": "4 failed in 0.21s"
+  },
+  {
+   "id": "t10",
+   "pr": 34,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 61.0,
+   "usd": 0.12318239999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ypysoljt",
+   "summary": "1 failed, 6 passed in 0.16s"
+  },
+  {
+   "id": "t21",
+   "pr": 112,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 2,
+   "right_checked": false,
+   "seconds": 122.1,
+   "usd": 0.3601750000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0eznf06v",
+   "summary": "4 failed, 2 passed in 1.32s"
+  },
+  {
+   "id": "t16",
+   "pr": 274,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 15.9,
+   "usd": 0.0394854,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-rdbjisgj",
+   "summary": "1 passed in 0.08s"
+  },
+  {
+   "id": "t33",
+   "pr": 275,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/REPORT.md",
+    "src/okl/core.py",
+    "tests/test_relevance_floor.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 157.8,
+   "usd": 0.7917180000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dvkai6sv",
+   "summary": "2 failed, 1 passed in 0.46s"
+  },
+  {
+   "id": "t47",
+   "pr": 388,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 199.9,
+   "usd": 0.1075606,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-89wnf032",
+   "summary": "1 failed in 0.50s"
+  },
+  {
+   "id": "t25",
+   "pr": 266,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 48.6,
+   "usd": 0.0545036,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-irfeugi7",
+   "summary": "2 failed in 3.15s"
+  },
+  {
+   "id": "t42",
+   "pr": 300,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 502.1,
+   "usd": 1.3586167000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-03yokda1",
+   "summary": "1 passed in 1.77s"
+  },
+  {
+   "id": "t45",
+   "pr": 362,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "src/okl/core.py",
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 317.2,
+   "usd": 0.8388322999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-eiz53w3t",
+   "summary": "3 failed in 0.56s"
+  },
+  {
+   "id": "t48",
+   "pr": 77,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 451.6,
+   "usd": 1.372656699999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-qm5vm3_p",
+   "summary": "3 passed in 0.33s"
+  },
+  {
+   "id": "t20",
+   "pr": 35,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 38.1,
+   "usd": 0.0788344,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-lecmcc02",
+   "summary": "6 failed in 0.28s"
+  },
+  {
+   "id": "t27",
+   "pr": 299,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 153.6,
+   "usd": 0.06252540000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ktobty1p",
+   "summary": "2 failed in 0.25s"
+  },
+  {
+   "id": "t03",
+   "pr": 37,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/drift.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 266.1,
+   "usd": 0.9331412,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-4pdvwiwg",
+   "summary": "3 failed, 1 passed in 0.58s"
+  },
+  {
+   "id": "t23",
+   "pr": 163,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 108.2,
+   "usd": 0.035141900000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-fsqtaavc",
+   "summary": "7 failed in 0.61s"
+  },
+  {
+   "id": "t40",
+   "pr": 50,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 63.3,
+   "usd": 0.1196852,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-qr3pl4j4",
+   "summary": "7 failed in 7.56s"
+  },
+  {
+   "id": "t24",
+   "pr": 266,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    ".scratch/",
+    "src/okl/client.py",
+    "tests/test_aliases.py"
+   ],
+   "harm": [],
+   "sub_agents": 8,
+   "right_checked": false,
+   "seconds": 487.2,
+   "usd": 1.3315182999999997,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-epnuqa78",
+   "summary": "6 passed in 0.28s"
+  },
+  {
+   "id": "t25",
+   "pr": 266,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "tests/test_aliases.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 450.5,
+   "usd": 1.2973959000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-9dfn16pn",
+   "summary": "2 failed in 3.22s"
+  },
+  {
+   "id": "t11",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": false,
+   "seconds": 292.4,
+   "usd": 0.7218328000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-8uw8l3hn",
+   "summary": "1 failed in 0.26s"
+  },
+  {
+   "id": "t34",
+   "pr": 269,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/REPORT.md",
+    "evals/ab_harness.py",
+    "src/okl/core.py",
+    "tests/test_index_arm.py"
+   ],
+   "harm": [],
+   "sub_agents": 11,
+   "right_checked": true,
+   "seconds": 252.8,
+   "usd": 1.4494767999999993,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-98x_3mx0",
+   "summary": "2 failed, 2 passed in 0.79s"
+  },
+  {
+   "id": "t17",
+   "pr": 262,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": true,
+   "seconds": 67.7,
+   "usd": 0.3241112,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-y0yb95uq",
+   "summary": "2 passed in 0.10s"
+  },
+  {
+   "id": "t02",
+   "pr": 383,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 190.0,
+   "usd": 0.0837026,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-8klvhnz6",
+   "summary": "2 failed, 1 passed in 0.40s"
+  },
+  {
+   "id": "t39",
+   "pr": 267,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "docs/WHERE-THIS-SITS.md",
+    "docs/overview/okl-anatomy.html",
+    "src/okl/service.py",
+    "tests/test_hybrid.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 527.0,
+   "usd": 0.9884358000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-cfgxf_m7",
+   "summary": "1 failed, 2 passed in 3.89s"
+  },
+  {
+   "id": "t11",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 108.3,
+   "usd": 0.0337541,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-15pgyrbb",
+   "summary": "1 failed in 0.30s"
+  },
+  {
+   "id": "t23",
+   "pr": 163,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 83.1,
+   "usd": 0.0350663,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-vlm7l8zk",
+   "summary": "7 failed in 0.71s"
+  },
+  {
+   "id": "t04",
+   "pr": 380,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 250.9,
+   "usd": 0.10836730000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-tq35k51i",
+   "summary": "1 failed, 1 passed in 0.90s"
+  },
+  {
+   "id": "t35",
+   "pr": 308,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_bench_stem.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 44.4,
+   "usd": 0.1218944,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3kgemwdt",
+   "summary": "2 failed, 1 passed in 1.71s"
+  },
+  {
+   "id": "t39",
+   "pr": 267,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/semantic.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 46.4,
+   "usd": 0.056867299999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-qihzjvq3",
+   "summary": "1 failed, 2 passed in 3.87s"
+  },
+  {
+   "id": "t09",
+   "pr": 362,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 123.3,
+   "usd": 0.1409355,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-75vveam5",
+   "summary": "2 failed in 0.18s"
+  },
+  {
+   "id": "t47",
+   "pr": 388,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 38.6,
+   "usd": 0.09976769999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dmzxr0j5",
+   "summary": "1 failed in 0.53s"
+  },
+  {
+   "id": "t46",
+   "pr": 339,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/install.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 3,
+   "right_checked": true,
+   "seconds": 190.4,
+   "usd": 0.5167131,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-tsci5y2s",
+   "summary": "5 passed in 3.41s"
+  },
+  {
+   "id": "t10",
+   "pr": 34,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 34.2,
+   "usd": 0.0727308,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-wups8s61",
+   "summary": "1 failed, 6 passed in 0.14s"
+  },
+  {
+   "id": "t26",
+   "pr": 299,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 67.2,
+   "usd": 0.16119019999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-yjaip_4y",
+   "summary": "4 failed, 2 passed in 0.24s"
+  },
+  {
+   "id": "t45",
+   "pr": 362,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 11,
+   "right_checked": true,
+   "seconds": 292.4,
+   "usd": 0.9618755,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-hwcovtb3",
+   "summary": "3 failed in 0.39s"
+  },
+  {
+   "id": "t43",
+   "pr": 325,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/warm.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 2,
+   "right_checked": true,
+   "seconds": 103.9,
+   "usd": 0.3379177,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-woh4zn6w",
+   "summary": "5 passed in 8.29s"
+  },
+  {
+   "id": "t36",
+   "pr": 309,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/REPORT.md",
+    "tests/test_bench.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 225.5,
+   "usd": 1.0979693,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-lh_skcca",
+   "summary": "4 failed in 0.18s"
+  },
+  {
+   "id": "t38",
+   "pr": 326,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 187.7,
+   "usd": 0.9710478999999997,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6byiw57g",
+   "summary": "2 failed, 1 passed in 0.38s"
+  },
+  {
+   "id": "t19",
+   "pr": 30,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 6,
+   "right_checked": false,
+   "seconds": 110.0,
+   "usd": 0.39937860000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ztgfp2yl",
+   "summary": "6 failed in 0.99s"
+  },
+  {
+   "id": "t30",
+   "pr": 380,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/health.py",
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 276.4,
+   "usd": 1.1450970999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-upmhacqg",
+   "summary": "2 failed in 1.30s"
+  },
+  {
+   "id": "t28",
+   "pr": 387,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/review.py",
+    "tests/test_seed_renames.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 316.0,
+   "usd": 1.1829984000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-a5ajtfgv",
+   "summary": "3 failed in 0.29s"
+  },
+  {
+   "id": "t47",
+   "pr": 388,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md",
+    "docs/COMMANDS.md",
+    "src/okl/cli/intake.py",
+    "src/okl/client.py",
+    "src/okl/intake.py",
+    "src/okl/service.py",
+    "tests/test_intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 482.5,
+   "usd": 1.1682162,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ho9h_8on",
+   "summary": "1 failed in 0.51s"
+  },
+  {
+   "id": "t14",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/install.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 17,
+   "right_checked": true,
+   "seconds": 704.4,
+   "usd": 2.0325444999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-jvlvwumv",
+   "summary": "3 failed, 1 passed in 1.09s"
+  },
+  {
+   "id": "t22",
+   "pr": 135,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "evals/layout_preflight.py",
+    "src/okl/client.py",
+    "src/okl/service.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 101.7,
+   "usd": 0.1401152,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0pj7pyss",
+   "summary": "1 passed in 0.31s"
+  },
+  {
+   "id": "t21",
+   "pr": 112,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 126.7,
+   "usd": 0.9111522000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-i6spux26",
+   "summary": "4 failed, 2 passed in 1.30s"
+  },
+  {
+   "id": "t43",
+   "pr": 325,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/warm.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 68.3,
+   "usd": 0.14761380000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-o1njb8xm",
+   "summary": "5 passed in 8.27s"
+  },
+  {
+   "id": "t25",
+   "pr": 266,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "tests/test_aliases.py",
+    "tests/test_docs.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 495.1,
+   "usd": 1.1898977000000006,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6y1wdj2w",
+   "summary": "2 failed in 3.04s"
+  },
+  {
+   "id": "t16",
+   "pr": 274,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 3,
+   "right_checked": true,
+   "seconds": 43.8,
+   "usd": 0.2058762,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ss59r9mk",
+   "summary": "1 passed in 0.07s"
+  },
+  {
+   "id": "t34",
+   "pr": 269,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/preflight.py",
+    "tests/test_docs.py",
+    "tests/test_index_arm.py",
+    "tests/test_preflight.py"
+   ],
+   "harm": [],
+   "sub_agents": 9,
+   "right_checked": false,
+   "seconds": 355.5,
+   "usd": 1.1761208,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0a36i63t",
+   "summary": "2 failed, 2 passed in 0.76s"
+  },
+  {
+   "id": "t16",
+   "pr": 274,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "tests/conftest.py",
+    "tests/test_docs.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 215.1,
+   "usd": 0.7432720999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-29ntt03k",
+   "summary": "1 passed in 0.08s"
+  },
+  {
+   "id": "t31",
+   "pr": 256,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 31.7,
+   "usd": 0.09647,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0l91ck9e",
+   "summary": "2 failed, 1 passed in 0.44s"
+  },
+  {
+   "id": "t01",
+   "pr": 388,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 155.2,
+   "usd": 0.083805,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-cwqypvoz",
+   "summary": "2 failed in 0.32s"
+  },
+  {
+   "id": "t11",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 349.7,
+   "usd": 1.3578244000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dhafuoyf",
+   "summary": "1 passed in 0.33s"
+  },
+  {
+   "id": "t04",
+   "pr": 380,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 82.0,
+   "usd": 0.0643877,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-xxrxg69u",
+   "summary": "1 failed, 1 passed in 0.95s"
+  },
+  {
+   "id": "t48",
+   "pr": 77,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 65.4,
+   "usd": 0.0618006,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-mafnhyde",
+   "summary": "3 passed in 0.39s"
+  },
+  {
+   "id": "t24",
+   "pr": 266,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 128.4,
+   "usd": 0.0342894,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-unjr3yjf",
+   "summary": "3 failed, 3 passed in 0.33s"
+  },
+  {
+   "id": "t29",
+   "pr": 387,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 43.5,
+   "usd": 0.10155310000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-2wrdapvp",
+   "summary": "2 failed, 2 passed in 2.00s"
+  },
+  {
+   "id": "t01",
+   "pr": 388,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/intake.py",
+    "tests/test_intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 76.2,
+   "usd": 0.3916440000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ceay7ys8",
+   "summary": "2 passed in 0.30s"
+  },
+  {
+   "id": "t03",
+   "pr": 37,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 49.0,
+   "usd": 0.10037800000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-mwcu1jkm",
+   "summary": "3 failed, 1 passed in 0.60s"
+  },
+  {
+   "id": "t16",
+   "pr": 274,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 16.0,
+   "usd": 0.0393971,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-tle6n7th",
+   "summary": "1 passed in 0.09s"
+  },
+  {
+   "id": "t22",
+   "pr": 135,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 153.4,
+   "usd": 0.1136363,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-euniwb2n",
+   "summary": "1 failed in 0.26s"
+  },
+  {
+   "id": "t13",
+   "pr": 161,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 153.0,
+   "usd": 0.1079101,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-38y8_vjj",
+   "summary": "2 failed in 0.19s"
+  },
+  {
+   "id": "t36",
+   "pr": 309,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_bench.py"
+   ],
+   "harm": [],
+   "sub_agents": 3,
+   "right_checked": true,
+   "seconds": 143.0,
+   "usd": 0.6864317,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-shptzj81",
+   "summary": "4 failed in 0.21s"
+  },
+  {
+   "id": "t12",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 131.7,
+   "usd": 0.0439616,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-rbybeao6",
+   "summary": "1 failed in 1.02s"
+  },
+  {
+   "id": "t48",
+   "pr": 77,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 66.9,
+   "usd": 0.05342640000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3xlbjyc8",
+   "summary": "3 passed in 0.34s"
+  },
+  {
+   "id": "t01",
+   "pr": 388,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/intake.py",
+    "tests/test_intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 104.7,
+   "usd": 0.4162417,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-1zev3jkq",
+   "summary": "2 passed in 0.31s"
+  },
+  {
+   "id": "t47",
+   "pr": 388,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/intake.py",
+    "src/okl/client.py",
+    "src/okl/service.py",
+    "tests/test_intake.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 123.8,
+   "usd": 0.437298,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-u6stmr25",
+   "summary": "1 failed in 0.55s"
+  },
+  {
+   "id": "t06",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 123.9,
+   "usd": 0.0357755,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-p738zajq",
+   "summary": "2 failed, 1 passed in 0.07s"
+  },
+  {
+   "id": "t10",
+   "pr": 34,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py"
+   ],
+   "harm": [],
+   "sub_agents": 1,
+   "right_checked": false,
+   "seconds": 81.8,
+   "usd": 0.1857874,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-e7pyuu5h",
+   "summary": "1 failed, 6 passed in 0.14s"
+  },
+  {
+   "id": "t37",
+   "pr": 312,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 103.0,
+   "usd": 0.0837704,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-puq77v8v",
+   "summary": "2 failed in 0.16s"
+  },
+  {
+   "id": "t19",
+   "pr": 30,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py"
+   ],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": false,
+   "seconds": 98.3,
+   "usd": 0.29178790000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6f3ld04o",
+   "summary": "6 failed in 0.88s"
+  },
+  {
+   "id": "t39",
+   "pr": 267,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/semantic.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 52.6,
+   "usd": 0.0641747,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-kp4_xg7w",
+   "summary": "1 failed, 2 passed in 3.89s"
+  },
+  {
+   "id": "t15",
+   "pr": 269,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "evals/REPORT.md",
+    "evals/ab_harness.py",
+    "evals/preflight.py",
+    "src/okl/core.py",
+    "tests/test_index_arm.py"
+   ],
+   "harm": [],
+   "sub_agents": 6,
+   "right_checked": true,
+   "seconds": 339.7,
+   "usd": 0.9798659000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-nandinbb",
+   "summary": "1 passed in 0.36s"
+  },
+  {
+   "id": "t28",
+   "pr": 387,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 188.2,
+   "usd": 0.08874939999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-aym8pxop",
+   "summary": "3 failed in 0.29s"
+  },
+  {
+   "id": "t23",
+   "pr": 163,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 442.4,
+   "usd": 1.4730200000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-z_vfv7tz",
+   "summary": "7 passed in 1.91s"
+  },
+  {
+   "id": "t35",
+   "pr": 308,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/bench/v2.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 173.7,
+   "usd": 0.8352644999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6k8um70s",
+   "summary": "2 failed, 1 passed in 1.71s"
+  },
+  {
+   "id": "t01",
+   "pr": 388,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 195.3,
+   "usd": 0.09615090000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-h2wr2ddw",
+   "summary": "2 failed in 0.28s"
+  },
+  {
+   "id": "t02",
+   "pr": 383,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "ci/check-diagram-names.py",
+    "docs/render_architecture.py",
+    "tests/test_architecture.py"
+   ],
+   "harm": [],
+   "sub_agents": 9,
+   "right_checked": true,
+   "seconds": 263.5,
+   "usd": 0.8771625999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-i6hqun6p",
+   "summary": "2 failed, 1 passed in 0.34s"
+  },
+  {
+   "id": "t15",
+   "pr": 269,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "evals/ab_harness.py",
+    "evals/preflight.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 193.1,
+   "usd": 1.2929942,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-u6av6v07",
+   "summary": "1 passed in 0.36s"
+  },
+  {
+   "id": "t08",
+   "pr": 307,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 108.8,
+   "usd": 0.042143599999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-vzviaai1",
+   "summary": "1 failed in 0.12s"
+  },
+  {
+   "id": "t45",
+   "pr": 362,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 84.3,
+   "usd": 0.1387257,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-r9eyxtko",
+   "summary": "3 failed in 0.38s"
+  },
+  {
+   "id": "t03",
+   "pr": 37,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 44.8,
+   "usd": 0.0955617,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6dvq_6oj",
+   "summary": "3 failed, 1 passed in 0.55s"
+  },
+  {
+   "id": "t05",
+   "pr": 259,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md",
+    "README.md",
+    "docs/render_pipeline_diagram.py",
+    "src/okl/core.py",
+    "tests/test_okl.py",
+    "tests/test_relevance_floor.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 378.3,
+   "usd": 0.48478469999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-mf1vh3yv",
+   "summary": "2 failed, 1 passed in 0.10s"
+  },
+  {
+   "id": "t33",
+   "pr": 275,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 162.4,
+   "usd": 0.8063089,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-j46_at9r",
+   "summary": "2 failed, 1 passed in 0.57s"
+  },
+  {
+   "id": "t22",
+   "pr": 135,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "evals/layout_preflight.py",
+    "src/okl/client.py",
+    "src/okl/service.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 5,
+   "right_checked": true,
+   "seconds": 337.8,
+   "usd": 0.8046282,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-d9k7942i",
+   "summary": "1 passed in 0.33s"
+  },
+  {
+   "id": "t08",
+   "pr": 307,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 119.2,
+   "usd": 0.040695199999999994,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-8krtqzzc",
+   "summary": "1 failed in 0.15s"
+  },
+  {
+   "id": "t09",
+   "pr": 362,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "src/okl/core.py",
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 469.6,
+   "usd": 1.0061735,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dx36yp6o",
+   "summary": "2 passed in 0.25s"
+  },
+  {
+   "id": "t13",
+   "pr": 161,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": false,
+   "seconds": 215.9,
+   "usd": 0.3537448000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-08e45omy",
+   "summary": "2 failed in 0.21s"
+  },
+  {
+   "id": "t44",
+   "pr": 383,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_architecture.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 55.2,
+   "usd": 0.2856158,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-5sndqa8q",
+   "summary": "4 failed, 4 passed in 1.05s"
+  },
+  {
+   "id": "t30",
+   "pr": 380,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 82.2,
+   "usd": 0.0729027,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-atnai86j",
+   "summary": "2 failed in 1.44s"
+  },
+  {
+   "id": "t44",
+   "pr": 383,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 26.5,
+   "usd": 0.05695460000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dtqz705g",
+   "summary": "4 failed, 4 passed in 0.92s"
+  },
+  {
+   "id": "t46",
+   "pr": 339,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/install.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 319.5,
+   "usd": 0.9422333999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-risw3j5h",
+   "summary": "5 passed in 2.86s"
+  },
+  {
+   "id": "t08",
+   "pr": 307,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    ".github/workflows/ci.yml",
+    "ci/review-agent.sh",
+    "src/okl/scaffold/ci/review-agent.sh"
+   ],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": false,
+   "seconds": 300.6,
+   "usd": 1.005207,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-7o9z94ga",
+   "summary": "1 failed in 0.12s"
+  },
+  {
+   "id": "t02",
+   "pr": 383,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "ci/check-diagram-names.py",
+    "tests/test_architecture.py"
+   ],
+   "harm": [],
+   "sub_agents": 11,
+   "right_checked": true,
+   "seconds": 290.1,
+   "usd": 1.0060001000000005,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-co2iki6c",
+   "summary": "2 failed, 1 passed in 0.33s"
+  },
+  {
+   "id": "t46",
+   "pr": 339,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 111.3,
+   "usd": 0.0711589,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-prip6ygb",
+   "summary": "3 failed, 2 passed in 2.62s"
+  },
+  {
+   "id": "t26",
+   "pr": 299,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 2,
+   "right_checked": false,
+   "seconds": 183.9,
+   "usd": 0.6010753999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-rafp237h",
+   "summary": "4 failed, 2 passed in 0.24s"
+  },
+  {
+   "id": "t07",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 115.7,
+   "usd": 0.035425700000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-y5qn56wg",
+   "summary": "2 failed in 0.52s"
+  },
+  {
+   "id": "t34",
+   "pr": 269,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 55.7,
+   "usd": 0.2102268,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-4eyzwccl",
+   "summary": "2 failed, 2 passed in 0.72s"
+  },
+  {
+   "id": "t27",
+   "pr": 299,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "docs/okl-retrieval-pipeline-hybrid.svg"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 188.1,
+   "usd": 0.3140202,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ci98y5t4",
+   "summary": "2 failed in 0.25s"
+  },
+  {
+   "id": "t08",
+   "pr": 307,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    ".github/workflows/ci.yml"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 434.7,
+   "usd": 1.3419726000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-gl5y3h5s",
+   "summary": "1 failed in 0.13s"
+  },
+  {
+   "id": "t32",
+   "pr": 267,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "src/okl/semantic.py",
+    "tests/test_hybrid.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 85.3,
+   "usd": 0.14024290000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-k3tybre7",
+   "summary": "2 failed, 1 passed in 0.59s"
+  },
+  {
+   "id": "t20",
+   "pr": 35,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 122.8,
+   "usd": 0.7147799,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-hdl46ouz",
+   "summary": "6 failed in 0.25s"
+  },
+  {
+   "id": "t40",
+   "pr": 50,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 87.3,
+   "usd": 0.3013454,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-7w1k3yno",
+   "summary": "7 passed in 4.86s"
+  },
+  {
+   "id": "t31",
+   "pr": 256,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/probe_rephrase.py",
+    "tests/test_probe_rephrase.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 284.7,
+   "usd": 1.082186,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3m6yt49h",
+   "summary": "3 failed in 0.42s"
+  },
+  {
+   "id": "t36",
+   "pr": 309,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 150.2,
+   "usd": 0.0760128,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-iaosgk8e",
+   "summary": "4 failed in 0.22s"
+  },
+  {
+   "id": "t31",
+   "pr": 256,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 22.6,
+   "usd": 0.10100140000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-b2fzl37g",
+   "summary": "2 failed, 1 passed in 0.42s"
+  },
+  {
+   "id": "t33",
+   "pr": 275,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 26.9,
+   "usd": 0.0721515,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-igrylhcd",
+   "summary": "2 failed, 1 passed in 0.49s"
+  },
+  {
+   "id": "t40",
+   "pr": 50,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 76.6,
+   "usd": 0.13224650000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-rp2f8a0w",
+   "summary": "7 failed in 7.43s"
+  },
+  {
+   "id": "t29",
+   "pr": 387,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "src/okl/review.py",
+    "tests/test_seed_renames.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 470.4,
+   "usd": 0.7575561000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-f1hzdrk5",
+   "summary": "2 failed, 2 passed in 1.55s"
+  },
+  {
+   "id": "t07",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/drift.py",
+    "tests/test_docs.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 9,
+   "right_checked": false,
+   "seconds": 325.4,
+   "usd": 1.2424766,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ksdp24e4",
+   "summary": "2 failed in 0.52s"
+  },
+  {
+   "id": "t07",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 117.1,
+   "usd": 0.0313844,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-finttjzw",
+   "summary": "2 failed in 0.59s"
+  },
+  {
+   "id": "t37",
+   "pr": 312,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "docs/THESIS.md",
+    "evals/drift_mutate.py",
+    "evals/drift_replay.py"
+   ],
+   "harm": [],
+   "sub_agents": 11,
+   "right_checked": false,
+   "seconds": 341.2,
+   "usd": 1.1173642,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-tymygdkf",
+   "summary": "2 failed in 0.16s"
+  },
+  {
+   "id": "t17",
+   "pr": 262,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 3,
+   "right_checked": true,
+   "seconds": 57.7,
+   "usd": 0.4313455,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-x1ioh5u3",
+   "summary": "2 passed in 0.10s"
+  },
+  {
+   "id": "t03",
+   "pr": 37,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "src/okl/drift.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 275.4,
+   "usd": 0.9357366,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-33nf0sun",
+   "summary": "4 passed in 0.62s"
+  },
+  {
+   "id": "t15",
+   "pr": 269,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 139.8,
+   "usd": 0.0906078,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-1ns53p3i",
+   "summary": "1 passed in 0.34s"
+  },
+  {
+   "id": "t43",
+   "pr": 325,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/warm.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 56.9,
+   "usd": 0.1386871,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-eahpkljc",
+   "summary": "5 passed in 8.28s"
+  },
+  {
+   "id": "t15",
+   "pr": 269,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 140.7,
+   "usd": 0.11643889999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-pyt8q8yb",
+   "summary": "1 passed in 0.38s"
+  },
+  {
+   "id": "t14",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 113.0,
+   "usd": 0.15469339999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-diuhqywk",
+   "summary": "3 failed, 1 passed in 1.26s"
+  },
+  {
+   "id": "t46",
+   "pr": 339,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 130.7,
+   "usd": 0.0678458,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-vrs242h8",
+   "summary": "3 failed, 2 passed in 7.27s"
+  },
+  {
+   "id": "t05",
+   "pr": 259,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md",
+    "README.md",
+    "docs/okl-retrieval-pipeline.svg",
+    "docs/render_pipeline_diagram.py",
+    "src/okl/core.py",
+    "tests/test_okl.py",
+    "tests/test_relevance_floor.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 403.3,
+   "usd": 0.7636846000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-qbyviifa",
+   "summary": "1 failed, 2 passed in 0.11s"
+  },
+  {
+   "id": "t29",
+   "pr": 387,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 183.3,
+   "usd": 0.9195417999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-5mn0x932",
+   "summary": "2 failed, 2 passed in 1.63s"
+  },
+  {
+   "id": "t38",
+   "pr": 326,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 141.6,
+   "usd": 0.0705535,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-g2_bg94e",
+   "summary": "2 failed, 1 passed in 0.35s"
+  },
+  {
+   "id": "t32",
+   "pr": 267,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "evals/hybrid_grid.py",
+    "src/okl/core.py",
+    "src/okl/service.py",
+    "tests/test_hybrid.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 479.1,
+   "usd": 0.9225916999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-tcda_lxd",
+   "summary": "3 passed in 0.48s"
+  },
+  {
+   "id": "t22",
+   "pr": 135,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 130.2,
+   "usd": 0.0962779,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-ksv8v33w",
+   "summary": "1 failed in 0.25s"
+  },
+  {
+   "id": "t39",
+   "pr": 267,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "src/okl/semantic.py",
+    "src/okl/service.py",
+    "tests/test_hybrid.py"
+   ],
+   "harm": [],
+   "sub_agents": 8,
+   "right_checked": false,
+   "seconds": 440.8,
+   "usd": 0.9638432999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-4b7z11rq",
+   "summary": "1 failed, 2 passed in 3.83s"
+  },
+  {
+   "id": "t45",
+   "pr": 362,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 202.9,
+   "usd": 0.0867092,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-1783snri",
+   "summary": "3 failed in 0.39s"
+  },
+  {
+   "id": "t04",
+   "pr": 380,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "docs/COMMANDS.md",
+    "src/okl/cli/health.py",
+    "src/okl/cli/parser.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 267.1,
+   "usd": 1.1382606,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-nn_7klom",
+   "summary": "2 passed in 1.50s"
+  },
+  {
+   "id": "t31",
+   "pr": 256,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 27.0,
+   "usd": 0.09282180000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-0c90e0yv",
+   "summary": "2 failed, 1 passed in 0.56s"
+  },
+  {
+   "id": "t41",
+   "pr": 373,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 104.5,
+   "usd": 0.1541866,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-lkg089jh",
+   "summary": "2 failed, 3 passed in 1.80s"
+  },
+  {
+   "id": "t13",
+   "pr": 161,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/service.py",
+    "tests/test_addressable_lessons.py"
+   ],
+   "harm": [],
+   "sub_agents": 5,
+   "right_checked": true,
+   "seconds": 400.1,
+   "usd": 0.5148993999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-rddm6cso",
+   "summary": "1 failed, 1 passed in 0.23s"
+  },
+  {
+   "id": "t37",
+   "pr": 312,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "docs/THESIS.md",
+    "tests/test_docs.py"
+   ],
+   "harm": [],
+   "sub_agents": 9,
+   "right_checked": false,
+   "seconds": 480.3,
+   "usd": 1.2585833999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-dyiokf35",
+   "summary": "2 failed in 0.21s"
+  },
+  {
+   "id": "t18",
+   "pr": 50,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 49.5,
+   "usd": 0.11988610000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-a8_cvxe1",
+   "summary": "1 passed in 1.14s"
+  },
+  {
+   "id": "t20",
+   "pr": 35,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 39.7,
+   "usd": 0.08380959999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-60omyecu",
+   "summary": "6 failed in 0.29s"
+  },
+  {
+   "id": "t04",
+   "pr": 380,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/health.py",
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 9,
+   "right_checked": true,
+   "seconds": 291.8,
+   "usd": 1.0965762999999997,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-4985yb53",
+   "summary": "2 passed in 1.12s"
+  },
+  {
+   "id": "t37",
+   "pr": 312,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 88.5,
+   "usd": 0.0650121,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-xxhrzs7r",
+   "summary": "2 failed in 0.19s"
+  },
+  {
+   "id": "t42",
+   "pr": 300,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 2,
+   "right_checked": false,
+   "seconds": 276.8,
+   "usd": 0.47485340000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-cwzj8x2a",
+   "summary": "1 failed in 0.72s"
+  },
+  {
+   "id": "t42",
+   "pr": 300,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 187.2,
+   "usd": 0.1687603,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-lntgbs0g",
+   "summary": "1 failed in 0.73s"
+  },
+  {
+   "id": "t28",
+   "pr": 387,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "src/okl/service.py",
+    "tests/test_seed_renames.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 533.4,
+   "usd": 1.1043877,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-bk2s847r",
+   "summary": "3 failed in 0.32s"
+  },
+  {
+   "id": "t38",
+   "pr": 326,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 170.6,
+   "usd": 0.0728258,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-x3web7li",
+   "summary": "2 failed, 1 passed in 0.40s"
+  },
+  {
+   "id": "t29",
+   "pr": 387,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 188.8,
+   "usd": 0.1091231,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-f69c33or",
+   "summary": "2 failed, 2 passed in 1.74s"
+  },
+  {
+   "id": "t35",
+   "pr": 308,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_bench_stemming.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 47.3,
+   "usd": 0.12033469999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-8ayg1nuw",
+   "summary": "2 failed, 1 passed in 1.74s"
+  },
+  {
+   "id": "t32",
+   "pr": 267,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/semantic.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 172.4,
+   "usd": 0.0636619,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-fllkcumn",
+   "summary": "2 failed, 1 passed in 0.56s"
+  },
+  {
+   "id": "t12",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/lessons.py",
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 142.1,
+   "usd": 0.4468063000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-p8q78t6v",
+   "summary": "1 passed in 1.11s"
+  },
+  {
+   "id": "t12",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/lessons.py",
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 5,
+   "right_checked": true,
+   "seconds": 312.1,
+   "usd": 0.7901855999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-00_7jczy",
+   "summary": "1 passed in 1.39s"
+  },
+  {
+   "id": "t06",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/drift.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 6,
+   "right_checked": false,
+   "seconds": 439.5,
+   "usd": 0.9668287000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-t_e8vu5w",
+   "summary": "2 failed, 1 passed in 0.08s"
+  },
+  {
+   "id": "t33",
+   "pr": 275,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 32.9,
+   "usd": 0.0993311,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-8n9u5rwc",
+   "summary": "2 failed, 1 passed in 0.50s"
+  },
+  {
+   "id": "t34",
+   "pr": 269,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 159.6,
+   "usd": 0.20528969999999994,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-38mok2yn",
+   "summary": "2 failed, 2 passed in 0.75s"
+  },
+  {
+   "id": "t21",
+   "pr": 112,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 108.6,
+   "usd": 0.1225762,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-mysp9z4y",
+   "summary": "4 failed, 2 passed in 1.29s"
+  },
+  {
+   "id": "t28",
+   "pr": 387,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 159.6,
+   "usd": 0.0976796,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6zfaxib4",
+   "summary": "3 failed in 0.28s"
+  },
+  {
+   "id": "t10",
+   "pr": 34,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 39.6,
+   "usd": 0.08299820000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-5n3oti_p",
+   "summary": "1 failed, 6 passed in 0.13s"
+  },
+  {
+   "id": "t06",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/drift.py",
+    "tests/test_okl.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 531.0,
+   "usd": 1.2655960000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-n9cxtpzd",
+   "summary": "2 failed, 1 passed in 0.08s"
+  },
+  {
+   "id": "t25",
+   "pr": 266,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 169.0,
+   "usd": 0.03779009999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-wyys4qgr",
+   "summary": "2 failed in 3.43s"
+  },
+  {
+   "id": "t30",
+   "pr": 380,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/health.py",
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 533.7,
+   "usd": 1.4409864,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-c9lpy0a9",
+   "summary": "2 failed in 1.78s"
+  },
+  {
+   "id": "t19",
+   "pr": 30,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 47.3,
+   "usd": 0.0857802,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-mhrwfz2g",
+   "summary": "6 failed in 1.06s"
+  },
+  {
+   "id": "t35",
+   "pr": 308,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "evals/bench/v2.py",
+    "tests/test_bench_stem.py"
+   ],
+   "harm": [],
+   "sub_agents": 11,
+   "right_checked": false,
+   "seconds": 277.4,
+   "usd": 1.0404247,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-05nqv8gu",
+   "summary": "2 failed, 1 passed in 1.71s"
+  },
+  {
+   "id": "t14",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 225.5,
+   "usd": 0.1285732,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-bthjjz5i",
+   "summary": "3 failed, 1 passed in 1.10s"
+  },
+  {
+   "id": "t18",
+   "pr": 50,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 300.9,
+   "usd": 1.1097168999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-xywx5wme",
+   "summary": "1 passed in 1.21s"
+  },
+  {
+   "id": "t18",
+   "pr": 50,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 277.4,
+   "usd": 1.0390309999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-fbvg5mio",
+   "summary": "1 passed in 1.14s"
+  },
+  {
+   "id": "t07",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "src/okl/drift.py",
+    "tests/test_okl.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 7,
+   "right_checked": true,
+   "seconds": 566.3,
+   "usd": 1.1807753000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-p8ke8uqr",
+   "summary": "2 passed in 0.59s"
+  },
+  {
+   "id": "t06",
+   "pr": 163,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 116.0,
+   "usd": 0.0331517,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-uzzcw06m",
+   "summary": "2 failed, 1 passed in 0.07s"
+  },
+  {
+   "id": "t38",
+   "pr": 326,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 236.4,
+   "usd": 0.9471820999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-71kp_h77",
+   "summary": "2 failed, 1 passed in 0.39s"
+  },
+  {
+   "id": "t43",
+   "pr": 325,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/warm.py",
+    "src/okl/warm.py",
+    "tests/test_warm.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 249.4,
+   "usd": 0.8062270999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-7de4ent_",
+   "summary": "5 passed in 8.23s"
+  },
+  {
+   "id": "t14",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/install.py",
+    "src/okl/coexist.py",
+    "src/okl/scaffold_cmd.py",
+    "tests/test_check_paths.py",
+    "tests/test_scaffold.py"
+   ],
+   "harm": [],
+   "sub_agents": 5,
+   "right_checked": true,
+   "seconds": 722.0,
+   "usd": 1.4708602999999996,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-z2fehl5p",
+   "summary": "3 failed, 1 passed in 1.02s"
+  },
+  {
+   "id": "t23",
+   "pr": 163,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/core.py",
+    "tests/test_docs.py",
+    "tests/test_retire.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 500.9,
+   "usd": 1.3498647000000004,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-5vm3ycy6",
+   "summary": "7 passed in 1.65s"
+  },
+  {
+   "id": "t05",
+   "pr": 259,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "README.md",
+    "docs/render_pipeline_diagram.py",
+    "src/okl/core.py",
+    "tests/test_relevance_floor.py"
+   ],
+   "harm": [],
+   "sub_agents": 4,
+   "right_checked": true,
+   "seconds": 372.9,
+   "usd": 0.5139623000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-o5wwsxag",
+   "summary": "1 failed, 2 passed in 0.11s"
+  },
+  {
+   "id": "t41",
+   "pr": 373,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 68.2,
+   "usd": 0.0682158,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3s157qzp",
+   "summary": "2 failed, 3 passed in 1.63s"
+  },
+  {
+   "id": "t24",
+   "pr": 266,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 295.1,
+   "usd": 0.0695741,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-1u6m_51m",
+   "summary": "3 failed, 3 passed in 0.27s"
+  },
+  {
+   "id": "t20",
+   "pr": 35,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 13,
+   "right_checked": false,
+   "seconds": 239.6,
+   "usd": 0.8087264999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-7s45ffz2",
+   "summary": "6 failed in 0.26s"
+  },
+  {
+   "id": "t02",
+   "pr": 383,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 186.1,
+   "usd": 0.0837427,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-yghesrg1",
+   "summary": "2 failed, 1 passed in 0.32s"
+  },
+  {
+   "id": "t44",
+   "pr": 383,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 35.1,
+   "usd": 0.11728299999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-bxvmy81b",
+   "summary": "4 failed, 4 passed in 0.90s"
+  },
+  {
+   "id": "t24",
+   "pr": 266,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py",
+    "tests/test_aliases.py",
+    "tests/test_docs.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": false,
+   "seconds": 389.7,
+   "usd": 1.0960832,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-v20onx1q",
+   "summary": "1 failed, 5 passed in 0.34s"
+  },
+  {
+   "id": "t17",
+   "pr": 262,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 13.7,
+   "usd": 0.0588358,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-nt8emg7c",
+   "summary": "2 passed in 0.12s"
+  },
+  {
+   "id": "t26",
+   "pr": 299,
+   "set": "457",
+   "arm": "none",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 133.0,
+   "usd": 0.0848222,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-9cz9y80o",
+   "summary": "4 failed, 2 passed in 0.27s"
+  },
+  {
+   "id": "t26",
+   "pr": 299,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/cli/parser.py",
+    "src/okl/client.py",
+    "src/okl/decide.py",
+    "tests/test_triggers.py"
+   ],
+   "harm": [],
+   "sub_agents": 6,
+   "right_checked": false,
+   "seconds": 311.6,
+   "usd": 1.0246123999999999,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3qsjgetq",
+   "summary": "4 failed, 2 passed in 0.28s"
+  },
+  {
+   "id": "t21",
+   "pr": 112,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 99.4,
+   "usd": 0.0706229,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-9p8ovc26",
+   "summary": "4 failed, 2 passed in 1.28s"
+  },
+  {
+   "id": "t12",
+   "pr": 363,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 263.2,
+   "usd": 0.12303840000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-9cq2fu9k",
+   "summary": "1 failed in 1.03s"
+  },
+  {
+   "id": "t32",
+   "pr": 267,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "docs/WHERE-THIS-SITS.md",
+    "src/okl/core.py",
+    "src/okl/service.py",
+    "tests/test_hybrid.py"
+   ],
+   "harm": [],
+   "sub_agents": 8,
+   "right_checked": false,
+   "seconds": 373.6,
+   "usd": 0.8299637,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-wlzmqahz",
+   "summary": "2 failed, 1 passed in 0.56s"
+  },
+  {
+   "id": "t41",
+   "pr": 373,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 76.6,
+   "usd": 0.0797551,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-iw8mk5w7",
+   "summary": "2 failed, 3 passed in 1.49s"
+  },
+  {
+   "id": "t13",
+   "pr": 161,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 141.1,
+   "usd": 0.0549955,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-hfnnsrb1",
+   "summary": "2 failed in 0.17s"
+  },
+  {
+   "id": "t27",
+   "pr": 299,
+   "set": "457",
+   "arm": "review",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 5,
+   "right_checked": false,
+   "seconds": 205.6,
+   "usd": 0.47504380000000007,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-aaehhgsd",
+   "summary": "2 failed in 0.24s"
+  },
+  {
+   "id": "t48",
+   "pr": 77,
+   "set": "457",
+   "arm": "review",
+   "rep": 1,
+   "passed": true,
+   "grader_exit": 0,
+   "edited": true,
+   "changed": [
+    "src/okl/cli.py",
+    "tests/test_okl.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 479.9,
+   "usd": 1.3887388000000003,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-r0bksag9",
+   "summary": "3 passed in 0.30s"
+  },
+  {
+   "id": "t42",
+   "pr": 300,
+   "set": "457",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": false,
+   "changed": [],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 164.0,
+   "usd": 0.1683149,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-p_g8uspn",
+   "summary": "1 failed in 0.80s"
+  },
+  {
+   "id": "t09",
+   "pr": 362,
+   "set": "4bg",
+   "arm": "review",
+   "rep": 1,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "CHANGELOG.md",
+    "docs/COMMANDS.md",
+    "src/okl/client.py",
+    "tests/test_check_paths.py"
+   ],
+   "harm": [],
+   "sub_agents": 10,
+   "right_checked": true,
+   "seconds": 368.1,
+   "usd": 0.8638872999999997,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-wa2dml07",
+   "summary": "2 failed in 0.18s"
+  },
+  {
+   "id": "t09",
+   "pr": 362,
+   "set": "4bg",
+   "arm": "none",
+   "rep": 0,
+   "passed": false,
+   "grader_exit": 1,
+   "edited": true,
+   "changed": [
+    "src/okl/client.py"
+   ],
+   "harm": [],
+   "sub_agents": 0,
+   "right_checked": false,
+   "seconds": 234.0,
+   "usd": 0.16241119999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-52ymzhy2",
+   "summary": "2 failed in 0.17s"
+  }
+ ],
+ "okl_commit_at_start": "6cb22b8",
+ "okl_commit": "6cb22b8",
+ "model_env": "sandbox.clean_env (#446)"
+}

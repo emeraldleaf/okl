@@ -1,6 +1,7 @@
 # Plan: making the review after writing earn its default
 
-- **Status:** In progress, started 2026-11-15. Piece 3 is built in #464, and is true once that pull request merges.
+- **Status:** In progress, started 2026-11-15. Pieces 2 to 4 are done (piece 3 in #468; piece 4's set in #477,
+  and the review against none on it in REPORT §4bj); piece 1 is not done, by my decision.
 - **Follows:** [The review after writing is on by default](2026-11-15-review-after-writing-on-by-default.md),
   which turned it on by decision while it missed both of its measured bars. This plan is the work
   that decides whether that decision holds, and how the review gets to the result it shows when the
@@ -15,7 +16,7 @@ Four pieces of work, in this order:
 | 1 | Settle the answer key: a person labels the key's pairs blind | not done: I decided not to label them (2026-11-15), so the key stays unvalidated |
 | 2 | Run the review's checks on the model it was measured with | done in #463: Sonnet, in Claude Code |
 | 3 | Log what each review does in real use, and report it | done in #468, released in 0.18.0 |
-| 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); no run on them yet |
+| 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); the review against none ran on them: a gain of 0.24, just under the bar of 0.25, and 0.15 where the lesson came before the change (REPORT §4bj) |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
 question only, worth testing once piece 4 makes a test decisive.

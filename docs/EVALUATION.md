@@ -208,7 +208,7 @@ before the code merged.
 | plan | the agent's statement of the task before it writes code | the agent can ask (`okl_check`); nothing yet makes it |
 | file | the lessons governing a file as it is read | yes, `okl check --path` (§4aj) |
 | change | the code as it is written | opt-in: `okl on-edit` runs every approved lesson's check after any edit in the repo, those governing the edited file first (#441, #450); not yet measured as a channel |
-| pull request | lessons against the diff, judged one by one | on by default since 0.17.0, by decision: the review after writing (`okl check --change`) asks ten the agent picks, each in a fresh context; reach measured on real PRs (§4ao–§4aq), and end to end 0.2 on five tasks (§4az) |
+| pull request | lessons against the diff, judged one by one | on by default since 0.17.0, by decision: the review after writing (`okl check --change`) asks ten the agent picks, each in a fresh context; reach measured on real PRs (§4ao–§4aq), and end to end a gain of 0.24 over no review on 43 graded tasks, just under its bar of 0.25, and 0.15 where the lesson came before the change (§4bj) |
 
 ## Where each evaluation runs
 
@@ -243,7 +243,9 @@ before the code merged.
    each records a lesson.
 7. **Making the review after writing earn its default.** It is on by default by decision since
    0.17.0. The work that decides whether that holds: a person's labels on the answer key, the
-   review's model, a log of what it does in real use, and a larger graded set. See
+   review's model, a log of what it does in real use, and a larger graded set. On that set it
+   gained 0.24 over no review, just under its bar (REPORT §4bj); what remains is other
+   repositories (#413) and a better pick. See
    [the plan](decisions/2026-11-15-making-the-review-earn-its-default.md).
 
 ## Related

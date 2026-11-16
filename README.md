@@ -564,10 +564,12 @@ Your store and your tasks will differ.
 
 **Per session, the review after writing** (on by default since 0.17.0): in Claude Code, before the
 question below, the Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
-sub-agent of its own, on Sonnet, the model it was measured with. It is the largest cost per session. On five past bugs in this repository a
-session with the review cost $0.73 API-priced on average and a median of 214 seconds, against $0.11
-and 160 seconds with no review, about 6.9 times the cost
-([REPORT §4az](evals/REPORT.md), receipt `review-e2e-20261111-1543.json`).
+sub-agent of its own, on Sonnet, the model it was measured with. It is the largest cost per session. On 43 graded past bugs in this repository a
+session with the review cost $0.86 API-priced on average and a median of 281 seconds, against $0.10
+and 108 seconds with no review, about 8.6 times the cost. It passed 0.27 of its sessions against 0.02
+with no review, a gain of 0.24 (95% interval 0.14 to 0.36), just under the 0.25 set in advance, and 0.15
+on the 31 bugs whose lesson was written before the change
+([REPORT §4bj](evals/REPORT.md), receipt `review-graded-20261116-0254.json`).
 `okl init --no-review-after-writing` turns it off; `OKL_REVIEW_AFTER_WRITING=0` skips it for one session.
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It

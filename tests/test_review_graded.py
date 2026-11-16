@@ -192,3 +192,59 @@ def test_the_section_quotes_its_check_receipt():
     assert name in text and f"all {receipt['tasks']} read as checked" in text
     assert receipt["read_as_checked"] == receipt["tasks"] == 48 and receipt["wrong"] == []
     assert not str(receipt["okl_commit"]).endswith("+dirty")
+
+
+RESULT = "review-graded-20261116-0254.json"
+
+
+def _result() -> dict:
+    return json.loads((REPO / "evals" / "results" / RESULT).read_text())
+
+
+def test_the_result_reads_its_receipt():
+    """The table, the contrast and the reading in §4bj's result are the committed receipt's, from clean code
+    that did not move during the run."""
+    text, r = " ".join(_section().split()), _result()
+    assert RESULT in text and r["sessions"] == r["of"] == 192
+    assert r["okl_commit"] == r["okl_commit_at_start"] and not str(r["okl_commit"]).endswith("+dirty")
+    assert f"at {r['okl_commit']}, whose code the sessions ran" in text
+    assert r["reading"] == "helps, under the bar" and "**Result (2026-11-16): it helps, under the bar.**" in text
+    for arm in graded.ARMS:
+        row = (f"| {arm} | {r['pass_rate'][arm]} | ", f"| {r['edited'][arm]} of {r['done_per_arm'][arm]} | "
+               f"${r['usd_per_session'][arm]:.3f} | {round(r['median_seconds'][arm])} s |")
+        assert all(part in text for part in row), arm
+    c = r["contrast"]["against"]
+    assert f"the review passed {c['mean']} more often than no review, with a 95% interval of {c['ci95'][0]} to " \
+           f"{c['ci95'][1]}" in text
+    assert f"the interval is {c['ci95_by_change'][0]} to {c['ci95_by_change'][1]}" in text
+    assert f"({r['review_sessions_that_started_a_sub_agent']:.1%}) started a sub-agent, a median of " \
+           f"{r['sub_agents_median']}" in text
+    out, ins = r["not_read"]["out_of_sample"], r["not_read"]["in_sample"]
+    assert f"a gain of {out['mean']} ({out['ci95'][0]} to {out['ci95'][1]})" in text
+    assert f"(gain {ins['mean']}, 95% interval {ins['ci95'][0]} to {ins['ci95'][1]})" in text
+    assert "0.432) and 7 of the 49" in text and r["pass_rate_when_handed_and_not"] == {"handed": 0.432,
+                                                                                        "not_handed": 0.143}
+    assert r["controls_broken"] == {"none": 0, "review": 0} and r["sessions_with_harm"] == {"none": 0, "review": 0}
+    assert f"${r['api_priced_usd']} in all" in text
+    ratio = r["usd_per_session"]["review"] / r["usd_per_session"]["none"]
+    assert f"{ratio:.1f} times one without" in text
+
+
+def _two(x: float) -> str:
+    """A receipt's three-place figure to two places, half up, as a reader rounds it: 0.145 is 0.15
+    (the exact out-of-sample gain is 9/62, 0.1452), where float formatting gives 0.14."""
+    from decimal import ROUND_HALF_UP, Decimal
+    return str(Decimal(str(x)).quantize(Decimal("0.01"), ROUND_HALF_UP))
+
+
+def test_the_docs_quote_the_measured_gain_as_the_receipt_has_it():
+    """The pre-registered follow-up: the docs say the gain was measured, in the receipt's figures, rounded."""
+    r = _result()
+    c, out = r["contrast"]["against"], r["not_read"]["out_of_sample"]
+    gain = f"a gain of {_two(c['mean'])} (95% interval {_two(c['ci95'][0])} to {_two(c['ci95'][1])})"
+    passed = f"passed {_two(r['pass_rate']['review'])} of its sessions against {_two(r['pass_rate']['none'])}"
+    for doc in ("README.md", "docs/COSTS-AND-KNOBS.md"):
+        flat = " ".join((REPO / doc).read_text().split())
+        assert gain in flat and passed in flat and RESULT in flat, doc
+        assert f"{_two(out['mean'])} on the 31" in flat or f"the gain was {_two(out['mean'])}" in flat, doc
+        assert f"${_two(r['usd_per_session']['review'])} API-priced" in flat, doc

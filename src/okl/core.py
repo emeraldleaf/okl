@@ -1574,7 +1574,7 @@ def review_menu(nodes: Iterable[Node], repo: str, interests: list[str] | None) -
     order, which says nothing about relevance: what the review after writing picks from. In
     REPORT §4at's development half, a model given an explanation of a change and this list
     found more of the lessons the change broke than the search did. On other repositories it is
-    not yet measured; the review is on by default by decision, not by that measure. The set a briefing can show: superseded and
+    not yet measured; on this one's 43 graded defects the review gained 0.24 over none (§4bj). The set a briefing can show: superseded and
     obsolete lessons are left out, and a retracted one stays in as what to avoid."""
     scope = f"repo:{repo}"
     return [_also_entry(n) for n in sorted(nodes, key=lambda n: n.id)

@@ -167,8 +167,8 @@ def review_setting(env: str | None, configured: Any, set_up: bool = True) -> boo
     §4at): OKL_REVIEW_AFTER_WRITING wins over the config's `review_after_writing`, read as warm
     is (on/1/true or off/0/false); unset is on. On by default since 0.17.0, by the maintainer's
     decision rather than a measured bar: the maintainer judges a missed lesson to cost more than
-    the review's sessions; in its pilot (§4az) it fixed some past defects where no review fixed
-    none, short of the bar it set for a default. Unset is on only where the repo was set up for okl (`set_up`: a
+    the review's sessions. On 43 graded past defects (§4bj) it gained 0.24 over no review, just
+    under the 0.25 bar it was read against. Unset is on only where the repo was set up for okl (`set_up`: a
     .okl/config.json found): a session with only a store URL exported, in a repo that never ran
     `okl init`, did not opt in to anything (review of 0.17.0). Any other value is refused: a mistyped
     "of" silently leaving it on would look the same as on."""
