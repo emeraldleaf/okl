@@ -1,0 +1,112 @@
+{
+ "about": "REPORT \u00a74bk: how plainly each task's right lesson fits the defect the task file states, for the 20 tasks whose right lesson reached no sub-agent in either \u00a74bj session, and the six whose sub-agent called the change not broken in both sessions and both failed. plain: the lesson's rule is the defect's mechanism; moderate: the mechanism matches but on another surface than the lesson's wording names; arguable or loose: as each line says.",
+ "classifier": "an agent (Claude), reading each lesson as the review showed it beside the task file's one-line defect, after the run was scored; the architecture review of #480 read the same pairs and reached about 12 plain and 6 to 7 moderate among the 20",
+ "never_handed": {
+  "t01": [
+   "plain",
+   "every caller of Client.check that briefs no agent asks unlogged; intake's caller logged a briefing per finding"
+  ],
+  "t06": [
+   "plain",
+   "filtering after a fixed fetch shrinks the window; retired lessons used up the window"
+  ],
+  "t08": [
+   "plain",
+   "a comment asserting a safety property is not the property; a workflow comment claimed an allow-list it did not have"
+  ],
+  "t10": [
+   "plain",
+   "exit 2 means did not run; the CI drift step turned exit 2 into a green warning"
+  ],
+  "t11": [
+   "moderate",
+   "a failure after the request was sent is not 'not written'; a retire retry appended a second row"
+  ],
+  "t19": [
+   "plain",
+   "stored data must not reach a shell unquoted; a printed seed command left the pack's path unquoted"
+  ],
+  "t20": [
+   "moderate",
+   "an on-demand surface enforces nothing; a report counted a Rule nothing runs as arming a defect"
+  ],
+  "t21": [
+   "plain",
+   "exit codes are the CLI's API; doctor ended in a traceback on a malformed config"
+  ],
+  "t24": [
+   "plain",
+   "a remote path tested only by posting to the service misses the client; the service refused the client's list of aliases"
+  ],
+  "t25": [
+   "moderate",
+   "a suite reading the storage variable writes into the real store; an eval script's Client() followed the service URL"
+  ],
+  "t26": [
+   "plain",
+   "filtering after a fixed fetch shrinks the window; the second tier dropped shown lessons after taking its limit"
+  ],
+  "t27": [
+   "moderate",
+   "a caller must survive an older counterpart; the client sent a decision an older service refuses"
+  ],
+  "t31": [
+   "plain",
+   "provenance references rot unless read at startup; a probe took lesson ids without checking the store holds them"
+  ],
+  "t35": [
+   "moderate",
+   "a suite reading the storage variable writes into the real store; a bench corpus seeded through a default Client()"
+  ],
+  "t37": [
+   "plain",
+   "a step reading a model's reply must find the result anywhere in it; a greedy match spanned two objects"
+  ],
+  "t38": [
+   "plain",
+   "an empty result and a mistyped filter must not look alike; an unresolvable revision returned no lessons"
+  ],
+  "t39": [
+   "moderate",
+   "a suite reading the storage variable writes into the real store; a diagram script's seed followed the checkout's service URL"
+  ],
+  "t41": [
+   "plain",
+   "a fail-closed check must hold at every entry point; the uvicorn entry point skipped serve's token check"
+  ],
+  "t44": [
+   "moderate",
+   "a check that greps for expected strings proves nothing else; a name check looked only at known hook events"
+  ],
+  "t47": [
+   "moderate",
+   "zero inspected must read as did not run; an unreadable store read as no lesson covering any finding"
+  ]
+ },
+ "dismissed_both_failed": {
+  "t14": [
+   "loose",
+   "the lesson is about an older CLI; the defect is a hook that stops at a CLI that cannot start"
+  ],
+  "t28": [
+   "arguable",
+   "a documented refusal must hold on every write path; record accepted a lesson replacing itself, which retire refuses, but that refusal was documented only in retire()'s docstring"
+  ],
+  "t29": [
+   "plain",
+   "a command that lists lessons uses the set a briefing can show; dedup compared superseded copies"
+  ],
+  "t30": [
+   "plain",
+   "exit codes are the CLI's API; doctor ended in a traceback on a store error it did not catch"
+  ],
+  "t33": [
+   "plain",
+   "an experiment cannot measure a filter it disables; a grid printed when the semantic arm fell back to full text"
+  ],
+  "t36": [
+   "plain",
+   "a derived index migrates on open; a failed rebuild was committed, leaving an empty index"
+  ]
+ }
+}
