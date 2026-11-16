@@ -1,6 +1,6 @@
 {
  "about": "REPORT \u00a74bk: what the sub-agent handed \u00a74bj's right lesson concluded, for each review session on a broken task that handed it over. broken: it said the change breaks the lesson, wholly or in part; not_broken: it said the change does not. Read from each sub-agent's final message.",
- "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict in its first sentence",
+ "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start, and the seven that said the change broke the lesson in part (t04 review0 and review1, t09 review0 and review1, t32 review1, t46 review0 and review1) are classed broken",
  "sessions": {
   "t02 review0": "broken",
   "t02 review1": "broken",
