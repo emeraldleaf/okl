@@ -249,6 +249,22 @@ def _paired(a: dict[str, float], b: dict[str, float], seed: str) -> dict[str, An
             "ci95": rt.interval(diffs, 0.95, seed) if diffs else None}
 
 
+def _joined(reach: dict[str, dict[str, float]], said: dict[tuple[str, str], dict[str, float]]) -> dict[str, dict]:
+    """Each pipeline's per-task catch: picked, then flagged by its checker (both, for a cheap screen and a
+    confirming check), over the tasks where every part answered."""
+    pipelines = {"pick 10, sonnet-ask (today)": ("n10", ("sonnet-ask",)),
+                 "pick 10, sonnet-paths": ("n10", ("sonnet-paths",)),
+                 "pick 30, sonnet-paths": ("n30", ("sonnet-paths",)),
+                 "pick 30, haiku-paths": ("n30", ("haiku-paths",)),
+                 "pick 30, haiku-paths screen then sonnet-paths": ("n30", ("haiku-paths", "sonnet-paths"))}
+    out = {}
+    for name, (pick, checkers) in pipelines.items():
+        parts = [reach[pick], *(said[(c, "right")] for c in checkers)]
+        common = set.intersection(*(set(x) for x in parts))
+        out[name] = {i: float(all(x[i] for x in parts)) for i in sorted(common)}
+    return out
+
+
 def score(write: bool) -> int:
     """Reach per pick size, "breaks" per checker on the right lesson and the decoy, paired by task."""
     guard = run_guard.start()
@@ -273,6 +289,10 @@ def score(write: bool) -> int:
                                                "4bl-h"),
         "haiku_minus_sonnet_on_decoy": _paired(said[("haiku-paths", "decoy")], said[("sonnet-paths", "decoy")],
                                                "4bl-hd"),
+        # Per task: the pick reaches the right lesson AND the checker says the change breaks it, the two
+        # stages of a review joined, so a wider pick gains only where its checker would flag what it adds.
+        "pick_then_check": {name: {"tasks": len(c), "rate": round(mean(c.values()), 3) if c else None}
+                            for name, c in _joined(reach, said).items()},
         "usd_per_call": {k: round(mean(r["usd"] for r in rs), 4) for k, rs in
                          {**{f"pick {v}": rs for v, rs in pick.items()},
                           **{f"check {v}": [r for (vv, _), rr in check.items() if vv == v for r in rr]
