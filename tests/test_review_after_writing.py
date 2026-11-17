@@ -293,6 +293,8 @@ def test_the_review_asks_each_lesson_on_its_own_in_a_fresh_context():
     steps = " ".join(" ".join(core.REVIEW_STEPS).split())
     assert "start a sub-agent for it" in steps and "one lesson each and one after another" in steps
     assert "does this change break this lesson?" in steps
+    # REPORT §4bl: listing every path the rule covers before answering found more of the right lessons
+    assert "to list every path the lesson's rule covers" in steps and "§4bl" in steps
     assert "If you cannot start a sub-agent" in steps and "say the review ran without fresh contexts" in steps
     assert "§4ay" in core.render_review({"repo": "r", "files": ["a.py"], "lessons": []})
 

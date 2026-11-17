@@ -569,7 +569,9 @@ session with the review cost $0.85 API-priced on average and a median of 281 sec
 and 108 seconds with no review, about 8.7 times the cost. It passed 0.267 of its sessions against 0.023
 with no review, a gain of 0.244 (95% interval 0.14 to 0.36), just under the 0.25 set in advance, with
 an interval that includes it, and 0.145 on the 31 bugs whose lesson was written before the change
-([REPORT §4bj](evals/REPORT.md), receipt `review-graded-20261116-0321.json`).
+([REPORT §4bj](evals/REPORT.md), receipt `review-graded-20261116-0321.json`). That measured the review's steps
+before 0.19.0, which asks each check to list every path the lesson's rule covers first: on single prompts that
+found the break 0.429 of the time against 0.279 ([REPORT §4bl](evals/REPORT.md)), not yet measured in sessions.
 `okl init --no-review-after-writing` turns it off; `OKL_REVIEW_AFTER_WRITING=0` skips it for one session.
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It

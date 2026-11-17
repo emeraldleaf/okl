@@ -166,7 +166,8 @@ okl check --change [BASE]
                      #   the changed code does, pick the ten lessons it most likely breaks, check
                      #   each in its own fresh sub-agent (on Sonnet in Claude Code, the model it was
                      #   measured with) with one question (does this change break
-                     #   it?), fix only what breaks one and run its tests again. okl calls no model;
+                     #   it?), asked to list every path the lesson's rule covers first,
+                     #   fix only what breaks one and run its tests again. okl calls no model;
                      #   the agent does the review. A step under measurement (REPORT §4at to §4bg). --format json for a script. --format hook
                      #   prints only the Stop hook's one-line note, unless `okl init
                      #   --no-review-after-writing` turned it off (OKL_REVIEW_AFTER_WRITING=1 or 0 for

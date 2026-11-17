@@ -1094,6 +1094,8 @@ OPEN_QUESTIONS = {
         "transfer-to-another-repository",
     ("docs/EVALUATION.md", "not yet measured as a channel"):
         "on-edit-as-a-reach-channel",
+    ("README.md", "found the break 0.429 of the time against 0.279 ([REPORT §4bl](evals/REPORT.md)), not yet measured in sessions"):
+        "path-question-in-review-sessions",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {
