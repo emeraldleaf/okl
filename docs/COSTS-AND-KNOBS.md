@@ -141,9 +141,15 @@ decides for one session.
 The cost is the list: every lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
 for 300 lessons, read once per session that changed something, plus the lessons the agent
 then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at
-random. Where the agent's tool shows long output as a preview with the rest in a saved file,
-as Claude Code does past about 30,000 characters, the list's first line tells the agent to
-read all of it. okl calls no model for this; the agent's own turns are the cost. Measured on
+random. A list longer than about 24,000 characters comes in pages, each short enough to
+arrive whole, and page 1 names the command for each further one (`okl check --change --page N
+--of <fingerprint>`; a page of a review whose lessons, or which of them govern a changed file,
+changed since page 1 is refused).
+Claude Code saves a command's output past about 30,000 characters by default to a file and shows
+the agent 2 KB of it. In 23 of 86 measured review sessions the list came back cut that way, and
+in 7 of the 49 that never handed the right lesson on, its line never reached the agent; all 7
+failed (REPORT §4bk). okl calls
+no model for this; the agent's own turns are the cost. Measured on
 20 of this repository's changes with 280 lessons in scope (REPORT §4au), one review took a
 median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
 $0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, kept it

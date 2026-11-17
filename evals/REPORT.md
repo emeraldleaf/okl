@@ -7449,6 +7449,10 @@ What it suggests, not tested:
 - 43 tasks from 33 changes, in one repository.
 - The in-sample tasks are counted with the rest.
 
+*Note, 2026-11-16:* #481 acts on the first suggestion. `okl check --change` now prints a list longer than about
+24,000 characters in pages, each short enough to arrive whole, and page 1 names the command for each further
+one. Whether that changes the review's pass rate is not measured.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

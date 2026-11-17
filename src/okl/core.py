@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import json
 import math
 import os
 import re
+import shlex
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field, replace
@@ -346,7 +348,6 @@ def unproven_watch(node_id: str) -> str:
     okl-drift.json (any verify or export writes one) is committed. Unsaid, that reads as okl breaking the build, and in one
     repo an agent cleared the lesson's files to get past it, dropping the watch it was for.
     The id is shell-quoted: `--id` is the caller's choice (CodeRabbit on #381)."""
-    import shlex
     return (f"it governs files and no check has passed, so drift reports it as never verified "
             f"wherever git finds a commit to those files (the pre-push gate at once, CI's once a "
             f"refreshed okl-drift.json is committed), until one passes: "
@@ -1643,6 +1644,127 @@ def render_review(result: dict[str, Any]) -> str:
     lines.append(f"### {'Every other' if first else 'Every'} lesson in scope ({len(rest)}), one line each")
     lines += rest
     return "\n".join(lines) + "\n"
+
+
+# The most characters one page of `okl check --change` holds. Claude Code saves a command's output past
+# about 30,000 characters to a file and shows the agent its first 2 KB: in 23 of §4bj's 86 review
+# sessions the list came back cut that way, and in 7 of the 49 that never handed the right lesson on,
+# its line never reached the agent; all 7 failed (REPORT §4bk). A page under the cap arrives whole.
+REVIEW_PAGE_CHARS = 24_000
+_CHANGED_CHARS = 3_000   # a paged review's `Changed:` line; past it, "and N more", the count in the title
+
+
+class ReviewPageError(Exception):
+    """A page the review does not have, or a page asked of a review that changed since page 1."""
+
+
+def review_fingerprint(result: dict[str, Any]) -> str:
+    """What a review's page breaks depend on: its lessons, and which of them govern a changed file
+    (they are listed first). Page 1 reserves room for the longest `Changed:` line, so the files
+    themselves move no break, and a page saved into the repo does not change the review. Page 1 hands
+    the fingerprint to each further page's command, and a page whose review differs is refused, since
+    its breaks would fall elsewhere and a lesson could land on no page the agent reads."""
+    key = [[e["id"] for e in result.get("lessons") or []], sorted(result.get("governing") or [])]
+    return hashlib.sha256(json.dumps(key).encode()).hexdigest()[:8]
+
+
+def _code(text: str) -> str:
+    """`text` as a markdown code span, with a longer fence when it holds a backtick (a legal branch name can)."""
+    return f"`` {text} ``" if "`" in text else f"`{text}`"
+
+
+def _packed(lines: list[str], first: int, rest: int) -> list[list[str]]:
+    """`lines` in order on pages, the first holding at most `first` characters and each later one `rest`,
+    newlines counted, never splitting a line (one longer than its page gets a page of its own)."""
+    pages: list[list[str]] = [[]]
+    size, cap = 0, first
+    for line in lines:
+        if pages[-1] and size + len(line) + 1 > cap:
+            pages.append([])
+            size, cap = 0, rest
+        pages[-1].append(line)
+        size += len(line) + 1
+    return pages
+
+
+def review_pages(result: dict[str, Any], command: str = "okl check --change") -> list[str]:
+    """`okl check --change` as the agent reads it: one page when the whole review fits in
+    REVIEW_PAGE_CHARS, exactly `render_review`; otherwise pages of at most that, page 1 with the steps
+    and the command for each further page (`command` plus `--page N --of <fingerprint>`, `command`
+    quoted for a shell by the caller), so no part reaches the agent as a preview with the rest in a
+    saved file (REPORT §4bk). The lessons and their order are `render_review`'s."""
+    whole = render_review(result)
+    if len(whole) <= REVIEW_PAGE_CHARS:
+        return [whole]
+    files = result.get("files") or []
+    lessons = result.get("lessons") or []
+    governed = set(result.get("governing") or [])
+    first = [_also_line(e) for e in lessons if e["id"] in governed]
+    rest = [_also_line(e) for e in lessons if e["id"] not in governed]
+    body: list[str] = ["> No lesson in this store applies to this repo, so there is nothing to check against."]
+    if lessons:
+        body = ([f"### Lessons that govern a file this change touched ({len(first)}): read each", *first, ""]
+                if first else [])
+        body += [f"### {'Every other' if first else 'Every'} lesson in scope ({len(rest)}), one line each", *rest]
+    shown, changed = [], "Changed: "
+    for f in files:
+        if len(changed) + len(f) + 40 > _CHANGED_CHARS:
+            break
+        shown.append(f)
+        changed = "Changed: " + ", ".join(shown)
+    if len(shown) < len(files):
+        changed += f", and {len(files) - len(shown)} more"
+    head = whole.splitlines()[0]
+    repo_head = head.split(" · ")[0]
+    steps = ["", "Before you finish, check the code you wrote against this repo's lessons (a step under "
+             "measurement, REPORT §4at to §4ay):", *[f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)],
+             "", changed, ""]
+    fp = review_fingerprint(result)
+    cmd = lambda n: f"{command} --page {n} --of {fp}"  # noqa: E731
+
+    def note(total: int) -> str:
+        if total == 1:
+            return (f"This review lists {len(lessons)} lesson(s), all on this page; the list of changed files "
+                    "is shortened to fit. Read all of it before you pick.")
+        more = _code(cmd(2)) if total == 2 else f"{_code(cmd(2))} through {_code(cmd(total))}, one after another"
+        return (f"This review lists {len(lessons)} lesson(s) on {total} pages, each short enough to arrive whole. "
+                f"This is page 1. Before you pick from the lessons below and on every further page, run {more}, "
+                "and read every page; if your tool shows only part of one, read the rest where it saved it.")
+
+    def foot(page: int, total: int) -> str:
+        return (f"End of page {page} of {total}. Next: {_code(cmd(page + 1))}." if page < total
+                else f"End of page {total} of {total}: that is every lesson. Now pick, and check each one.")
+
+    def page_head(page: int, total: int) -> str:
+        return f"{repo_head} · page {page} of {total}, the lessons continued"
+
+    size = lambda lines: sum(len(line) + 1 for line in lines)  # noqa: E731
+    widest = 99_999
+    # Page 1's room for lessons is sized for the longest Changed line and file count, not this one, so
+    # the breaks depend only on the lessons the fingerprint covers.
+    roomy = [*steps[:-2], "Changed: " + "x" * (_CHANGED_CHARS + 40), ""]
+    first_cap = REVIEW_PAGE_CHARS - size([head + " " * 12, "", note(widest), *roomy, "", foot(widest - 1, widest)])
+    rest_cap = REVIEW_PAGE_CHARS - size([page_head(widest, widest), "", "", foot(widest - 1, widest)])
+    packed = [p for p in _packed(body, first_cap, rest_cap) if p]
+    total = max(1, len(packed))
+    out = []
+    for n, lines in enumerate(packed or [[]], 1):
+        top = [head, "", note(total), *steps] if n == 1 else [page_head(n, total), ""]
+        out.append("\n".join([*top, *lines, "", foot(n, total)]) + "\n")
+    return out
+
+
+def review_page(result: dict[str, Any], page: int, command: str = "okl check --change",
+                of: str | None = None) -> str:
+    """One page of `review_pages`. Raises ReviewPageError for a page it does not have, or when `of`
+    names a fingerprint other than this review's: the review changed since page 1 was read."""
+    if of is not None and of != review_fingerprint(result):
+        raise ReviewPageError(f"the review changed since page 1 (its lessons, or which govern a changed file, "
+                              f"differ); run {_code(command)} again and read every page it names")
+    pages = review_pages(result, command)
+    if not 1 <= page <= len(pages):
+        raise ReviewPageError(f"page {page}: this review has {len(pages)} page{'s' if len(pages) != 1 else ''}")
+    return pages[page - 1]
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:
