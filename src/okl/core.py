@@ -1729,7 +1729,8 @@ def review_pages(result: dict[str, Any], command: str = "okl check --change") ->
         more = _code(cmd(2)) if total == 2 else f"{_code(cmd(2))} through {_code(cmd(total))}, one after another"
         return (f"This review lists {len(lessons)} lesson(s) on {total} pages, each short enough to arrive whole. "
                 f"This is page 1. Before you pick from the lessons below and on every further page, run {more}, "
-                "and read every page; if your tool shows only part of one, read the rest where it saved it.")
+                "each as a command of its own, since a page run beside another command can be cut short with "
+                "it, and read every page; if your tool shows only part of one, read the rest where it saved it.")
 
     def foot(page: int, total: int) -> str:
         return (f"End of page {page} of {total}. Next: {_code(cmd(page + 1))}." if page < total

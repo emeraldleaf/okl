@@ -216,6 +216,7 @@ okl recap --transcript <path> --log-review
                      #   no such log); a review_log setting that is not on or off; the store cannot
                      #   be opened or written.
 okl recap --reviews  # the review log, from those rows: how often the review was asked for and run,
+                     #   how many reviews came in pages and how many of those read every page,
                      #   lessons checked per review, how many checks were followed by an edit, tokens (the work, with the cache reads apart)
                      #   and seconds per review, and per lesson how often it was checked and how often
                      #   that was followed by an edit. An edit after a check means the review acted on

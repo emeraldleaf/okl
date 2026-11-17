@@ -201,7 +201,8 @@ off with `okl init --no-review-after-writing`, or for one session with `OKL_REVI
 In Claude Code, okl also keeps a log of what that review did, so the default can be judged on real
 sessions. At a later stop of the session, the Stop hook reads the session's transcript and its
 sub-agents' (under `~/.claude/projects`), silently and for no more than about five seconds, and writes
-one row about it to your store: whether the review was asked for and ran, which lessons each sub-agent
+one row about it to your store: whether the review was asked for and ran, how many of its pages came
+back when it came in pages, which lessons each sub-agent
 checked, whether it edited anything in the repository and which files, the tests it ran, and the tokens
 and time it took, counted from the review's command to the next prompt you typed, or the stop after the
 last of its sub-agents has reported. No code, no command line

@@ -121,6 +121,7 @@ def test_log_review_writes_the_row_and_exits_0(repo, tmp_path, capsys):
     assert "logged session sess-1" in got.err and got.out == ""
     (row,) = _rows(repo)
     assert (row.session_id, row.asked, row.ran, row.files_changed, row.lessons_listed) == ("sess-1", True, True, 4, 12)
+    assert (row.pages_total, row.pages_read) == (1, 1)          # the review came whole, and was read
     assert [c["lessons"] for c in row.checks] == [["les-a"], ["les-b"]]
     assert row.checks[0]["edited_files"] == ["src/x.py"]       # relative to the repository okl runs in
     assert row.checks[0]["model"] == "claude-opus-5-5"
@@ -460,3 +461,36 @@ def test_the_review_report_says_one_session_not_one_sessions():
         assert said in out, said
     for wrong in ("1 sessions", "1 reviews", "1 sub-agents", "1 lessons"):
         assert wrong not in out, wrong
+
+
+# --- pages (#481): how many the review had, and how many came back -----------------------------
+
+def test_a_row_keeps_its_pages_and_an_older_table_gains_the_columns(tmp_path):
+    """The pages logged come back; a review_run table from before pages gains both columns when opened,
+    and its rows read as not known."""
+    path = tmp_path / "okl.db"
+    s = Store(f"sqlite:///{path}")
+    s.log_review("old", "r", asked=True, ran=True)
+    s.close()
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE r2 AS SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
+               "cache_read_tokens, duration_s, failed_launches, checks FROM review_run")
+    db.execute("DROP TABLE review_run"); db.execute("ALTER TABLE r2 RENAME TO review_run"); db.commit(); db.close()
+
+    reopened = Store(f"sqlite:///{path}")
+    reopened.log_review("new", "r", asked=True, ran=True, pages_total=3, pages_read=2)
+
+    rows = {x.session_id: x for x in reopened.reviews("r")}
+    assert (rows["old"].pages_total, rows["old"].pages_read) == (None, None)
+    assert (rows["new"].pages_total, rows["new"].pages_read) == (3, 2)
+
+
+def test_the_report_says_how_many_paged_reviews_read_every_page(tmp_path):
+    """Only reviews that came in pages count; one that came whole is not a paged review."""
+    s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
+    s.log_review("a", "r", asked=True, ran=True, files_changed=1, pages_total=2, pages_read=2)
+    s.log_review("b", "r", asked=True, ran=True, files_changed=1, pages_total=3, pages_read=1)
+    s.log_review("c", "r", asked=True, ran=True, files_changed=1, pages_total=1, pages_read=1)
+    data = recap.reviews_report(s, "r")
+    assert (data["paged"], data["paged_read_every_page"]) == (2, 1)
+    assert "**Pages:** 2 reviews came in pages; 1 (50%) read every page." in recap.render_reviews(data)
