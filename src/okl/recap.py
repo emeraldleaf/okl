@@ -358,8 +358,9 @@ def _spread(values: list[int]) -> dict[str, float] | None:
 
 
 def reviews_report(store: Store, repo: str, *, since_ms: int = 0, top: int = 5) -> dict[str, Any]:
-    """The review log as data: how often the review was asked for and run, what it checked, how
-    often a check ended in an edit, what it cost, and per lesson how often it was checked and acted on."""
+    """The review log as data: how often the review was asked for and run, how many paged reviews read
+    every page, what it checked, how often a check ended in an edit, what it cost, and per lesson how often
+    it was checked and acted on."""
     rows = [r for r in store.reviews(repo) if r.at >= since_ms]
     ran = [r for r in rows if r.ran]
     titles = {n.id: n.title for n in store.all_nodes()}

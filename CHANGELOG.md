@@ -3,9 +3,13 @@
 ## Unreleased
 
 - **The review log counts the review's pages** (#481's follow-up). Each row now records how many pages
-  the review came in and how many of them came back to the agent, read from the session's transcript
-  (a page command run inside a longer line counts, a refused one does not), and `okl recap --reviews`
-  says how many paged reviews read every page. A store from before gains the two columns when opened,
+  the review came in and how many of them came back to the agent whole, read from the session's
+  transcript: a page counts only when its last line came back, so a page cut to Claude Code's preview,
+  as happens when a page runs beside a long `git diff` in one command, does not. Several pages in one
+  command, or in a loop, all count; a refused call, and page text quoted in a diff, do not. `okl recap
+  --reviews` says how many paged reviews read every page. Page 1 of a paged review now asks the agent
+  to run each further page as a command of its own, since both smoke sessions ran page 2 beside
+  `git diff main`. A store from before gains the two columns when opened,
   and its older rows read as not known.
 
 - **The review after writing comes in pages that arrive whole** (REPORT §4bk). `okl check --change`

@@ -779,46 +779,94 @@ def test_the_commands_the_parser_recognizes():
         ["echo", "a; b"], ["ls"], ["wc"], ["cat", "<<EOF"], ["ls"]]
 
 
-# --- pages (#481) ---------------------------------------------------------------------------------
+# --- pages (#481, #482) ---------------------------------------------------------------------------
 
-PAGE_ONE = ("## OKL review after writing — r · 4 file(s) changed since main (merge base abc1234), committed or "
-            "not\n\nThis review lists 400 lesson(s) on 3 pages, each short enough to arrive whole. This is page 1.\n")
+def _real_pages(n=400):
+    """The pages `okl check --change` prints for a long list, as the agent gets them."""
+    lessons = [{"id": f"n_{i:04d}", "title": f"lesson {i} title, about as long as a real one in this store",
+                "fix": "the fix line, with enough words to look like a real one in this repository's store"}
+               for i in range(n)]
+    pages = core.review_pages({"repo": "r", "base": None, "merge_base": "abc1234", "files": ["a.py"],
+                               "governing": [], "lessons": lessons})
+    assert len(pages) >= 3
+    return pages
 
 
-def _page(n: int, total: int = 3) -> str:
-    return f"## OKL review after writing — r · page {n} of {total}, the lessons continued\n\n- [l{n}] a lesson\n"
+def _cut(text: str) -> str:
+    """Claude Code's preview of an output past its cap: the first 2 KB, and the end left in a file."""
+    return f"<persisted-output>\nOutput too large (40.0KB). Full output saved to: /x/tool-results/b.txt\n\n" \
+           f"Preview (first 2KB):\n{text[:2000]}\n...\n</persisted-output>"
 
 
-def _paged(tmp_path, *lines: str):
+def _review(tmp_path, *lines: str, first: str | None = None):
+    pages = _real_pages()
     rev = call("tu-rev", "Bash", command="okl check --change")
-    main = [typed(0, "fix the bug"), feedback(100), turn(110, "m1", rev), result(112, "tu-rev", PAGE_ONE), *lines]
-    return reviewlog.read_review(write(tmp_path, main))
+    main = [typed(0, "fix the bug"), feedback(100), turn(110, "m1", rev),
+            result(112, "tu-rev", pages[0] if first is None else first), *lines]
+    return reviewlog.read_review(write(tmp_path, main)), pages
 
 
-def test_a_paged_review_counts_the_pages_that_came_back(tmp_path):
-    """Page 1 says how many pages there are; a page asked in a compound line (as agents write it, with
-    `; git diff main`) counts, a refused one does not, and a page past the last is not counted."""
-    p2 = call("tu-p2", "Bash", command="okl check --change --page 2 --of abc12345; git diff main")
-    p3 = call("tu-p3", "Bash", command="okl check --change --page=3 --of stale000")
-    p9 = call("tu-p9", "Bash", command="okl check --change --page 9 --of abc12345")
-    r = _paged(tmp_path, turn(120, "m2", p2), result(121, "tu-p2", _page(2) + "diff --git a/x b/x\n"),
-               turn(130, "m3", p3), result(131, "tu-p3", "okl check --change: the review changed", error=True),
-               turn(140, "m4", p9), result(141, "tu-p9", "okl check --change: page 9: this review has 3 pages",
-                                           error=True))
-    assert (r.ran, r.lessons_listed, r.pages_total, r.pages_read) == (True, 400, 3, 2)
+def test_a_paged_review_counts_each_page_whose_end_came_back(tmp_path):
+    """Pages fetched one by one, two in one line, and in a loop all count, by the last line each page ends on."""
+    pages = _real_pages()
+    total = len(pages)
+    loop = call("tu-loop", "Bash", command=f"for n in $(seq 2 {total}); do okl check --change --page $n --of x; done")
+    r, _ = _review(tmp_path, turn(120, "m2", loop), result(121, "tu-loop", "\n".join(pages[1:])))
+    assert (r.lessons_listed, r.pages_total, r.pages_read) == (400, total, total)
 
 
-def test_a_review_that_came_whole_is_one_page_read(tmp_path):
-    """A review that fits on one page, or one from before pages, is one page, read."""
-    r = reviewlog.read_review(write(tmp_path, start_review()))
-    assert (r.pages_total, r.pages_read) == (1, 1)
+def test_a_page_cut_to_a_preview_with_the_diff_beside_it_is_not_read(tmp_path):
+    """Agents ran `okl check --change --page 2 --of X; git diff main`: past the cap the output is a 2 KB preview,
+    which keeps the page's head and loses its end, so the page was not read whole."""
+    pages = _real_pages()
+    p2 = call("tu-p2", "Bash", command="okl check --change --page 2 --of x; git diff main")
+    p3 = call("tu-p3", "Bash", command="okl check --change --page 3 --of x && okl check --change --page 4 --of x")
+    r, _ = _review(tmp_path, turn(120, "m2", p2), result(121, "tu-p2", _cut(pages[1] + "diff --git a/x b/x\n" * 400)),
+                   turn(130, "m3", p3), result(131, "tu-p3", "\n".join(pages[2:4])))
+    assert r.pages_total == len(pages) and r.pages_read == 1 + len(pages[2:4])
 
 
-def test_a_review_command_names_the_page_it_asks(tmp_path):
-    """The page each review command in a Bash line asks for; the hook's note, an echo and a bad page are none."""
-    assert reviewcmd.review_pages("okl check --change --page 2 --of x; git diff main") == [2]
-    assert reviewcmd.review_pages("okl check --change main --page=3") == [3]
-    assert reviewcmd.review_pages("okl check --change") == [1]
-    assert reviewcmd.review_pages("okl check --change --format hook") == []
-    assert reviewcmd.review_pages("echo okl check --change --page 2") == []
-    assert reviewcmd.review_pages("okl check --change --page two") == []
+def test_a_refused_page_a_quoted_page_and_a_page_past_the_last_are_not_read(tmp_path):
+    """A refused call does not count even if its text holds a page's end; a page's words in a diff are led by
+    + or a space and are no page; a footer naming a page past the last counts for nothing."""
+    pages = _real_pages()
+    bad = call("tu-bad", "Bash", command="okl check --change --page 2 --of stale")
+    diff = call("tu-diff", "Bash", command="okl check --change --page 3 --of x; git diff main")
+    quoted = "\n".join("+" + line for line in pages[1].splitlines())
+    r, _ = _review(tmp_path, turn(120, "m2", bad), result(121, "tu-bad", pages[1], error=True),
+                   turn(130, "m3", diff), result(131, "tu-diff", "page 3 failed\n" + quoted + "\nEnd of page 9 of 3."))
+    assert (r.pages_total, r.pages_read) == (len(pages), 1)
+
+
+def test_a_review_that_came_whole_is_one_page_read_and_a_cut_one_is_not(tmp_path):
+    """A review that fits is one page, read; the same review cut to a preview is one page, not read."""
+    assert ((r := reviewlog.read_review(write(tmp_path, start_review()))).pages_total, r.pages_read) == (1, 1)
+    cut = [typed(0, "fix"), feedback(100), turn(110, "m1", call("tu-rev", "Bash", command="okl check --change")),
+           result(112, "tu-rev", _cut(REVIEW_OUT + "- [x] a lesson\n" * 2000))]
+    (tmp_path / "c").mkdir()
+    r = reviewlog.read_review(write(tmp_path / "c", cut))
+    assert (r.pages_total, r.pages_read) == (1, 0)
+
+
+def test_a_review_opened_on_a_later_page_takes_its_counts_from_page_1(tmp_path):
+    """A window that opens on page 2 still learns the files and lessons when page 1 comes back."""
+    pages = _real_pages()
+    p2 = call("tu-p2", "Bash", command="okl check --change --page 2 --of x")
+    p1 = call("tu-p1", "Bash", command="okl check --change")
+    main = [typed(0, "fix"), feedback(100), turn(110, "m1", p2), result(111, "tu-p2", pages[1]),
+            turn(120, "m2", p1), result(121, "tu-p1", pages[0])]
+    r = reviewlog.read_review(write(tmp_path, main))
+    assert (r.files_changed, r.lessons_listed, r.pages_read) == (1, 400, 2)
+
+
+def test_a_new_note_starts_the_page_count_again(tmp_path):
+    """With two notes the row describes the last review: pages the first one read do not carry over."""
+    pages = _real_pages()
+    first = call("tu-a", "Bash", command="okl check --change")
+    every = call("tu-b", "Bash", command="okl check --change --page 2 --of x && okl check --change --page 3 --of x")
+    second = call("tu-c", "Bash", command="okl check --change")
+    main = [typed(0, "fix"), feedback(100), turn(110, "m1", first), result(111, "tu-a", pages[0]),
+            turn(120, "m2", every), result(121, "tu-b", "\n".join(pages[1:3])),
+            typed(200, "again"), feedback(300), turn(310, "m3", second), result(311, "tu-c", pages[0])]
+    r = reviewlog.read_review(write(tmp_path, main))
+    assert (r.pages_total, r.pages_read) == (len(pages), 1)

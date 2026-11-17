@@ -137,8 +137,9 @@ be published or a default it decides: the review's measured gain behind "on by d
 is one. Before proposing one, say what it can detect, its power against the plausible effect, and
 whether its result will be published or decide anything. A change whose correctness a test can prove
 gets that test, at most a short smoke session to watch an agent use it, and a field in the review log
-so real use answers the rest: paging the review list (#481) got all three, since a run of 96 sessions
-could not have detected its likely gain of 0.03 to 0.05. An idea that claims an effect is measured
+so real use answers the rest. Paging the review list (#481) got all three: its tests prove each page
+arrives whole, and the sessions it can help, the 7 of REPORT §4bk's 86 whose right lesson's line never
+reached the agent, are too few for a run of that size to show a gain. An idea that claims an effect is measured
 first by its cheapest mechanical proxy, such as whether the right lesson reaches a sub-agent on the
 graded tasks, and gets sessions only once it looks worth claiming. A run that is done meets every rule
 above.

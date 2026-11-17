@@ -60,8 +60,13 @@ _SHOWN = re.compile(r"^\[([^\]\s]+)\] \w+ · ", re.M)
 # reads them back, so a change to that wording fails there rather than here, quietly.
 _FILES = re.compile(r"(\d+) file\(s\) changed since")
 _LISTED = re.compile(r"This review lists (\d+) lesson\(s\)")
-_PAGES = re.compile(r"This review lists \d+ lesson\(s\) on (\d+) pages")   # a paged review's page 1 (#481)
-_PAGE_OF = re.compile(r" · page (\d+) of (\d+), the lessons continued")
+# A page of the review counts as read only when its last line came back: a page cut to Claude Code's
+# preview keeps its first lines and loses its end, and a command that runs the page beside another can
+# push the whole output past the cut (#481, #482). Anchored to a line's start, so the same words quoted
+# in a diff (each line led by +, - or a space) are no page.
+_PAGE_END = re.compile(r"^End of page (\d+) of (\d+)[.:]", re.M)
+_WHOLE = re.compile(r"^This review lists \d+ lesson\(s\) in about", re.M)   # an unpaged review's opening
+PREVIEW = "<persisted-output>"          # Claude Code's mark on a tool result cut to a preview
 # What Claude Code writes as a user line that no person typed.
 _NOT_A_PROMPT = ("<task-notification", "<agent-message", "<system-reminder", "Stop hook")
 # The bytes that mark a line a person typed, as 2.1.302 writes it, and a user line, in both spellings of JSON.
@@ -446,7 +451,7 @@ class _Main:
         self.listed: int | None = None
         self.pages_total: int | None = None
         self.pages_read: set[int] = set()
-        self.page_calls: dict[str, int] = {}            # a review command's tool_use id -> the page it asked
+        self.page_calls: set[str] = set()               # tool_use ids of Bash calls that ran a review command
         self.failed = 0                                 # Agent calls that came back as an error
         self.agents: dict[str, dict[str, Any]] = {}     # Agent tool_use id -> its input and result
         self.pending: set[str] = set()                  # Agent calls not yet reported back
@@ -536,26 +541,28 @@ class _Main:
             self._release(_reported(d))
 
     def _ask_pages(self, tid: Any, command: str) -> None:
-        """Note the page a review command in this Bash call asks for (the last, when a line runs several)."""
-        pages = reviewcmd.review_pages(command)
-        if pages and isinstance(tid, str):
-            self.page_calls[tid] = pages[-1]
+        """Note a Bash call that runs a review command, a page or several (a loop, or `&&`), or the whole review."""
+        if isinstance(tid, str) and reviewcmd.is_review_command(command):
+            self.page_calls.add(tid)
 
     def _page_result(self, b: dict[str, Any]) -> None:
-        """A review page came back: count it, and learn how many pages the review has from what it says."""
+        """A review command's output came back: each page whose last line is in it was read whole, and a
+        review that came unpaged was read whole unless the output was cut to a preview."""
         tid = b.get("tool_use_id")
-        page = self.page_calls.get(tid) if isinstance(tid, str) else None
-        if page is None or b.get("is_error"):
+        if not isinstance(tid, str) or tid not in self.page_calls or b.get("is_error"):
             return
         text = _text(b.get("content"))
-        if (m := _PAGES.search(text)):
-            self.pages_total = int(m.group(1))
-        elif (m := _PAGE_OF.search(text)):
-            self.pages_total = self.pages_total or int(m.group(2))
-        elif page == 1 and _LISTED.search(text):
-            self.pages_total = 1          # a review that came whole, or from before pages
-        if _LISTED.search(text) or _PAGE_OF.search(text):
-            self.pages_read.add(page)
+        for m in _PAGE_END.finditer(text):
+            page, total = int(m.group(1)), int(m.group(2))
+            self.pages_total = self.pages_total or total
+            if 1 <= page <= total:
+                self.pages_read.add(page)
+        if _WHOLE.search(text):
+            self.pages_total = self.pages_total or 1
+            if PREVIEW not in text:
+                self.pages_read.add(1)
+        if self.files is None and self.listed is None and _LISTED.search(text):
+            self._counts(text)       # a window opened on a later page, and page 1 came back now
 
     def _result(self, b: dict[str, Any], res: Any) -> None:
         """A tool result: the review's own output, a page of it, or a sub-agent's launch, completion or failure."""

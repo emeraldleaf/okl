@@ -121,6 +121,7 @@ def test_log_review_writes_the_row_and_exits_0(repo, tmp_path, capsys):
     assert "logged session sess-1" in got.err and got.out == ""
     (row,) = _rows(repo)
     assert (row.session_id, row.asked, row.ran, row.files_changed, row.lessons_listed) == ("sess-1", True, True, 4, 12)
+    assert (row.pages_total, row.pages_read) == (1, 1)          # the review came whole, and was read
     assert [c["lessons"] for c in row.checks] == [["les-a"], ["les-b"]]
     assert row.checks[0]["edited_files"] == ["src/x.py"]       # relative to the repository okl runs in
     assert row.checks[0]["model"] == "claude-opus-5-5"

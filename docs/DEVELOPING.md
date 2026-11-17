@@ -270,7 +270,7 @@ OKL_BRIEF_INTERESTS="python,method,security,agent-safety,retrieval-design,eval-i
 | `okl recap --transcript <path>` | The lessons a session was briefed on and those whose files it changed |
 | `okl recap --report [--since 6h]` | How the session went: briefings, lessons recorded and retired, checks run and failed, commits, and what is stale now, from the local store's logs (`--format json` for scripts) |
 | `okl recap --transcript <path> --log-review` | Writes one row about the session's review after writing to the store (Claude Code transcripts; the Stop hook runs it at a later stop; off with `OKL_REVIEW_LOG=0`) |
-| `okl recap --reviews` | The review log: reviews asked for and run, lessons checked per review, checks followed by an edit, tokens and time per review, and per lesson how often it was checked and acted on |
+| `okl recap --reviews` | The review log: reviews asked for and run, how many paged reviews read every page, lessons checked per review, checks followed by an edit, tokens and time per review, and per lesson how often it was checked and acted on |
 | `okl dedup` | Near-duplicate lessons a briefing can show, for review (superseded and obsolete ones are left out) |
 | `okl doctor` | Other agent-memory tools beside okl, how they collide, where drift is gated, after `okl init --owner` whether GitHub enforces the owner's approval, and which org lessons the interests keep out of briefings |
 | `okl coverage` | How much of the code the store's lessons govern |
