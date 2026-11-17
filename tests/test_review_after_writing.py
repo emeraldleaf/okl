@@ -7,6 +7,8 @@ where the repo turns it on.
 """
 import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -322,65 +324,113 @@ def test_the_review_runs_each_check_on_the_model_it_was_measured_with():
     assert "the model the review was measured with (REPORT §4ay, §4az)" in steps
 
 
-def _long_review(n=400, base=None):
+
+def _long_review(n=400, base=None, files=("a.py",), repo="r"):
     lessons = [{"id": f"n_{i:04d}", "title": f"lesson {i} title, about as long as a real one in this store",
                 "fix": "the fix line, with enough words to look like a real one in this repository's store"}
                for i in range(n)]
-    return {"repo": "r", "base": base, "merge_base": "abc1234", "files": ["a.py"], "governing": ["n_0003"],
+    return {"repo": repo, "base": base, "merge_base": "abc1234", "files": list(files), "governing": ["n_0003"],
             "lessons": lessons}
 
 
-def _all_pages(result):
-    pages, page = [], 1
-    while True:
-        try:
-            pages.append(core.render_review(result, page))
-        except ValueError:
-            return pages
-        page += 1
+def _lesson_lines(pages):
+    return [line for p in pages for line in p.splitlines() if line.startswith("- [")]
 
 
 def test_a_long_review_comes_in_pages_that_each_arrive_whole():
-    """REPORT §4bk: a list past Claude Code's ~30,000-character cap came back as a 2 KB preview, and in 7
-    sessions the right lesson's line never reached the agent. Each page stays under the cap, every lesson
-    is on exactly one page in the list's order, and page 1 has the steps and names every further page."""
+    """REPORT §4bk: a list past Claude Code's ~30,000-character cap came back as a 2 KB preview, and in 7 of
+    the 49 sessions that never handed the right lesson on, its line never reached the agent; all 7 failed.
+    Each page stays under the cap, every lesson of render_review is on exactly one page in its order, and
+    page 1 has the steps and names every further page with the review's fingerprint."""
     result = _long_review()
-    pages = _all_pages(result)
+    pages = core.review_pages(result)
+    whole = core.render_review(result)
     assert len(pages) > 1 and all(len(p) <= core.REVIEW_PAGE_CHARS < 30_000 for p in pages)
-    shown = [line for p in pages for line in p.splitlines() if line.startswith("- [")]
-    assert shown == ([core._also_line(e) for e in result["lessons"] if e["id"] == "n_0003"]
-                     + [core._also_line(e) for e in result["lessons"] if e["id"] != "n_0003"])
+    assert _lesson_lines(pages) == [line for line in whole.splitlines() if line.startswith("- [")]
     assert "1. Say what the changed code does" in pages[0] and all("1. Say what" not in p for p in pages[1:])
-    assert f"on {len(pages)} pages" in pages[0] and f"`okl check --change --page 2` through `--page {len(pages)}`" \
-        in pages[0]
+    fp = core.review_fingerprint(result)
+    assert (f"on {len(pages)} pages" in pages[0] and f"`okl check --change --page 2 --of {fp}` through "
+            f"`okl check --change --page {len(pages)} --of {fp}`" in pages[0])
     for n, p in enumerate(pages[:-1], 1):
-        assert p.rstrip().endswith(f"End of page {n} of {len(pages)}. Next: `okl check --change --page {n + 1}`.")
+        assert p.rstrip().endswith(f"End of page {n} of {len(pages)}. Next: `okl check --change --page {n + 1} "
+                                   f"--of {fp}`.")
     assert pages[-1].rstrip().endswith("that is every lesson. Now pick, and check each one.")
 
 
-def test_a_review_that_fits_prints_as_one_page_as_before():
-    """A short list keeps its one output, and asks for no page past the first."""
+def test_a_review_that_fits_is_render_review_unchanged():
+    """A short list keeps its one output, byte for byte, and has no page 2."""
     result = _long_review(20)
-    text = core.render_review(result)
-    assert "Read all of it before you pick" in text and "page" not in text.lower().replace("pages", "")
-    with pytest.raises(ValueError, match="one page"):
-        core.render_review(result, 2)
+    assert core.review_pages(result) == [core.render_review(result)]
+    with pytest.raises(core.ReviewPageError, match="has 1 page$"):
+        core.review_page(result, 2)
 
 
-def test_the_page_commands_quote_the_base_for_a_shell():
-    """The agent pastes the page commands, and a branch name is the user's text (lesson n_adea7f2c7373)."""
-    pages = _all_pages(_long_review(base="it's; rm -rf x"))
-    assert """`okl check --change 'it'"'"'s; rm -rf x' --page 2`""" in pages[0]
+def test_render_review_still_lists_every_lesson_for_the_evals():
+    """The eval harnesses write REVIEW.md from render_review: paging is the CLI's, so they keep every lesson."""
+    result = _long_review()
+    assert len(_lesson_lines([core.render_review(result)])) == 400
 
 
-def test_check_change_page_prints_a_page_and_refuses_one_it_has_not(repo, capsys):
-    """--page with --change prints that page; a page past the last, --page without --change, and --page with
-    --format json exit 2 with the reason on stderr and nothing on stdout."""
-    _store(repo, *[_n(f"l{i:03d}") for i in range(3)])
-    assert main(["check", "--change", "--page", "1"]) == 0
-    assert "[l000]" in capsys.readouterr().out
-    for argv in (["check", "--change", "--page", "2"], ["check", "--task", "x", "--page", "2"],
-                 ["check", "--change", "--page", "2", "--format", "json"]):
+def test_pages_stay_under_the_cap_with_huge_changes_and_long_names():
+    """A thousand changed files, a 300-character base and a 255-character repo: the Changed line is cut to
+    'and N more' with the count in the title, and every page still fits."""
+    files = [f"src/pkg/module_{i:04d}/some_reasonably_long_name.py" for i in range(1000)]
+    base = "feature/" + "b" * 292
+    result = _long_review(base=base, files=files, repo="r" * 255)
+    pages = core.review_pages(result, shlex.join(["okl", "check", "--change", base, "--repo", "r" * 255]))
+    assert all(len(p) <= core.REVIEW_PAGE_CHARS for p in pages)
+    assert "1000 file(s) changed" in pages[0] and re.search(r", and \d+ more\n", pages[0])
+    assert _lesson_lines(pages) == [line for line in core.render_review(result).splitlines() if line.startswith("- [")]
+
+
+def test_a_page_of_a_review_that_changed_since_page_1_is_refused():
+    """Page breaks follow the files and lessons: a page asked of a different review could leave a lesson on
+    no page read, so the fingerprint page 1 hands out must match."""
+    result = _long_review()
+    fp = core.review_fingerprint(result)
+    assert core.review_page(result, 2, of=fp) == core.review_pages(result)[1]
+    with pytest.raises(core.ReviewPageError, match="changed since page 1"):
+        core.review_page({**result, "files": ["a.py", "scratch.py"]}, 2, of=fp)
+    with pytest.raises(core.ReviewPageError, match=f"has {len(core.review_pages(result))} pages"):
+        core.review_page(result, 9)
+
+
+def test_a_backtick_in_a_branch_name_keeps_the_command_one_code_span():
+    """A legal branch name can hold a backtick; the shell side is quoted, and the span gets a longer fence."""
+    pages = core.review_pages(_long_review(), shlex.join(["okl", "check", "--change", "x`y"]))
+    assert "`` okl check --change 'x`y' --page 2 --of " in pages[0]
+
+
+def _many(repo, n=300):
+    long = "a lesson title long enough that three hundred of them make a list past the page cap " * 2
+    _store(repo, *[_n(f"l{i:03d}", fix=f"{long}{i}") for i in range(n)])
+
+
+def test_check_change_pages_through_the_cli(repo, capsys):
+    """Paged from the CLI: page 1 names the commands, the base and --repo carried and quoted; page 2 holds
+    lessons page 1 does not; a page of a changed review, page 0, a page past the last, --page or --of with
+    --task, json or hook, and nothing changed with --page 2 each exit 2 with nothing on stdout."""
+    _many(repo)
+    assert main(["check", "--change", "main", "--repo", "r"]) == 0
+    one = capsys.readouterr().out
+    fp = re.search(r"--page 2 --of (\w+)", one).group(1)
+    assert "`okl check --change main --repo r --page 2 --of " in one and len(one) <= core.REVIEW_PAGE_CHARS
+    assert main(["check", "--change", "main", "--repo", "r", "--page", "2", "--of", fp]) == 0
+    two = capsys.readouterr().out
+    assert set(_lesson_lines([two])) and not set(_lesson_lines([two])) & set(_lesson_lines([one]))
+    (repo / "new_untracked.py").write_text("x = 1\n")
+    for argv in (["check", "--change", "main", "--repo", "r", "--page", "2", "--of", fp],
+                 ["check", "--change", "--page", "0"], ["check", "--change", "--page", "99"],
+                 ["check", "--task", "x", "--page", "2"], ["check", "--task", "x", "--of", fp],
+                 ["check", "--change", "--page", "2", "--format", "json"],
+                 ["check", "--change", "--page", "2", "--format", "hook"]):
         assert main(argv) == 2, argv
         got = capsys.readouterr()
-        assert got.out == "" and ("--page" in got.err or "page 2" in got.err), argv
+        assert got.out == "" and got.err.strip(), argv
+
+
+def test_the_docs_give_the_page_size_the_code_uses():
+    """'about 24,000 characters' in the docs is the constant, not a copy that can fall behind it."""
+    figure = f"{core.REVIEW_PAGE_CHARS:,}"
+    for doc in ("docs/COSTS-AND-KNOBS.md", "docs/COMMANDS.md", "CHANGELOG.md"):
+        assert figure in " ".join((Path(__file__).resolve().parent.parent / doc).read_text().split()), doc

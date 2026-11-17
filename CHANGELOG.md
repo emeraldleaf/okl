@@ -5,11 +5,14 @@
 - **The review after writing comes in pages that arrive whole** (REPORT §4bk). `okl check --change`
   printed every lesson in one output, about 80 KB for 300 lessons. Claude Code saves a command's
   output past about 30,000 characters to a file and shows the agent its first 2 KB: in 23 of §4bj's
-  86 review sessions the list came back cut that way, and in 7 the right lesson's line never reached
-  the agent, all 7 of which failed. A list longer than about 24,000 characters now comes in pages,
-  page 1 with the steps and the command for each further page (`okl check --change --page N`, the
-  base quoted for a shell). A list that fits prints as before, and the lessons and their order do
-  not change. Whether paging changes the review's pass rate is not measured.
+  86 review sessions the list came back cut that way, and in 7 of the 49 that never handed the right
+  lesson on, its line never reached the agent; all 7 failed. A list longer than about 24,000
+  characters now comes in pages, page 1 with the steps and the command for each further page
+  (`okl check --change --page N --of <fingerprint>`, the base and `--repo` quoted for a shell). A
+  page of a review whose files or lessons changed since page 1 is refused, since its breaks would
+  fall elsewhere. A list that fits prints as before, the lessons and their order do not change, and
+  `render_review`, which the eval harnesses write their lists from, still holds every lesson. Whether
+  paging changes the review's pass rate is not measured.
 
 ## 0.18.0
 

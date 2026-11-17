@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import shlex
 import signal
 import sys
 import tempfile
@@ -72,8 +73,8 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
 
 def _checked(client: Client, args: argparse.Namespace) -> dict[str, Any] | None:
     """The check's result, or None once it has said on stderr why none could be had."""
-    if getattr(args, "page", 1) != 1:
-        print("okl check: --page pages the review after writing; give it with --change", file=sys.stderr)
+    if getattr(args, "page", 1) != 1 or getattr(args, "of", None):
+        print("okl check: --page and --of page the review after writing; give them with --change", file=sys.stderr)
         return None
     try:
         return client.check(args.task or "", repo=args.repo, limit=args.limit, paths=getattr(args, "path", None))
@@ -145,13 +146,13 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     With --format hook it prints only the Stop hook's note, and only when the review is on (the
     default where okl was set up, unless the repo turns it off) and something changed. Exit 0 when it ran, 2 when git or the store could not be
     read, or a flag that shapes a briefing (--limit, --compact, --format actions) was given."""
-    if args.format == "hook":
-        _review_note(client, args)
-        return 0
     refused = _review_flags_refused(args)
     if refused:
         print(f"okl check --change: {refused}", file=sys.stderr)
         return 2
+    if args.format == "hook":
+        _review_note(client, args)
+        return 0
     try:
         merge_base, files = changes.touched(args.change or None)
     except changes.ChangesError as e:
@@ -172,9 +173,14 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
         governed = sorted(n.id for n in core.governing(nodes, repo, set(files)) if n.id in listed)
     result = {"repo": repo, "base": args.change or None, "merge_base": merge_base, "files": files,
               "governing": governed, "lessons": lessons}
+    # The page commands repeat what this one was given, quoted for a shell: the agent pastes them, and a
+    # branch or repo name is the user's text (lesson n_adea7f2c7373).
+    command = shlex.join(["okl", "check", "--change", *([args.change] if args.change else []),
+                          *(["--repo", args.repo] if args.repo else [])])
     try:
-        text = None if args.format == "json" else core.render_review(result, getattr(args, "page", 1))
-    except ValueError as e:
+        text = None if args.format == "json" else core.review_page(result, getattr(args, "page", 1), command,
+                                                                   getattr(args, "of", None))
+    except core.ReviewPageError as e:
         print(f"okl check --change: {e}", file=sys.stderr)
         return 2
     if text is None:
@@ -190,8 +196,11 @@ def _review_flags_refused(args: argparse.Namespace) -> str | None:
     if getattr(args, "limit", None) is not None or getattr(args, "compact", False) or args.format == "actions":
         return ("--limit, --compact and --format actions shape a briefing; the review lists every lesson in "
                 "scope, so they do not apply")
-    if getattr(args, "page", 1) != 1 and args.format == "json":
-        return "--page pages the review for the agent; --format json holds every lesson"
+    page = getattr(args, "page", 1)
+    if page < 1:
+        return f"--page {page}: pages start at 1"
+    if (page != 1 or getattr(args, "of", None)) and args.format in ("json", "hook"):
+        return f"--page and --of page the review for the agent; --format {args.format} does not"
     return None
 
 

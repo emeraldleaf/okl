@@ -143,6 +143,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="with --change: the page of the review to print (default 1). A list too long to "
                          "arrive whole as one command's output is printed on pages, and page 1 names the "
                          "command for each further page (REPORT §4bk)")
+    pk.add_argument("--of", metavar="FINGERPRINT",
+                    help="with --change --page: the review page 1 named; a page of a review that changed "
+                         "since then (its files, base or lessons) is refused, exit 2")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
                     help="with --format hook: the Claude Code event the output answers (default: "
