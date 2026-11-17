@@ -583,8 +583,9 @@ a change in one line and makes it once you agree. To read the whole session back
 briefings, the lessons recorded and retired, the checks run and failed, the commits, and what
 is stale now, from the store's own logs. `okl recap --reviews` reads another log: in Claude Code, the
 Stop hook records at a later stop what the review after writing did, read from the session's
-transcript (whether it ran, the lessons its sub-agents checked, whether each edited, the tokens and
-time), and the report says how often a check was followed by an edit. An edit after a check means the
+transcript (whether it ran, how many of its pages came back, the lessons its sub-agents checked,
+whether each edited, the tokens and time), and the report says how often a check was followed by an
+edit and how many paged reviews read every page. An edit after a check means the
 review acted on that lesson, not that it caught a break.
 
 A full briefing costs roughly **1,580 tokens** on the measurement above (~780 for the line

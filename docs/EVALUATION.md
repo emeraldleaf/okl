@@ -130,6 +130,19 @@ mistake no lesson named.
     written from what the author expects: a fixture written by the code's author shares its
     assumptions (the store's `qz_fixtures` lesson, and the bug it let through in #388).
 
+## When a full run is needed
+
+A pre-registered run, with its REPORT section, receipt and hours of sessions, is for a figure that will
+be published or a default it decides: the review's measured gain behind "on by default" (REPORT §4bj)
+is one. Before proposing one, say what it can detect, its power against the plausible effect, and
+whether its result will be published or decide anything. A change whose correctness a test can prove
+gets that test, at most a short smoke session to watch an agent use it, and a field in the review log
+so real use answers the rest: paging the review list (#481) got all three, since a run of 96 sessions
+could not have detected its likely gain of 0.03 to 0.05. An idea that claims an effect is measured
+first by its cheapest mechanical proxy, such as whether the right lesson reaches a sub-agent on the
+graded tasks, and gets sessions only once it looks worth claiming. A run that is done meets every rule
+above.
+
 ## What every pre-registration states
 
 A review of the series in November 2026 (#446) found careful procedure, with controls run in the same

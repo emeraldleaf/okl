@@ -60,6 +60,8 @@ _SHOWN = re.compile(r"^\[([^\]\s]+)\] \w+ · ", re.M)
 # reads them back, so a change to that wording fails there rather than here, quietly.
 _FILES = re.compile(r"(\d+) file\(s\) changed since")
 _LISTED = re.compile(r"This review lists (\d+) lesson\(s\)")
+_PAGES = re.compile(r"This review lists \d+ lesson\(s\) on (\d+) pages")   # a paged review's page 1 (#481)
+_PAGE_OF = re.compile(r" · page (\d+) of (\d+), the lessons continued")
 # What Claude Code writes as a user line that no person typed.
 _NOT_A_PROMPT = ("<task-notification", "<agent-message", "<system-reminder", "Stop hook")
 # The bytes that mark a line a person typed, as 2.1.302 writes it, and a user line, in both spellings of JSON.
@@ -84,6 +86,8 @@ class ReviewReading:
     ran: bool = False                  # the agent ran `okl check --change` itself
     files_changed: int | None = None   # from the review's own output, when readable
     lessons_listed: int | None = None
+    pages_total: int | None = None     # the review's pages, 1 when it came whole (#481); None: unread
+    pages_read: int | None = None      # how many of them came back to the agent
     tokens: int | None = None          # the work: input, output and cache creation, with its sub-agents'
     cache_read_tokens: int | None = None   # cache reads, apart: the context a call re-reads, at a far lower price
     duration_s: int | None = None
@@ -440,6 +444,9 @@ class _Main:
         self.review_id: str | None = None
         self.files: int | None = None
         self.listed: int | None = None
+        self.pages_total: int | None = None
+        self.pages_read: set[int] = set()
+        self.page_calls: dict[str, int] = {}            # a review command's tool_use id -> the page it asked
         self.failed = 0                                 # Agent calls that came back as an error
         self.agents: dict[str, dict[str, Any]] = {}     # Agent tool_use id -> its input and result
         self.pending: set[str] = set()                  # Agent calls not yet reported back
@@ -504,6 +511,7 @@ class _Main:
                     and reviewcmd.is_review_command(cmd)):
                 self.started, self.start, self.review_id = True, _ts(d), b.get("id")
                 self.waiting = False
+                self._ask_pages(b.get("id"), cmd)
                 return True
         return False
 
@@ -512,6 +520,10 @@ class _Main:
         blocks = _blocks(d)
         results = [b for b in blocks if b.get("type") == "tool_result"]
         for b in blocks:
+            inp = b.get("input")
+            if (b.get("type") == "tool_use" and b.get("name") == "Bash" and isinstance(inp, dict)
+                    and isinstance(inp.get("command"), str) and b.get("id") != self.review_id):
+                self._ask_pages(b.get("id"), inp["command"])
             if b.get("type") == "tool_use" and b.get("name") in (SUBAGENT_TOOL, SUBAGENT_TOOL_OLD) \
                     and isinstance(b.get("id"), str) and b["id"] not in self.agents:
                 inp = b.get("input")
@@ -523,9 +535,33 @@ class _Main:
         if self.pending:
             self._release(_reported(d))
 
-    def _result(self, b: dict[str, Any], res: Any) -> None:
-        """A tool result: the review's own output, or a sub-agent's launch, completion or failure."""
+    def _ask_pages(self, tid: Any, command: str) -> None:
+        """Note the page a review command in this Bash call asks for (the last, when a line runs several)."""
+        pages = reviewcmd.review_pages(command)
+        if pages and isinstance(tid, str):
+            self.page_calls[tid] = pages[-1]
+
+    def _page_result(self, b: dict[str, Any]) -> None:
+        """A review page came back: count it, and learn how many pages the review has from what it says."""
         tid = b.get("tool_use_id")
+        page = self.page_calls.get(tid) if isinstance(tid, str) else None
+        if page is None or b.get("is_error"):
+            return
+        text = _text(b.get("content"))
+        if (m := _PAGES.search(text)):
+            self.pages_total = int(m.group(1))
+        elif (m := _PAGE_OF.search(text)):
+            self.pages_total = self.pages_total or int(m.group(2))
+        elif page == 1 and _LISTED.search(text):
+            self.pages_total = 1          # a review that came whole, or from before pages
+        if _LISTED.search(text) or _PAGE_OF.search(text):
+            self.pages_read.add(page)
+
+    def _result(self, b: dict[str, Any], res: Any) -> None:
+        """A tool result: the review's own output, a page of it, or a sub-agent's launch, completion or failure."""
+        tid = b.get("tool_use_id")
+        if tid in self.page_calls and tid != self.review_id:
+            self._page_result(b)
         if tid == self.review_id:
             if b.get("is_error"):
                 # The command was refused, or okl could not run it: no review ran. This window closes,
@@ -533,8 +569,10 @@ class _Main:
                 noted = self.noted
                 self._clear()
                 self.waiting = noted
-            elif self.files is None and self.listed is None:
-                self._counts(_text(b.get("content")))
+            else:
+                self._page_result(b)
+                if self.files is None and self.listed is None:
+                    self._counts(_text(b.get("content")))
         elif tid in self.agents:
             if b.get("is_error"):
                 del self.agents[tid]            # the call started no sub-agent
@@ -593,6 +631,9 @@ def _read(path: Path, reading: ReviewReading, repo_dir: str | None,
     if not main.started:
         return reading
     reading.files_changed, reading.lessons_listed = main.files, main.listed
+    if main.pages_total is not None:
+        reading.pages_total = main.pages_total
+        reading.pages_read = len({p for p in main.pages_read if 1 <= p <= main.pages_total})
     reading.failed_launches = main.failed
     tokens, cache, seen_tokens, last = main.tally.tokens, main.tally.cache_read, main.tally.seen, main.tally.last
     for check, read in _checks(main, path.parent / path.stem / "subagents", repo_dir, known_ids):

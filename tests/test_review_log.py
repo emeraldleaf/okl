@@ -777,3 +777,48 @@ def test_the_commands_the_parser_recognizes():
     assert reviewcmd.parse_test_outcome(False, "collected nothing") == "unknown"
     assert reviewcmd.segments("echo 'a; b' && ls | wc\ncat <<EOF\nokl check --change\nEOF\nls") == [
         ["echo", "a; b"], ["ls"], ["wc"], ["cat", "<<EOF"], ["ls"]]
+
+
+# --- pages (#481) ---------------------------------------------------------------------------------
+
+PAGE_ONE = ("## OKL review after writing — r · 4 file(s) changed since main (merge base abc1234), committed or "
+            "not\n\nThis review lists 400 lesson(s) on 3 pages, each short enough to arrive whole. This is page 1.\n")
+
+
+def _page(n: int, total: int = 3) -> str:
+    return f"## OKL review after writing — r · page {n} of {total}, the lessons continued\n\n- [l{n}] a lesson\n"
+
+
+def _paged(tmp_path, *lines: str):
+    rev = call("tu-rev", "Bash", command="okl check --change")
+    main = [typed(0, "fix the bug"), feedback(100), turn(110, "m1", rev), result(112, "tu-rev", PAGE_ONE), *lines]
+    return reviewlog.read_review(write(tmp_path, main))
+
+
+def test_a_paged_review_counts_the_pages_that_came_back(tmp_path):
+    """Page 1 says how many pages there are; a page asked in a compound line (as agents write it, with
+    `; git diff main`) counts, a refused one does not, and a page past the last is not counted."""
+    p2 = call("tu-p2", "Bash", command="okl check --change --page 2 --of abc12345; git diff main")
+    p3 = call("tu-p3", "Bash", command="okl check --change --page=3 --of stale000")
+    p9 = call("tu-p9", "Bash", command="okl check --change --page 9 --of abc12345")
+    r = _paged(tmp_path, turn(120, "m2", p2), result(121, "tu-p2", _page(2) + "diff --git a/x b/x\n"),
+               turn(130, "m3", p3), result(131, "tu-p3", "okl check --change: the review changed", error=True),
+               turn(140, "m4", p9), result(141, "tu-p9", "okl check --change: page 9: this review has 3 pages",
+                                           error=True))
+    assert (r.ran, r.lessons_listed, r.pages_total, r.pages_read) == (True, 400, 3, 2)
+
+
+def test_a_review_that_came_whole_is_one_page_read(tmp_path):
+    """A review that fits on one page, or one from before pages, is one page, read."""
+    r = reviewlog.read_review(write(tmp_path, start_review()))
+    assert (r.pages_total, r.pages_read) == (1, 1)
+
+
+def test_a_review_command_names_the_page_it_asks(tmp_path):
+    """The page each review command in a Bash line asks for; the hook's note, an echo and a bad page are none."""
+    assert reviewcmd.review_pages("okl check --change --page 2 --of x; git diff main") == [2]
+    assert reviewcmd.review_pages("okl check --change main --page=3") == [3]
+    assert reviewcmd.review_pages("okl check --change") == [1]
+    assert reviewcmd.review_pages("okl check --change --format hook") == []
+    assert reviewcmd.review_pages("echo okl check --change --page 2") == []
+    assert reviewcmd.review_pages("okl check --change --page two") == []

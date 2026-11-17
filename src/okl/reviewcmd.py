@@ -345,6 +345,26 @@ def is_review_command(command: str) -> bool:
     return False
 
 
+def review_pages(command: str) -> list[int]:
+    """The page each review command in a Bash line asks for, in order: `--page N` (or `--page=N`),
+    and 1 for a review command without it. A word that is not a page number is left out."""
+    out = []
+    for words in executed(command):
+        args = _okl_args(words)
+        if args is None or "check" not in args or _hook_format(args) or not any(
+                a == "--change" or a.startswith("--change=") for a in args):
+            continue
+        page = 1
+        for i, a in enumerate(args):
+            value = args[i + 1] if a == "--page" and i + 1 < len(args) else a.removeprefix("--page=") \
+                if a.startswith("--page=") else None
+            if value is not None:
+                page = int(value) if value.isdigit() else 0
+        if page:
+            out.append(page)
+    return out
+
+
 def _first_id(args: list[str]) -> str | None:
     """The lesson id in `show`'s arguments: the first word that is not a flag or a flag's value."""
     i = 0

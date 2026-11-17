@@ -343,7 +343,7 @@ def log_review(store: Store, repo: str, transcript: str | Path, repo_dir: str | 
                      files_changed=reading.files_changed, lessons_listed=reading.lessons_listed,
                      tokens=reading.tokens, cache_read_tokens=reading.cache_read_tokens,
                      duration_s=reading.duration_s, failed_launches=reading.failed_launches,
-                     checks=reading.checks)
+                     checks=reading.checks, pages_total=reading.pages_total, pages_read=reading.pages_read)
     return reading, True
 
 
@@ -390,6 +390,8 @@ def reviews_report(store: Store, repo: str, *, since_ms: int = 0, top: int = 5) 
         "tokens": _spread([r.tokens for r in ran if r.tokens is not None]),
         "cache_read_tokens": _spread([r.cache_read_tokens for r in ran if r.cache_read_tokens is not None]),
         "failed_launches": sum(r.failed_launches for r in ran),
+        "paged": sum((r.pages_total or 0) > 1 for r in ran),
+        "paged_read_every_page": sum((r.pages_total or 0) > 1 and r.pages_read == r.pages_total for r in ran),
         "duration_s": _spread([r.duration_s for r in ran if r.duration_s is not None]),
         "lessons": [{"id": i, "title": titles.get(i, "(no longer in the store)"), **t}
                     for i, t in ranked[:top]],
@@ -452,6 +454,9 @@ def render_reviews(r: dict[str, Any]) -> str:
     if r["failed_launches"]:
         n = r["failed_launches"]
         out.append(f"{n} Agent {'call' if n == 1 else 'calls'} came back as an error and started no sub-agent.")
+    if r.get("paged"):
+        out.append(f"**Pages:** {_n(r['paged'], 'review')} came in pages; {r['paged_read_every_page']} "
+                   f"({_pct(r['paged_read_every_page'], r['paged'])}) read every page.")
     if r["lessons"]:
         out += ["", f"**Per lesson**, most checked first ({_n(r['lessons_total'], 'lesson')} checked):"]
         out += [f"- [{x['id']}] {x['title']}: checked {x['checked']}×, {x['edited']} of the {x['read']} "
