@@ -2,6 +2,17 @@
 
 ## 0.19.0
 
+- **Each check lists every path the lesson covers before it answers** (REPORT §4bl). §4bk found the
+  review's sub-agents dismissed the right lesson in 18 of the 37 sessions that handed it over, and on
+  five of the six tasks dismissed twice they had checked the path the change took, not the one where the
+  rule broke. Step 3 now asks each sub-agent, before it answers, to list every path the lesson's rule
+  covers (each entry point that does what the lesson is about, each error and fallback path, and
+  existing code whose behaviour the change alters or makes reachable) and to check each. On single
+  prompts over the 43 graded tasks a checker asked that way found the break 0.429 of the time against
+  0.279, for 0.07 false alarms against 0.047, and the review as a whole, pick then check, caught 0.333
+  against 0.256. That is a proxy, not a session: whether review sessions gain as much is not measured,
+  and §4bj's measured gain is of the steps before this one.
+
 - **The review after writing comes in pages that arrive whole** (#481, REPORT §4bk). `okl check
   --change` printed every lesson in one output, about 80 KB for 300 lessons. Claude Code saves a
   command's output past about 30,000 characters to a file and shows the agent its first 2 KB: in 23

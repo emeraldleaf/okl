@@ -183,8 +183,8 @@ the Stop hook first asks the agent to run `okl check --change` and check the cod
 against the lessons. The command lists the files changed since the main branch, committed or
 not, and every lesson in scope one line each, those governing a changed file first. The agent
 says what its code does, picks the ten lessons the change most likely breaks, and checks each
-one on its own in a fresh sub-agent on Sonnet, the model it was measured with, fixing only what
-breaks one. In a pilot on five real past
+one on its own in a fresh sub-agent on Sonnet, the model it was measured with, asking it first to
+list every path the lesson's rule covers (REPORT §4bl), and fixing only what breaks one. In a pilot on five real past
 bugs, asking each lesson of a fixed list of ten on its own reached a pass rate of 0.72, against
 0.08 when the same ten were given together as a list (REPORT §4ay, receipt `replay-one-20261111-1355.json`);
 with the agent choosing its own ten, the review passed in 0.2 of its sessions (5 of 25, on 2 of the

@@ -1595,7 +1595,12 @@ REVIEW_STEPS = (
     "§4az): a sub-agent otherwise runs on the session's own model, which costs more on a larger one, and a "
     "smaller one was never tested. Give it the lesson's "
     "full text (`okl show <id>`, the okl_get tool), the files this change touched, and one question: does "
-    "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
+    "this change break this lesson? Ask it, before it answers, to list every path the lesson's rule covers "
+    "(each entry point that does what the lesson is about, each error and fallback path, and existing code "
+    "whose behaviour the change alters or makes reachable) and to check each, not only the lines the change "
+    "added: asked that way, a checker found the break 0.429 of the time against 0.279, for few more false "
+    "alarms (REPORT §4bl, single prompts, not sessions). If the change breaks the lesson, fix that and run the "
+    "tests that cover it; if it does not, "
     "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "
     "the same ten lessons checked together in one pass caught far less than when each was asked on its "
     "own (REPORT §4ax, §4ay), even when the one pass was asked to check each in turn (§4bg).",
