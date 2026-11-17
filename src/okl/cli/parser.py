@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "command for each further page (REPORT §4bk)")
     pk.add_argument("--of", metavar="FINGERPRINT",
                     help="with --change --page: the review page 1 named; a page of a review that changed "
-                         "since then (its files, base or lessons) is refused, exit 2")
+                         "since then (its lessons, or which govern a changed file) is refused, exit 2")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
                     help="with --format hook: the Claude Code event the output answers (default: "

@@ -1659,11 +1659,12 @@ class ReviewPageError(Exception):
 
 
 def review_fingerprint(result: dict[str, Any]) -> str:
-    """What a review's pages depend on: its merge base, files, lessons and the governing ones. Page 1
-    hands it to each further page's command, and a page whose review differs is refused, since its
-    breaks would fall elsewhere and a lesson could land on no page the agent reads."""
-    key = [result.get("merge_base"), result.get("files") or [], [e["id"] for e in result.get("lessons") or []],
-           sorted(result.get("governing") or [])]
+    """What a review's page breaks depend on: its lessons, and which of them govern a changed file
+    (they are listed first). Page 1 reserves room for the longest `Changed:` line, so the files
+    themselves move no break, and a page saved into the repo does not change the review. Page 1 hands
+    the fingerprint to each further page's command, and a page whose review differs is refused, since
+    its breaks would fall elsewhere and a lesson could land on no page the agent reads."""
+    key = [[e["id"] for e in result.get("lessons") or []], sorted(result.get("governing") or [])]
     return hashlib.sha256(json.dumps(key).encode()).hexdigest()[:8]
 
 
@@ -1722,6 +1723,9 @@ def review_pages(result: dict[str, Any], command: str = "okl check --change") ->
     cmd = lambda n: f"{command} --page {n} --of {fp}"  # noqa: E731
 
     def note(total: int) -> str:
+        if total == 1:
+            return (f"This review lists {len(lessons)} lesson(s), all on this page; the list of changed files "
+                    "is shortened to fit. Read all of it before you pick.")
         more = _code(cmd(2)) if total == 2 else f"{_code(cmd(2))} through {_code(cmd(total))}, one after another"
         return (f"This review lists {len(lessons)} lesson(s) on {total} pages, each short enough to arrive whole. "
                 f"This is page 1. Before you pick from the lessons below and on every further page, run {more}, "
@@ -1736,7 +1740,10 @@ def review_pages(result: dict[str, Any], command: str = "okl check --change") ->
 
     size = lambda lines: sum(len(line) + 1 for line in lines)  # noqa: E731
     widest = 99_999
-    first_cap = REVIEW_PAGE_CHARS - size([head, "", note(widest), *steps, "", foot(widest - 1, widest)])
+    # Page 1's room for lessons is sized for the longest Changed line and file count, not this one, so
+    # the breaks depend only on the lessons the fingerprint covers.
+    roomy = [*steps[:-2], "Changed: " + "x" * (_CHANGED_CHARS + 40), ""]
+    first_cap = REVIEW_PAGE_CHARS - size([head + " " * 12, "", note(widest), *roomy, "", foot(widest - 1, widest)])
     rest_cap = REVIEW_PAGE_CHARS - size([page_head(widest, widest), "", "", foot(widest - 1, widest)])
     packed = [p for p in _packed(body, first_cap, rest_cap) if p]
     total = max(1, len(packed))
@@ -1752,8 +1759,8 @@ def review_page(result: dict[str, Any], page: int, command: str = "okl check --c
     """One page of `review_pages`. Raises ReviewPageError for a page it does not have, or when `of`
     names a fingerprint other than this review's: the review changed since page 1 was read."""
     if of is not None and of != review_fingerprint(result):
-        raise ReviewPageError("the review changed since page 1 (its files, base or lessons differ); run "
-                              "`okl check --change` again and read every page it names")
+        raise ReviewPageError(f"the review changed since page 1 (its lessons, or which govern a changed file, "
+                              f"differ); run {_code(command)} again and read every page it names")
     pages = review_pages(result, command)
     if not 1 <= page <= len(pages):
         raise ReviewPageError(f"page {page}: this review has {len(pages)} page{'s' if len(pages) != 1 else ''}")

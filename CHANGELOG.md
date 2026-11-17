@@ -9,8 +9,9 @@
   lesson on, its line never reached the agent; all 7 failed. A list longer than about 24,000
   characters now comes in pages, page 1 with the steps and the command for each further page
   (`okl check --change --page N --of <fingerprint>`, the base and `--repo` quoted for a shell). A
-  page of a review whose files or lessons changed since page 1 is refused, since its breaks would
-  fall elsewhere. A list that fits prints as before, the lessons and their order do not change, and
+  page of a review whose lessons, or which of them govern a changed file, changed since page 1 is
+  refused, since its breaks would fall elsewhere; page 1 is sized for the longest list of changed
+  files, so a new file, such as a page saved into the repo, moves no break. A list that fits prints as before, the lessons and their order do not change, and
   `render_review`, which the eval harnesses write their lists from, still holds every lesson. Whether
   paging changes the review's pass rate is not measured.
 

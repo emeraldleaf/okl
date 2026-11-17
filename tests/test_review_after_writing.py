@@ -351,6 +351,7 @@ def test_a_long_review_comes_in_pages_that_each_arrive_whole():
     fp = core.review_fingerprint(result)
     assert (f"on {len(pages)} pages" in pages[0] and f"`okl check --change --page 2 --of {fp}` through "
             f"`okl check --change --page {len(pages)} --of {fp}`" in pages[0])
+    assert all(_lesson_lines([p]) for p in pages[1:])
     for n, p in enumerate(pages[:-1], 1):
         assert p.rstrip().endswith(f"End of page {n} of {len(pages)}. Next: `okl check --change --page {n + 1} "
                                    f"--of {fp}`.")
@@ -380,17 +381,31 @@ def test_pages_stay_under_the_cap_with_huge_changes_and_long_names():
     pages = core.review_pages(result, shlex.join(["okl", "check", "--change", base, "--repo", "r" * 255]))
     assert all(len(p) <= core.REVIEW_PAGE_CHARS for p in pages)
     assert "1000 file(s) changed" in pages[0] and re.search(r", and \d+ more\n", pages[0])
+    assert all(_lesson_lines([p]) for p in pages[1:])
     assert _lesson_lines(pages) == [line for line in core.render_review(result).splitlines() if line.startswith("- [")]
 
 
+def test_a_review_paged_only_by_its_changed_line_fits_one_page_and_names_no_other():
+    """600 changed files and 20 lessons: past the cap only by the Changed line, which is cut; the page says
+    every lesson is on it and names no page that does not exist."""
+    files = [f"src/pkg/module_{i:04d}/some_reasonably_long_name.py" for i in range(600)]
+    pages = core.review_pages(_long_review(20, files=files))
+    assert len(pages) == 1 and "--page" not in pages[0] and "all on this page" in pages[0]
+    assert len(_lesson_lines(pages)) == 20 and len(pages[0]) <= core.REVIEW_PAGE_CHARS
+
+
 def test_a_page_of_a_review_that_changed_since_page_1_is_refused():
-    """Page breaks follow the files and lessons: a page asked of a different review could leave a lesson on
-    no page read, so the fingerprint page 1 hands out must match."""
+    """Page breaks follow the lessons and which govern a changed file: a page asked of a different review
+    could leave a lesson on no page read, so the fingerprint page 1 hands out must match. A new file that
+    governs nothing, such as a page saved into the repo, moves no break and is no change."""
     result = _long_review()
     fp = core.review_fingerprint(result)
     assert core.review_page(result, 2, of=fp) == core.review_pages(result)[1]
-    with pytest.raises(core.ReviewPageError, match="changed since page 1"):
-        core.review_page({**result, "files": ["a.py", "scratch.py"]}, 2, of=fp)
+    saved = {**result, "files": [*result["files"], *[f"page{i}_saved_from_the_review.md" for i in range(60)]]}
+    assert core.review_page(saved, 2, of=fp) == core.review_pages(result)[1]
+    for changed in ({**result, "governing": ["n_0003", "n_0200"]}, {**result, "lessons": result["lessons"][1:]}):
+        with pytest.raises(core.ReviewPageError, match="changed since page 1.*`okl check --change` again"):
+            core.review_page(changed, 2, of=fp)
     with pytest.raises(core.ReviewPageError, match=f"has {len(core.review_pages(result))} pages"):
         core.review_page(result, 9)
 
@@ -418,7 +433,10 @@ def test_check_change_pages_through_the_cli(repo, capsys):
     assert main(["check", "--change", "main", "--repo", "r", "--page", "2", "--of", fp]) == 0
     two = capsys.readouterr().out
     assert set(_lesson_lines([two])) and not set(_lesson_lines([two])) & set(_lesson_lines([one]))
-    (repo / "new_untracked.py").write_text("x = 1\n")
+    (repo / "page2.md").write_text(two)   # a page saved into the repo changes no break
+    assert main(["check", "--change", "main", "--repo", "r", "--page", "2", "--of", fp]) == 0
+    assert capsys.readouterr().out == two
+    _store(repo, _n("l999"))
     for argv in (["check", "--change", "main", "--repo", "r", "--page", "2", "--of", fp],
                  ["check", "--change", "--page", "0"], ["check", "--change", "--page", "99"],
                  ["check", "--task", "x", "--page", "2"], ["check", "--task", "x", "--of", fp],

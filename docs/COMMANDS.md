@@ -177,7 +177,8 @@ okl check --change [BASE] [--repo R] --page N --of FINGERPRINT
                      # page N of that review, as page 1 names it (REPORT §4bk: a list past Claude
                      #   Code's ~30,000-character cap came back as a 2 KB preview). Exit 2 for a
                      #   page the review does not have, a page below 1, a FINGERPRINT other than
-                     #   the review's now (its files, base or lessons changed since page 1), and
+                     #   the review's now (its lessons, or which govern a changed file, changed
+                     #   since page 1; a page saved into the repo is no change), and
                      #   --page other than 1 or --of with --task, --path, or --format json or hook.
 okl recap --transcript <path> --log-review
                      # in Claude Code: read the session's transcript, and its sub-agents' under
