@@ -7453,6 +7453,61 @@ What it suggests, not tested:
 24,000 characters in pages, each short enough to arrive whole, and page 1 names the command for each further
 one. Whether that changes the review's pass rate is not measured.
 
+## 4bl. EXPLORATORY, NOT PRE-REGISTERED: cheap proxies for finding the right lesson (2026-11-17)
+
+§4bk split the review's losses: the pick lost 42 of 63 failed sessions and the check 16. This measures three
+ways to do better with single prompts and no tools, as docs/EVALUATION.md's "When a full run is needed" asks
+before any sessions: a wider pick (30 lessons, not 10), a check question that first lists every path the
+lesson's rule covers, and Haiku for that check, at a fraction of Sonnet's cost (#456). It decides what is worth
+building, and none of its figures says what a review session would do. An agent (Claude) wrote
+`evals/lesson_finding.py` and ran it at be66177; the joined figures were added to its scoring afterwards
+(2fd1520), from the same rows. Receipt `lesson-finding-20261117-0441.json`: 343 of 344 calls answered, all on
+Sonnet or Haiku at effort medium, about $43 API-priced. One check, Sonnet's path question on t12's right
+lesson, gave no answer it could read on two tries.
+
+**Pick.** Given the review's list and the change's diff, Sonnet's ten held the right lesson on 0.628 of the 43
+tasks, and its thirty on 0.791: 0.163 more (95% interval 0.047 to 0.302). In §4bj's sessions the review handed
+the right lesson to a sub-agent in 0.43 of its sessions, so this proxy runs higher than a session does.
+
+**Check.** One lesson, the diff and the changed files as they stand after it; does the change break the
+lesson? Each checker on the right lesson and on one decoy per task, a lesson §4bj's review handed a sub-agent
+that is not the right one. A decoy has no grader, so its "breaks" rate bounds false alarms from above.
+
+| checker | says "breaks" on the right lesson | on the decoy | API-priced cost a call |
+|---|---|---|---|
+| Sonnet, today's question | 0.279 | 0.047 | $0.150 |
+| Sonnet, listing every path first | 0.429 | 0.07 | $0.156 |
+| Haiku, listing every path first | 0.535 | 0.256 | $0.009 |
+
+Listing the paths first found 0.167 more of the right lessons (0.071 to 0.286) for 0.023 more decoys (0 to
+0.07). Haiku said "breaks" on 0.095 more of the right lessons than Sonnet (-0.024 to 0.238) and on 0.186 more
+of the decoys (0.07 to 0.302): it flags more of everything.
+
+**Pick, then check**, joined per task: the right lesson picked, and then flagged by the checker.
+
+| pipeline | caught |
+|---|---|
+| pick 10, Sonnet with today's question (as the review runs now) | 0.256 |
+| pick 10, Sonnet listing every path | 0.333 |
+| pick 30, Sonnet listing every path | 0.333 |
+| pick 30, Haiku listing every path | 0.465 |
+| pick 30, Haiku screens, then Sonnet listing every path confirms | 0.31 |
+
+What it suggests, not tested in sessions:
+- **The path question is the cheap win.** It raises the catch from 0.256 to 0.333 at the same cost, and costs
+  few false alarms.
+- **A wider pick adds nothing when Sonnet checks it.** The tasks a pick of 30 adds are ones Sonnet then calls
+  not broken.
+- **Haiku is not ready to check 30 lessons alone.** It catches the most, 0.465, but flags a quarter of the
+  decoys, which over 30 lessons is about eight false alarms a review, each an edit the agent should not make.
+  A Haiku screen with a Sonnet confirmation costs, at these per-call prices, about what today's review does, and
+  catches 0.31.
+
+**Threats.**
+- Single prompts with no tools, against review sessions whose sub-agents read the repository.
+- The decoys' "breaks" may be true: nothing grades them.
+- 43 tasks from 33 changes, in one repository; the in-sample tasks are counted with the rest.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
