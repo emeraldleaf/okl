@@ -53,7 +53,12 @@ LABELS, STATES, FIRST, USAGE, SETTLED, VERDICTS, DECOYS = ("4aq-labels.jsonl", "
                                                           "4aq-settled.jsonl", "4aq-verdicts.jsonl", "4aq-decoys.json")
 READ_ONLY = ["--output-format", "json", "--restricted", "--strict-mcp-config", "--tools", "Read,Grep,Glob"]
 SONNET_READS, OPUS_READS = ["claude", "-p", "--model", "sonnet", *READ_ONLY], ["claude", "-p", "--model", "opus", *READ_ONLY]
-ENV = sb.clean_env()   # no session, okl or git variables (#446)
+def call_env() -> dict[str, str]:
+    """The environment for a model call: no session, okl or git variables (#446). Built when a call needs
+    it, not at import: building it marks the process as having run its children in clean_env, and six
+    scripts import this module, so an import-time build stamped that on receipts whose own calls never
+    used it, a score-only process's among them (#479)."""
+    return sb.clean_env()
 AGENT_FILES = (".claude", ".cursor", ".mcp.json", "CLAUDE.md", "AGENTS.md")   # the copy must not brief or instruct the model
 ACTION, RAISED_AFTER, CHANGE_FILE = ("not_followed", "check"), ("gap", "ask"), "CHANGE.diff"
 WORKERS, TOOL_TIMEOUT, TOOL_BATCH, DECOY_SHARE, DECOY_VOID = 3, 900, 10, 0.1, 0.2
@@ -271,7 +276,7 @@ def ask_with_repo(cmd: list[str], prompt: str, room: Path, *, pr: int, step: str
     """The model's array for `prompt`, or nothing when it gave none (a later round asks again)."""
     start = time.monotonic()
     try:
-        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=TOOL_TIMEOUT, cwd=room, env=ENV)
+        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=TOOL_TIMEOUT, cwd=room, env=call_env())
     except subprocess.TimeoutExpired:
         note_usage({"pr": pr, "step": step, "seconds": TOOL_TIMEOUT, "error": "timeout"})
         return []

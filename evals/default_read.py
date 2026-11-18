@@ -139,7 +139,7 @@ def review_one(arm: str, task: dict) -> dict | None:
             (room / LESSON_DIR / f"{i.replace('/', '_')}.md").write_text(texts.get(i, f"[{i}] (no text)\n"))
         start = time.monotonic()
         try:
-            p = subprocess.run(SONNET, input=PROMPT, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=rp.ENV)
+            p = subprocess.run(SONNET, input=PROMPT, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=rp.call_env())
         except subprocess.TimeoutExpired:
             return None
     try:
@@ -290,7 +290,7 @@ def settle_one(case: dict, task: dict) -> dict | None:
         (room / CHANGE_FILE).write_text(ra.whole(task))
         try:
             p = subprocess.run(THIRD, input=SETTLE_PROMPT.format(lesson=lesson), capture_output=True, text=True,
-                               timeout=TIMEOUT, cwd=room, env=rp.ENV)
+                               timeout=TIMEOUT, cwd=room, env=rp.call_env())
         except subprocess.TimeoutExpired:
             return None
     try:

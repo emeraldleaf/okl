@@ -143,7 +143,7 @@ def judge_one(call: dict, task: dict) -> dict | None:
         (room / dr.CHANGE_FILE).write_text(ra.whole(task))
         try:
             p = subprocess.run(JUDGES[call["judge"]], input=PROMPT.format(lesson=lesson), capture_output=True,
-                               text=True, timeout=TIMEOUT, cwd=room, env=rp.ENV)
+                               text=True, timeout=TIMEOUT, cwd=room, env=rp.call_env())
         except subprocess.TimeoutExpired:
             print(f"  #{call['pr']} {call['lesson']} {call['arm']}/{call['judge']}: timed out", file=sys.stderr, flush=True)
             return None
