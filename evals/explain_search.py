@@ -64,7 +64,6 @@ PICKED = lr.PRIVATE / "pick-4at.jsonl"
 LINE_FIX = 160   # characters of the fix's first sentence, as the briefing's one-line tier cuts it
 SONNET = ["claude", "-p", "--model", "sonnet", "--output-format", "json", "--restricted", "--strict-mcp-config",
           "--tools", "Read,Grep,Glob"]
-ENV = {**rp.ENV}
 K, K_ALSO, CODE_CUT, WORKERS, TIMEOUT, STOP_AFTER_EMPTY = 5, 10, 4000, 3, 900, 12
 EXPLAINED = lr.PRIVATE / "explain-4at.jsonl"
 BROKEN = "not_followed"   # §4ao's sort used check for what the diff alone could not show, so it is not counted
@@ -156,7 +155,7 @@ def explain_one(half: str, task: dict) -> dict | None:
     with tempfile.TemporaryDirectory(prefix="okl-4at-") as room:
         (Path(room) / "CHANGE.diff").write_text(ra.whole(task))
         try:
-            p = subprocess.run(SONNET, input=EXPLAIN_PROMPT, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=ENV)
+            p = subprocess.run(SONNET, input=EXPLAIN_PROMPT, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=rp.call_env())
         except subprocess.TimeoutExpired:
             return None
     try:
@@ -237,7 +236,7 @@ def pick_one(half: str, task: dict, sentences: list[str]) -> dict | None:
                       "", "## The lessons", *lesson_lines(half, task)])
     with tempfile.TemporaryDirectory(prefix="okl-4at-pick-") as room:
         try:
-            p = subprocess.run(SONNET, input=text, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=ENV)
+            p = subprocess.run(SONNET, input=text, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=rp.call_env())
         except subprocess.TimeoutExpired:
             return None
     try:

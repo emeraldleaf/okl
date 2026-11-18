@@ -116,7 +116,7 @@ def test_every_model_call_in_the_evals_names_its_room_and_its_environment():
 
 # Names an env may come from because each is built by clean_env, which its own test holds:
 # review_repo.ENV and explain_search.ENV (module constants), and Replayer.env.
-CLEAN_SOURCES = {"clean_env", "env_for", "generator_env"}
+CLEAN_SOURCES = {"clean_env", "env_for", "generator_env", "call_env"}
 CLEAN_NAMES = {"ENV", "rp.ENV", "self.env", "r.env"}
 
 
@@ -434,3 +434,65 @@ def test_a_garbled_path_is_read_as_its_own_tree_only_when_the_whole_prefix_match
     other = ht.breaker(session("/tmp/okl-w-a_b/t0", "/tmp/okl-w-c_d/t0/ci/check-x.sh"), "/main", ("ci/check-x.sh",))
     assert (own["hidden_asked"], own["outside_worktree_calls"]) == (1, 0)
     assert (other["hidden_asked"], other["outside_worktree_calls"]) == (0, 1)
+
+
+# --- receipts say what their runs ran (#479) -------------------------------------------------------
+
+REPO = Path(__file__).resolve().parent.parent
+# review_repo and every script that imports it. Importing one must not mark the process as having run
+# its children in clean_env: an import-time build did, so receipts claimed it whatever their calls used.
+REVIEW_REPO_IMPORTERS = ("review_repo", "audit_sample", "briefed_follow", "conditions_agree", "default_read",
+                         "explain_search", "review_repo_detail", "review_graded", "review_graded_diagnose",
+                         "lesson_finding")
+
+
+def test_importing_the_eval_scripts_does_not_claim_a_clean_environment():
+    """sandbox.USED stays False after importing review_repo and its importers, and turns True once a call's
+    environment is built: the receipt's model_env then means a call used it."""
+    code = ("import sys, importlib; sys.path[:0] = ['evals', 'src']\n"
+            f"for m in {REVIEW_REPO_IMPORTERS!r}: importlib.import_module(m)\n"
+            "import sandbox, review_repo\nbefore = sandbox.USED\nreview_repo.call_env()\n"
+            "print(before, sandbox.USED)")
+    out = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True, timeout=120)
+    assert out.stdout.split() == ["False", "True"], out.stderr[-600:]
+
+
+# Receipts written at or before this stamp are grandfathered: their rows predate the rule.
+ROWS_COMMIT_FROM = "20261117-0500"
+_STAMP = __import__("re").compile(r"-(\d{8}-\d{4})\.json$")
+
+
+def _row_commit_problems(name: str, receipt: object) -> list[str]:
+    """What a receipt with rows lacks to say what its rows ran: a commit on every row, and the set of them."""
+    rows = receipt.get("rows") if isinstance(receipt, dict) else None
+    if not isinstance(rows, list) or not rows:
+        return []
+    bare = [i for i, r in enumerate(rows) if not isinstance(r, dict) or not r.get("okl_commit")]
+    if bare:
+        return [f"{name}: rows {bare[:5]} carry no okl_commit (stamp each with run_guard.commit())"]
+    if sorted({r["okl_commit"] for r in rows}) != sorted(receipt.get("run_commits") or []):
+        return [f"{name}: run_commits does not list the commits its rows ran"]
+    return []
+
+
+def test_the_row_commit_check_finds_what_it_is_for():
+    """The check flags a row with no commit and a run_commits that disagrees, and passes a receipt that has both."""
+    good = {"rows": [{"okl_commit": "abc1234"}, {"okl_commit": "abc1234"}], "run_commits": ["abc1234"]}
+    assert _row_commit_problems("r", good) == [] and _row_commit_problems("r", {"rows": []}) == []
+    assert "carry no okl_commit" in _row_commit_problems("r", {"rows": [{"id": "t1"}], "run_commits": []})[0]
+    assert "does not list" in _row_commit_problems("r", {**good, "run_commits": ["other"]})[0]
+
+
+def test_every_new_receipt_with_rows_says_what_each_row_ran():
+    """A receipt's okl_commit is the scoring process's; one scored after its run, in another process, cannot
+    show what its sessions ran unless each row carries its own commit (#479, §4bj's first receipt)."""
+    results = REPO / "evals" / "results"
+    receipts = sorted(results.glob("*.json"))
+    assert len(receipts) > 50
+    problems = []
+    for p in receipts:
+        m = _STAMP.search(p.name)
+        if m and m.group(1) > ROWS_COMMIT_FROM:
+            problems += _row_commit_problems(p.name, __import__("json").loads(p.read_text()))
+    assert problems == []
+

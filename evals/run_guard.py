@@ -50,3 +50,10 @@ class Run:
 def start() -> Run:
     """Read the code at the start of a run."""
     return Run()
+
+
+def commit() -> str:
+    """The commit the code runs at now, marked dirty when the tree it reads has uncommitted changes. Stamp it
+    on each row a run writes: a receipt's own commit stamps cover only the process that writes it, so a run
+    scored later in another process cannot say what its sessions ran without one on every row (#479)."""
+    return ab.tree_state(READS)[0]

@@ -124,7 +124,8 @@ mistake no lesson named.
     2014; SWE-bench's fail-to-pass tests; Anthropic, *Demystifying evals*).
 15. **Each runs where it can, and a claim follows its evaluation.** Deterministic evaluations run in
     CI on every pull request; model-judged ones run on a schedule and before each release, and a
-    release waits for them. Every public figure links its receipt. A claim with no passing
+    release waits for them. Every public figure links its receipt, and a receipt with rows records the commit
+    each row ran (`run_guard.commit()`), since its own commit stamps cover only the process that wrote it (#479). A claim with no passing
     evaluation at the release commit is marked unmeasured or removed.
 16. **Tests use recorded inputs.** Fixtures are recorded from the systems they stand for, never
     written from what the author expects: a fixture written by the code's author shares its
