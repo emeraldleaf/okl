@@ -1001,6 +1001,33 @@ def test_review_agent_reviews_a_long_diff_in_parts_and_merges_them(tmp_path):
     assert ["+++ b/c.py" in p for p in prompts] == [False, False, True]
     assert r.returncode == 1 and "1 must-fix, 1 to consider" in r.stdout          # merged across parts
     assert "checked: c1; c2; c3" in r.stdout
+    # Every part's prompt carries the reviewer's checklist. Built inside the clean room, the
+    # prompt lost it: the agent file is found by a repo-relative path (okl #490's own review).
+    agent = next(p for p in tmp_path.rglob("architecture-reviewer.md") if ".git" not in p.parts)
+    assert all(agent.read_text().strip() in p for p in prompts)
+    assert "No such file" not in r.stderr, r.stderr
+
+
+def test_review_agent_shows_a_file_longer_than_a_part_up_to_the_limit_and_says_so(tmp_path):
+    """One file's diff longer than a part is shown up to the limit, and the reviewer is told how much
+    is not shown and to read the rest in the repository, rather than the rest vanishing."""
+    base = _review_repo(tmp_path, {"a.py": "".join(f"line {i}\n" for i in range(60))})
+    r, prompts = _run_review(tmp_path, base, [_verdict(None)], REVIEW_MAX_LINES="20")
+    assert len(prompts) == 1 and r.returncode == 0, r.stdout + r.stderr
+    shown = prompts[0].split("--- DIFF UNDER REVIEW")[1].split("--- END DIFF ---")[0]
+    assert "+line 10" in shown and "+line 59" not in shown
+    assert "more lines of a.py are not shown: read the file in the repository]" in shown
+
+
+def test_review_agent_with_no_review_in_any_part_has_no_verdict_and_says_so(tmp_path):
+    """When no part's reply holds a review, the change has no verdict: it does not block, but the
+    PR gets a warning, so a green check is not read as a review."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big})
+    r, prompts = _run_review(tmp_path, base, ["I could not finish."], REVIEW_MAX_LINES="20")
+    assert len(prompts) == 2 and r.returncode == 0, r.stdout + r.stderr
+    assert "::warning title=architecture review::no review verdict" in r.stdout
+    assert "must-fix" not in r.stdout.split("::warning")[0]
 
 
 def test_review_agent_names_what_it_did_not_review_past_its_parts(tmp_path):

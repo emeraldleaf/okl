@@ -215,11 +215,15 @@ fi
 # injects a briefing into the review, and the Stop hook answers instead of the reviewer.
 # Reproduced while verifying this script — a smoke call in the repo cwd came back answering
 # the Stop hook rather than the question, which is the same failure evals/ documents.
+# Only the reviewer runs there: the prompt is built here first, because it reads repo-relative
+# paths (the agent file, as `find` names it), and building it inside the clean room sent the
+# reviewer a prompt without its checklist (cat failed on okl #490's own review).
 replies_dir="$(mktemp -d)"
 for part in "$parts_dir"/part-*.diff; do
   n="$(basename "$part" .diff)"; n="${n#part-}"
+  build_prompt "$((10#$n))" "$part" > "$parts_dir/prompt-$n.txt"
   clean="$(mktemp -d)"
-  (cd "$clean" && build_prompt "$((10#$n))" "$part" | $REVIEW_CMD 2>/dev/null) > "$replies_dir/reply-$n.txt"
+  (cd "$clean" && $REVIEW_CMD < "$parts_dir/prompt-$n.txt" 2>/dev/null) > "$replies_dir/reply-$n.txt"
   rmdir "$clean" 2>/dev/null || true
 done
 raw="$(cat "$replies_dir"/reply-*.txt 2>/dev/null)"
