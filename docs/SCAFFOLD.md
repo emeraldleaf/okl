@@ -32,6 +32,9 @@ The kit's scripts read these environment variables, each optional:
 | `REVIEW_REPO_DIR` | `ci/review-agent.sh` | the checkout, so a reviewer that can read files is told where it is. With `GIT_DIR` set as well, it is also told that git already points there |
 | `REVIEW_PR_TITLE`, `REVIEW_PR_BODY` | `ci/review-agent.sh` | what the change says it does (the body's first 4,000 bytes) |
 | `REVIEW_BRIEFING_FILE` | `ci/review-agent.sh` | a file holding `okl check`'s briefing for the change (its first 20,000 bytes) |
+| `REVIEW_CI_RESULTS_FILE` | `ci/review-agent.sh` | a file holding what the change's tests, linters and type checks reported (its first 30,000 bytes), so a reviewer that runs nothing still reads them |
+| `REVIEW_EXCLUDE` | `ci/review-agent.sh` | git globs left out of the diff the reviewer reads, as data, and listed for it to open: lockfiles unless set |
+| `REVIEW_MAX_LINES`, `REVIEW_MAX_PARTS` | `ci/review-agent.sh` | the diff is reviewed in parts of at most 4,000 lines, one fresh call each, at most 4 parts; files past the last part are named as not reviewed, on the PR and in the log |
 | `GENERATOR_MODEL`, `JUDGE_MODEL` | `evals/run_evals.py` | the models that answer and grade. The harness refuses to run when both are set and the same |
 
 It also stamps two **first-party method skills** — `encoding-loop` (turn a finding

@@ -945,6 +945,133 @@ def test_review_agent_finds_the_review_wherever_the_reply_puts_it(tmp_path, repl
     assert expect in r.stdout, r.stdout + r.stderr
 
 
+def _review_repo(tmp_path, files: dict[str, str]) -> str:
+    """A scaffolded repo with a base commit, then one commit writing `files`; returns the base."""
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    def git(*args):
+        return subprocess.run(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", *args],
+                              cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    for name, text in files.items():
+        (tmp_path / name).write_text(text)
+    git("add", "-A"); git("commit", "-qm", "change")
+    return base
+
+
+def _run_review(tmp_path, base, replies: list[str], **env_extra):
+    """Run the runner with a stand-in reviewer that saves each prompt it gets and gives the reply for
+    its turn (the last reply again past the end)."""
+    (tmp_path / "replies.json").write_text(json.dumps(replies))
+    fake = tmp_path / "fake-reviewer.py"
+    fake.write_text("import json, sys, pathlib\n"
+                    f"d = pathlib.Path({str(tmp_path)!r})\n"
+                    "n = len(list(d.glob('prompt-*.txt')))\n"
+                    "(d / ('prompt-%d.txt' % n)).write_text(sys.stdin.read())\n"
+                    "r = json.loads((d / 'replies.json').read_text())\n"
+                    "print(r[min(n, len(r) - 1)])\n")
+    env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(tmp_path),
+           "REVIEW_CMD": f"{sys.executable} {fake}", "REVIEW_BASE_REF": base, "GITHUB_ACTIONS": "true",
+           **env_extra}
+    r = subprocess.run(["bash", str(tmp_path / "ci" / "review-agent.sh")], capture_output=True,
+                       text=True, cwd=str(tmp_path), env=env)
+    prompts = [(tmp_path / f"prompt-{i}.txt").read_text()
+               for i in range(len(list(tmp_path.glob("prompt-*.txt"))))]
+    return r, prompts
+
+
+def _verdict(severity="consider", file="a.py", checked="c", not_checked=None):
+    return json.dumps({"findings": [{"severity": severity, "file": file, "line": 1, "rule": "r",
+                                     "finding": f"in {file}"}] if severity else [],
+                       "checked": [checked], "not_checked": not_checked or []})
+
+
+def test_review_agent_reviews_a_long_diff_in_parts_and_merges_them(tmp_path):
+    """A diff past one part's lines goes to several fresh reviews, one part each, never cut silently;
+    their findings are merged. On okl's own pull requests the old single cut at 4,000 lines left the
+    code after it unreviewed on two changes in one week."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big, "c.py": big})
+    r, prompts = _run_review(tmp_path, base, [_verdict(file="a.py", checked="c1"),
+                                              _verdict("must-fix", file="b.py", checked="c2"),
+                                              _verdict(None, checked="c3")], REVIEW_MAX_LINES="20")
+    assert len(prompts) == 3, r.stdout + r.stderr
+    assert [f"PART {i} OF 3" in p for i, p in enumerate(prompts, 1)] == [True, True, True]
+    assert ["+++ b/a.py" in p for p in prompts] == [True, False, False]
+    assert ["+++ b/c.py" in p for p in prompts] == [False, False, True]
+    assert r.returncode == 1 and "1 must-fix, 1 to consider" in r.stdout          # merged across parts
+    assert "checked: c1; c2; c3" in r.stdout
+    # Every part's prompt carries the reviewer's checklist. Built inside the clean room, the
+    # prompt lost it: the agent file is found by a repo-relative path (okl #490's own review).
+    agent = next(p for p in tmp_path.rglob("architecture-reviewer.md") if ".git" not in p.parts)
+    assert all(agent.read_text().strip() in p for p in prompts)
+    assert "No such file" not in r.stderr, r.stderr
+
+
+def test_review_agent_shows_a_file_longer_than_a_part_up_to_the_limit_and_says_so(tmp_path):
+    """One file's diff longer than a part is shown up to the limit, and the reviewer is told how much
+    is not shown and to read the rest in the repository, rather than the rest vanishing."""
+    base = _review_repo(tmp_path, {"a.py": "".join(f"line {i}\n" for i in range(60))})
+    r, prompts = _run_review(tmp_path, base, [_verdict(None)], REVIEW_MAX_LINES="20")
+    assert len(prompts) == 1 and r.returncode == 0, r.stdout + r.stderr
+    shown = prompts[0].split("--- DIFF UNDER REVIEW")[1].split("--- END DIFF ---")[0]
+    assert "+line 10" in shown and "+line 59" not in shown
+    assert "more lines of a.py are not shown: read the file in the repository]" in shown
+
+
+def test_review_agent_with_no_review_in_any_part_has_no_verdict_and_says_so(tmp_path):
+    """When no part's reply holds a review, the change has no verdict: it does not block, but the
+    PR gets a warning, so a green check is not read as a review."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big})
+    r, prompts = _run_review(tmp_path, base, ["I could not finish."], REVIEW_MAX_LINES="20")
+    assert len(prompts) == 2 and r.returncode == 0, r.stdout + r.stderr
+    assert "::warning title=architecture review::no review verdict" in r.stdout
+    assert "must-fix" not in r.stdout.split("::warning")[0]
+
+
+def test_review_agent_names_what_it_did_not_review_past_its_parts(tmp_path):
+    """Parts past REVIEW_MAX_PARTS are not sent: their files are named in the log, on the PR and
+    under not_checked, so a green check is never read as a review of them."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big, "c.py": big})
+    r, prompts = _run_review(tmp_path, base, [_verdict(None)], REVIEW_MAX_LINES="20", REVIEW_MAX_PARTS="2")
+    assert len(prompts) == 2 and r.returncode == 0
+    assert "not reviewed, past 2 part(s) of 20 lines: c.py" in r.stdout
+    assert "::warning title=architecture review::not reviewed, past REVIEW_MAX_PARTS: c.py" in r.stdout
+    assert "could not check: not reviewed, past REVIEW_MAX_PARTS: c.py" in r.stdout
+
+
+def test_review_agent_leaves_data_files_out_of_the_diff_but_lists_them(tmp_path):
+    """A lockfile is listed for the reviewer to open, not sent as diff lines; so is a pattern the repo
+    names in REVIEW_EXCLUDE."""
+    base = _review_repo(tmp_path, {"a.py": "x = 1\n", "uv.lock": "LOCK-LINE\n" * 50,
+                                   "receipt.json": "RECEIPT-LINE\n" * 50})
+    r, prompts = _run_review(tmp_path, base, [_verdict(None)],
+                             REVIEW_EXCLUDE="*.lock receipt.json")
+    assert len(prompts) == 1 and r.returncode == 0, r.stdout + r.stderr
+    p = prompts[0]
+    assert "LOCK-LINE" not in p and "RECEIPT-LINE" not in p and "+++ b/a.py" in p
+    left = p.split("--- LEFT OUT OF THE DIFF AS DATA")[1].split("--- DIFF UNDER REVIEW")[0]
+    assert "uv.lock" in left and "receipt.json" in left
+    assert "left out as data: 2 file(s)" in r.stdout
+
+
+def test_review_agent_hands_the_reviewer_the_ci_results_and_counts_a_silent_part(tmp_path):
+    """The reviewer cannot run code while a token is in its environment, so the change's CI results
+    reach it as input; and a part whose reply holds no review is said, not passed over."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big})
+    results = tmp_path / "ci-results.md"
+    results.write_text("tests-other-pythons (3.13): failure\nFAILED tests/test_x.py::test_y\n")
+    r, prompts = _run_review(tmp_path, base, [_verdict(None, checked="c1"), "I could not finish."],
+                             REVIEW_MAX_LINES="20", REVIEW_CI_RESULTS_FILE=str(results))
+    assert all("FAILED tests/test_x.py::test_y" in p for p in prompts)
+    assert "a failure the change caused is must-fix" in prompts[0]
+    assert "a test that would pass" in prompts[0] and "on broken code" in prompts[0]
+    assert r.returncode == 0 and "could not check: part 2 of 2: the reviewer gave no review" in r.stdout
+
+
 def test_stored_data_never_reaches_a_shell():
     """Data from the store reaches subprocesses list-form; only a typed arg may be shelled.
 

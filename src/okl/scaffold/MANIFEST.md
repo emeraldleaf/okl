@@ -70,4 +70,7 @@ between repos) lives in okl and surfaces via `okl check`.
 fails on must-fix findings. **Off unless the `REVIEW_CMD` repository variable is set** to
 a CLI that reads a prompt on stdin — `claude -p` (uses your existing Claude Code login,
 no separate API key), `ollama run <model>` (local, free), or any other. Unset, it prints
-one line and passes. It is the only gate in this kit that calls a model.
+one line and passes. It is the only gate in this kit that calls a model. A long diff is
+reviewed in parts, one call each, and any file past the last part is named as not reviewed;
+lockfiles are left out of the diff as data and listed. Give it your CI's test results
+(`REVIEW_CI_RESULTS_FILE`) so a reviewer that runs nothing still reads what they found.
