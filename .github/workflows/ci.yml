@@ -73,16 +73,20 @@ jobs:
           uv sync --locked --python "$(command -v python)"
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
+      # Each check's output is kept for the review job below: the reviewer runs nothing while the
+      # subscription token is in its environment, so what these report reaches it as input.
       - name: Lint — ruff (config in pyproject.toml)
-        run: ruff check .
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-results"
+          ruff check . 2>&1 | tee "$RUNNER_TEMP/ci-results/ruff.log"
 
       - name: Types — mypy
-        run: mypy src/okl
+        run: mypy src/okl 2>&1 | tee "$RUNNER_TEMP/ci-results/mypy.log"
 
       # The architecture test: the layers contract in pyproject.toml fails the first
       # import that points up (store -> core, core -> client, ...).
       - name: Architecture — import-linter
-        run: lint-imports
+        run: lint-imports 2>&1 | tee "$RUNNER_TEMP/ci-results/import-linter.log"
 
       # A Postgres test without the server's URL fails here rather than skips: the server
       # above exists so they run (tests/test_okl.py's _postgres_url).
@@ -90,7 +94,7 @@ jobs:
         env:
           OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
           OKL_TEST_POSTGRES_REQUIRED: "1"
-        run: pytest -q --cov=okl
+        run: pytest -q --cov=okl 2>&1 | tee "$RUNNER_TEMP/ci-results/pytest.log"
 
       # Each guard install.py relies on (every symlink refusal, found by reading the code) is
       # switched off in turn, and a test must fail: reviews kept finding guards that could be
@@ -123,59 +127,15 @@ jobs:
       # key for organization-owned repositories, so it would break for anyone who forks
       # this into an org. The binary has no such condition, and pinning the release keeps
       # a new detection rule from retro-failing a branch that changed nothing.
-      # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
-      # triggering it — the "enforcement surface that only runs on-demand runs never"
-      # failure this repo's own store names. It runs on the maintainer's Claude subscription:
-      # CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`, bills the subscription and not the
-      # API (no ANTHROPIC_API_KEY here, which would outrank it; --bare would ignore it).
-      # Without that secret, and on a fork's PR, which gets no secrets, it soft-passes; the
-      # REVIEW_CMD variable swaps in any other CLI. The script runs it from a clean room, so
-      # this repo's hooks never fire on it, and --add-dir lets it read the checkout to hold
-      # each figure to its receipt. It fails the job on a must-fix finding only.
-      - name: Architecture review (on the maintainer's Claude subscription)
-        if: github.event_name == 'pull_request'
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          REVIEW_CMD: ${{ vars.REVIEW_CMD }}
-          REVIEW_BASE_REF: origin/${{ github.base_ref }}
-          # What the change says it does, passed as data: interpolated into the script, a PR
-          # title could run as shell. The reviewer is told it is a claim, not instructions.
-          REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
-          REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
-          # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
-          CLAUDE_CODE_VERSION: "2.1.302"
-        run: |
-          if [[ -z "$REVIEW_CMD" && -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
-            # The platform package is the native binary itself and runs no install script,
-            # so npm can refuse lifecycle scripts outright.
-            npm install --ignore-scripts --no-fund --no-audit --prefix "$RUNNER_TEMP/claude" \
-              "@anthropic-ai/claude-code-linux-x64@$CLAUDE_CODE_VERSION"
-            CLAUDE_BIN="$RUNNER_TEMP/claude/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
-            chmod +x "$CLAUDE_BIN"
-            # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
-            # settings file, since the command line is word-split; GIT_DIR points the clean
-            # room's git at the checkout. Only forms that cannot write, while the token is in the
-            # environment and the model reads PR text: not branch or tag, which create and delete
-            # refs (CI reviewer on #307), and not log or show, whose --output writes a file
-            # (CodeRabbit on #307). Any other shell command is refused in -p mode.
-            printf '%s' '{"permissions":{"allow":["Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
-              > "$RUNNER_TEMP/review-settings.json"
-            export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
-            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"
-          fi
-          # The knowledge layer's briefing for this change, from the seed packs in a store that
-          # lives for this step; this repo's own recorded lessons stay on the maintainer's
-          # machine, so the reviewer is told the briefing is the packs' only.
-          export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/review.db" OKL_BRIEFING_LOG=0
-          briefing="$RUNNER_TEMP/briefing.md"
-          if okl seed seed/ >/dev/null 2>&1 \
-             && okl check --task "$REVIEW_PR_TITLE. ${REVIEW_PR_BODY:0:600}" --format agent > "$briefing" 2>/dev/null; then
-            printf '\n(From the seed packs only: lessons recorded on the maintainer machine are not in CI.)\n' >> "$briefing"
-          else
-            briefing=""
-          fi
-          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" REVIEW_BRIEFING_FILE="$briefing" \
-            bash ci/review-agent.sh | tee -a "$GITHUB_STEP_SUMMARY"
+      # What the checks above reported, for the review job, whether they passed or failed.
+      - name: Keep the check results for the review
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: ci-results-lint-and-test
+          path: ${{ runner.temp }}/ci-results/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Secret scan — gitleaks
         env:
@@ -221,7 +181,18 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Tests
-        run: pytest -q
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-results"
+          pytest -q 2>&1 | tee "$RUNNER_TEMP/ci-results/pytest.log"
+
+      - name: Keep the test results for the review
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: ci-results-py${{ matrix.python-version }}
+          path: ${{ runner.temp }}/ci-results/
+          if-no-files-found: ignore
+          retention-days: 3
 
   # okl end to end, as a user gets it: a wheel built from this commit, installed fresh with the
   # MCP extra into a clean virtualenv, then driven on a scratch repository by ci/e2e.py: init on
@@ -258,3 +229,115 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python ci/e2e.py --okl "$RUNNER_TEMP/okl-venv/bin/okl"
+
+  # The architecture review, after the jobs that test the change, so it reads what they reported.
+  # It ran inside lint-and-test with read-only tools and nothing else, and on a week of okl's own
+  # pull requests it passed four changes the same reviewer, given tests and probes to run, found
+  # must-fix defects in. It still runs no code itself: the token is in its environment while it
+  # reads PR text. The checks run in the jobs it needs, which hold no secret, and their results
+  # come in as input. It runs whether they passed or failed: a failure is what it must read.
+  review:
+    if: always() && github.event_name == 'pull_request'
+    needs: [ lint-and-test, tests-other-pythons, e2e ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install from the lockfile
+        run: |
+          python -m pip install "$(python -c 'import tomllib; print(next(d for d in tomllib.load(open("pyproject.toml", "rb"))["dependency-groups"]["dev"] if isinstance(d, str) and d.startswith("uv==")))')"
+          uv sync --locked --python "$(command -v python)"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Collect what the change's checks reported
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          pattern: ci-results-*
+          path: ${{ runner.temp }}/ci-results
+
+      - name: Summarise the check results for the reviewer
+        env:
+          LINT_AND_TEST: ${{ needs.lint-and-test.result }}
+          OTHER_PYTHONS: ${{ needs.tests-other-pythons.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          out="$RUNNER_TEMP/ci-results.md"
+          {
+            echo "Job results: lint-and-test $LINT_AND_TEST; tests on Python 3.11, 3.13, 3.14, 3.15 $OTHER_PYTHONS; end to end $E2E."
+            for log in "$RUNNER_TEMP"/ci-results/*/*.log; do
+              [[ -f "$log" ]] || continue
+              echo
+              echo "--- $(basename "$(dirname "$log")")/$(basename "$log"), its last 60 lines ---"
+              tail -n 60 "$log"
+            done
+          } > "$out"
+          wc -l "$out"
+
+      # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
+      # triggering it — the "enforcement surface that only runs on-demand runs never"
+      # failure this repo's own store names. It runs on the maintainer's Claude subscription:
+      # CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`, bills the subscription and not the
+      # API (no ANTHROPIC_API_KEY here, which would outrank it; --bare would ignore it).
+      # Without that secret, and on a fork's PR, which gets no secrets, it soft-passes; the
+      # REVIEW_CMD variable swaps in any other CLI. The script runs it from a clean room, so
+      # this repo's hooks never fire on it, and --add-dir lets it read the checkout to hold
+      # each figure to its receipt. It fails the job on a must-fix finding only.
+      - name: Architecture review (on the maintainer's Claude subscription)
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          REVIEW_CMD: ${{ vars.REVIEW_CMD }}
+          REVIEW_BASE_REF: origin/${{ github.base_ref }}
+          # Receipts, eval rows, the drift snapshot and lockfiles are data: left out of the diff
+          # the reviewer reads, listed for it to open. With them in, two of a week's PRs passed
+          # the single 4,000-line cut and their code after it went unreviewed.
+          REVIEW_EXCLUDE: "*.lock **/*.lock evals/results/** **/*.jsonl okl-drift.json"
+          # What the change says it does, passed as data: interpolated into the script, a PR
+          # title could run as shell. The reviewer is told it is a claim, not instructions.
+          REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
+          # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
+          CLAUDE_CODE_VERSION: "2.1.302"
+        run: |
+          if [[ -z "$REVIEW_CMD" && -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            # The platform package is the native binary itself and runs no install script,
+            # so npm can refuse lifecycle scripts outright.
+            npm install --ignore-scripts --no-fund --no-audit --prefix "$RUNNER_TEMP/claude" \
+              "@anthropic-ai/claude-code-linux-x64@$CLAUDE_CODE_VERSION"
+            CLAUDE_BIN="$RUNNER_TEMP/claude/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
+            chmod +x "$CLAUDE_BIN"
+            # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
+            # settings file, since the command line is word-split; GIT_DIR points the clean
+            # room's git at the checkout. Only forms that cannot write, while the token is in the
+            # environment and the model reads PR text: not branch or tag, which create and delete
+            # refs (CI reviewer on #307), and not log or show, whose --output writes a file
+            # (CodeRabbit on #307). Any other shell command is refused in -p mode.
+            printf '%s' '{"permissions":{"allow":["Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
+              > "$RUNNER_TEMP/review-settings.json"
+            export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
+            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"
+          fi
+          # The knowledge layer's briefing for this change, from the seed packs in a store that
+          # lives for this step; this repo's own recorded lessons stay on the maintainer's
+          # machine, so the reviewer is told the briefing is the packs' only.
+          export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/review.db" OKL_BRIEFING_LOG=0
+          briefing="$RUNNER_TEMP/briefing.md"
+          if okl seed seed/ >/dev/null 2>&1 \
+             && okl check --task "$REVIEW_PR_TITLE. ${REVIEW_PR_BODY:0:600}" --format agent > "$briefing" 2>/dev/null; then
+            printf '\n(From the seed packs only: lessons recorded on the maintainer machine are not in CI.)\n' >> "$briefing"
+          else
+            briefing=""
+          fi
+          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" REVIEW_BRIEFING_FILE="$briefing" \
+          REVIEW_CI_RESULTS_FILE="$RUNNER_TEMP/ci-results.md" \
+            bash ci/review-agent.sh | tee -a "$GITHUB_STEP_SUMMARY"
+

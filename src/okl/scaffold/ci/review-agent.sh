@@ -48,24 +48,60 @@ if ! command -v ${REVIEW_CMD%% *} >/dev/null 2>&1; then
   exit 0
 fi
 
-diff_text="$(git diff "$BASE"...HEAD 2>/dev/null)"
-# Every changed file, even past the diff's cut below, so a reviewer that can read files knows
-# what it has not seen.
+# Data files are left out of the reviewed diff, each still listed for a reviewer that can open it:
+# a receipt or a lockfile is thousands of lines nobody reviews line by line, and with them in, the
+# diff passed the old single 4,000-line cut on two of okl's pull requests in one week, so the code
+# after the cut was never reviewed. REVIEW_EXCLUDE is a space-separated list of git globs.
+read -r -a exclude <<< "${REVIEW_EXCLUDE:-*.lock **/*.lock package-lock.json **/package-lock.json yarn.lock pnpm-lock.yaml}"
+pathspec=(.)
+for pat in "${exclude[@]}"; do
+  pathspec+=(":(exclude,glob)$pat")
+done
+diff_text="$(git diff "$BASE"...HEAD -- "${pathspec[@]}" 2>/dev/null)"
+# Every changed file, so a reviewer that can read files knows what it has not seen.
 changed_files="$(git diff --name-status "$BASE"...HEAD 2>/dev/null)"
+left_out="$(comm -23 <(git diff --name-only "$BASE"...HEAD 2>/dev/null | sort) \
+                     <(git diff --name-only "$BASE"...HEAD -- "${pathspec[@]}" 2>/dev/null | sort))"
 if [[ -z "$diff_text" ]]; then
-  echo "review-agent: no diff against $BASE — nothing to review."
+  echo "review-agent: no diff against $BASE${left_out:+ beyond data files} — nothing to review."
   exit 0
 fi
 
-# Truncate: a very large diff would blow the context budget and produce a worse review than
-# a focused one. Reviewing the first N lines and saying so beats silently reviewing a
-# truncated diff as though it were whole.
-max_lines=4000
-total_lines=$(printf '%s' "$diff_text" | wc -l | tr -d ' ')
-if [[ "$total_lines" -gt "$max_lines" ]]; then
-  diff_text="$(printf '%s' "$diff_text" | head -n "$max_lines")"
-  echo "review-agent: diff is $total_lines lines; reviewing the first $max_lines."
-fi
+# Parts, not a cut: the diff is split at file boundaries into parts of at most REVIEW_MAX_LINES
+# lines, each reviewed by a fresh call, so no line is silently dropped. A single file longer than
+# a part is shown up to the limit and says where it stops; parts past REVIEW_MAX_PARTS are not
+# sent, and their files are named as not reviewed, on the PR as well as in the log.
+max_lines="${REVIEW_MAX_LINES:-4000}"
+max_parts="${REVIEW_MAX_PARTS:-4}"
+parts_dir="$(mktemp -d)"
+not_reviewed="$(printf '%s\n' "$diff_text" | python3 -c '
+import os, re, sys
+out, max_lines, max_parts = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+files, cur = [], None
+for line in sys.stdin.read().splitlines():
+    if line.startswith("diff --git ") or cur is None:
+        m = re.match(r"diff --git a/(.*) b/(.*)", line)
+        cur = [m.group(2) if m else "?", []]
+        files.append(cur)
+    cur[1].append(line)
+parts, part, size = [], [], 0
+for path, lines in files:
+    if len(lines) > max_lines:
+        lines = lines[:max_lines] + ["[... %d more lines of %s are not shown: read the file in the repository]"
+                                     % (len(lines) - max_lines, path)]
+    if part and size + len(lines) > max_lines:
+        parts.append(part)
+        part, size = [], 0
+    part.append((path, lines))
+    size += len(lines)
+if part:
+    parts.append(part)
+for i, part in enumerate(parts[:max_parts], 1):
+    with open(os.path.join(out, "part-%02d.diff" % i), "w") as f:
+        f.write("\n".join(line for _p, lines in part for line in lines) + "\n")
+print(" ".join(path for part in parts[max_parts:] for path, _l in part))
+' "$parts_dir" "$max_lines" "$max_parts")"
+n_parts=$(find "$parts_dir" -name 'part-*.diff' | wc -l | tr -d ' ')
 
 # With REVIEW_REPO_DIR, a reviewer that can read files (REVIEW_CMD's own tools, e.g. claude -p
 # with --add-dir) is told where the checkout is, so it can hold a figure to the receipt it
@@ -86,7 +122,11 @@ fi
 # it exists to enforce never reached it):
 #   the repo's instructions (CLAUDE.md, AGENTS.md), the rules a change here must keep;
 #   REVIEW_PR_TITLE / REVIEW_PR_BODY, what the change says it does;
-#   REVIEW_BRIEFING_FILE, the knowledge layer's briefing for this change (okl check's output).
+#   REVIEW_BRIEFING_FILE, the knowledge layer's briefing for this change (okl check's output);
+#   REVIEW_CI_RESULTS_FILE, what the change's tests, linters and type checks reported, from jobs
+#   that ran without secrets: the reviewer cannot run code while a token is in its environment,
+#   and on okl's own pull requests the run-nothing reviewer passed four changes the same
+#   reviewer, run with tests and probes, found must-fix defects in (a Python 3.13 failure among them).
 instructions=""
 for f in CLAUDE.md AGENTS.md; do
   if [[ -f "$f" ]]; then
@@ -97,13 +137,18 @@ briefing=""
 if [[ -n "${REVIEW_BRIEFING_FILE:-}" && -f "$REVIEW_BRIEFING_FILE" ]]; then
   briefing="$(head -c 20000 "$REVIEW_BRIEFING_FILE")"
 fi
+ci_results=""
+if [[ -n "${REVIEW_CI_RESULTS_FILE:-}" && -f "$REVIEW_CI_RESULTS_FILE" ]]; then
+  ci_results="$(head -c 30000 "$REVIEW_CI_RESULTS_FILE")"
+fi
 pr_title="${REVIEW_PR_TITLE:-}"
 pr_body="$(printf '%s' "${REVIEW_PR_BODY:-}" | head -c 4000)"
 
 # The checklist lives in the agent file — one source of truth for the rules. Only the OUTPUT
 # CONTRACT is supplied here, because the agent is written for interactive use and returns
 # prose, which CI cannot act on.
-prompt="$(cat <<EOF
+build_prompt() {
+  cat <<EOF
 You are the architecture reviewer defined below. Apply its checklist to the diff.
 $repo_note
 
@@ -119,12 +164,26 @@ ${instructions:-(none found)}
 --- THE KNOWLEDGE LAYER BRIEFING FOR THIS CHANGE (binding, as your checklist says) ---
 ${briefing:-(none given: say so under not_checked)}
 
+--- WHAT THE CHANGE'S CI REPORTED (tests, linters, type checks; from jobs that ran without secrets) ---
+${ci_results:-(none given: say so under not_checked)}
+
 --- EVERY FILE THE CHANGE TOUCHES ---
 $changed_files
 
---- DIFF UNDER REVIEW ---
-$diff_text
+--- LEFT OUT OF THE DIFF AS DATA (open one when a claim depends on it) ---
+${left_out:-(none)}
+
+--- DIFF UNDER REVIEW: PART $1 OF $n_parts (other parts go to separate reviews: report only what this part shows, and read any file you need) ---
+$(cat "$2")
 --- END DIFF ---
+
+Before you answer:
+- For each test this part adds or changes, name a break in the code it tests that it would catch.
+  A test that would still pass with that code broken is a finding.
+- For each figure, count or claim this part adds in prose (docs, comments, reports), check it
+  against the code or data it names. A claim stronger than its evidence ("every", "all", "no
+  difference", a cause read off a correlation) is a finding.
+- Read the CI results above: a failure the change caused is must-fix.
 
 Reply with STRICT JSON and nothing else:
 {"findings":[{"severity":"must-fix|consider","file":"path","line":0,"rule":"which checklist item","finding":"one sentence"}],
@@ -132,45 +191,75 @@ Reply with STRICT JSON and nothing else:
  "not_checked":["each one you could not verify, and why"]}
 
 Rules for your reply:
-- "must-fix" is reserved for a violation of an encoded rule: a restated retraction, a
-  resurrected tombstoned identifier, a speculative abstraction, an assert-from-memory claim.
-  Style preferences and suggestions are "consider".
+- "must-fix" is for: a violation of an encoded rule (a restated retraction, a resurrected
+  tombstoned identifier, a speculative abstraction, an assert-from-memory claim); a failure in
+  the CI results the change caused; a defect you can show in what the changed code does (a
+  wrong result, a crash, lost data, a path that silently does nothing); a test that would pass
+  on broken code; and a published claim its evidence does not support. Say the evidence in the
+  finding. Style preferences and suggestions are "consider".
 - Only report what this diff introduces. Pre-existing issues are out of scope.
 - An empty findings list is a valid and common answer. Do not invent findings to seem useful.
 - "checked" and "not_checked" are required: silence must never read as a clean review.
 EOF
-)"
+}
 
-echo "review-agent: reviewing $(printf '%s' "$diff_text" | wc -l | tr -d ' ') lines of diff against $BASE"
+echo "review-agent: reviewing $(printf '%s\n' "$diff_text" | wc -l | tr -d ' ') lines of diff against $BASE in $n_parts part(s)${left_out:+; left out as data: $(printf '%s\n' "$left_out" | wc -l | tr -d ' ') file(s)}"
+if [[ -n "$not_reviewed" ]]; then
+  echo "review-agent: not reviewed, past $max_parts part(s) of $max_lines lines: $not_reviewed"
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::warning title=architecture review::not reviewed, past REVIEW_MAX_PARTS: $not_reviewed"
+  fi
+fi
 # CLEAN ROOM. Run the reviewer from a temp directory, never the repo. If REVIEW_CMD is a
 # coding agent, this repo's own hooks would otherwise fire on it: the UserPromptSubmit hook
 # injects a briefing into the review, and the Stop hook answers instead of the reviewer.
 # Reproduced while verifying this script — a smoke call in the repo cwd came back answering
 # the Stop hook rather than the question, which is the same failure evals/ documents.
-clean="$(mktemp -d)"
-raw="$(cd "$clean" && printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
-rmdir "$clean" 2>/dev/null || true
+replies_dir="$(mktemp -d)"
+for part in "$parts_dir"/part-*.diff; do
+  n="$(basename "$part" .diff)"; n="${n#part-}"
+  clean="$(mktemp -d)"
+  (cd "$clean" && build_prompt "$((10#$n))" "$part" | $REVIEW_CMD 2>/dev/null) > "$replies_dir/reply-$n.txt"
+  rmdir "$clean" 2>/dev/null || true
+done
+raw="$(cat "$replies_dir"/reply-*.txt 2>/dev/null)"
 
-# The review: the last JSON object in the reply with its three lists. A reviewer often writes a
-# line of prose before its JSON, or fences it; stripping fences alone left that line, the whole
-# reply failed to parse, and its findings were dropped while the job passed (three on okl #363,
-# one review in three that day).
-json="$(printf '%s' "$raw" | python3 -c '
-import json, sys
-text, dec, found = sys.stdin.read(), json.JSONDecoder(), None
-for i, ch in enumerate(text):
-    if ch == "{":
-        try:
-            obj, _end = dec.raw_decode(text, i)
-        except ValueError:
-            continue
-        # A review carries all three lists; a reply quoting the format ({"findings":[]}) is not one.
-        if isinstance(obj, dict) and all(isinstance(obj.get(k), list) for k in ("findings", "checked", "not_checked")):
-            found = obj
-if found is None:
+# The review: in each part's reply, the last JSON object with its three lists, merged across the
+# parts. A reviewer often writes a line of prose before its JSON, or fences it; stripping fences
+# alone left that line, the whole reply failed to parse, and its findings were dropped while the
+# job passed (three on okl #363, one review in three that day). A part whose reply holds no
+# review is named under not_checked; with none in any part there is no verdict at all.
+json="$(python3 -c '
+import json, os, sys
+folder, skipped = sys.argv[1], sys.argv[2].split()
+dec, merged, any_review = json.JSONDecoder(), {"findings": [], "checked": [], "not_checked": []}, False
+names = sorted(f for f in os.listdir(folder) if f.startswith("reply-"))
+for name in names:
+    text, found = open(os.path.join(folder, name)).read(), None
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _end = dec.raw_decode(text, i)
+            except ValueError:
+                continue
+            # A review carries all three lists; a reply quoting the format ({"findings":[]}) is not one.
+            if isinstance(obj, dict) and all(isinstance(obj.get(k), list) for k in ("findings", "checked", "not_checked")):
+                found = obj
+    part = name[len("reply-"):-len(".txt")]
+    if found is None:
+        merged["not_checked"].append("part %s of %d: the reviewer gave no review" % (int(part), len(names)))
+        continue
+    any_review = True
+    merged["findings"] += found["findings"]
+    for key in ("checked", "not_checked"):
+        merged[key] += [x for x in found[key] if x not in merged[key]]
+if skipped:
+    merged["not_checked"].append("not reviewed, past REVIEW_MAX_PARTS: " + " ".join(skipped))
+if not any_review:
     sys.exit(1)
-print(json.dumps(found))
-' 2>/dev/null)" || json=""
+print(json.dumps(merged))
+' "$replies_dir" "$not_reviewed" 2>/dev/null)" || json=""
+rm -rf "$parts_dir" "$replies_dir"
 
 if [[ -z "$json" ]]; then
   # Fail OPEN when no review can be found in the reply, but never quietly. A reviewer that
