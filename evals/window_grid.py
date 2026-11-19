@@ -12,20 +12,30 @@ the probe's own measures: governing lessons briefed per variant (harness config)
 prompts' returned counts (hook config). The reranker is off throughout: this is the first
 stage and the floor.
 """
-from grid_setup import REPO, governing_hits, prompt_counts, store
+import grid_setup as gs
+from grid_setup import governing_hits, prompt_counts
 
 from okl import core  # grid_setup has put src/ on the path
 
-print(f"store {len(store.all_nodes())} records · repo={REPO} · reranker off · limit 12")
-print(f"{'hybrid':7} {'fetch':>5} {'sem-words':>9} | {'authored':>8} {'ticket':>6} {'para':>4} {'bug':>3} | six prompts' counts")
-for hybrid in (None, "linear"):
-    for mult in (3, 6, 9):
-        for sem_words in ((None,) if hybrid is None else (None, 2)):
-            core.FETCH_MULTIPLIER = mult
-            core.SEMANTIC_WORD_FLOOR = sem_words
-            hits = governing_hits(hybrid, "window grid")
-            counts = prompt_counts(hybrid)
-            print(f"{hybrid or 'off':7} {mult * 12:>5} {sem_words!s:>9} | {hits['authored']:>8} {hits['ticket']:>6} "
-                  f"{hits['paraphrase']:>4} {hits['bug-report']:>3} | {', '.join(str(c) for c in counts)}")
-core.FETCH_MULTIPLIER = 3
-core.SEMANTIC_WORD_FLOOR = None
+
+def main() -> int:
+    """Everything window_grid does when run, which it did on import before #486: importing it now does nothing."""
+    store, REPO = gs.store, gs.REPO
+    print(f"store {len(store.all_nodes())} records · repo={REPO} · reranker off · limit 12")
+    print(f"{'hybrid':7} {'fetch':>5} {'sem-words':>9} | {'authored':>8} {'ticket':>6} {'para':>4} {'bug':>3} | six prompts' counts")
+    for hybrid in (None, "linear"):
+        for mult in (3, 6, 9):
+            for sem_words in ((None,) if hybrid is None else (None, 2)):
+                core.FETCH_MULTIPLIER = mult
+                core.SEMANTIC_WORD_FLOOR = sem_words
+                hits = governing_hits(hybrid, "window grid")
+                counts = prompt_counts(hybrid)
+                print(f"{hybrid or 'off':7} {mult * 12:>5} {sem_words!s:>9} | {hits['authored']:>8} {hits['ticket']:>6} "
+                      f"{hits['paraphrase']:>4} {hits['bug-report']:>3} | {', '.join(str(c) for c in counts)}")
+    core.FETCH_MULTIPLIER = 3
+    core.SEMANTIC_WORD_FLOOR = None
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

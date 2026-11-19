@@ -496,3 +496,74 @@ def test_every_new_receipt_with_rows_says_what_each_row_ran():
             problems += _row_commit_problems(p.name, __import__("json").loads(p.read_text()))
     assert problems == []
 
+
+
+# --- an eval script does nothing on import (#486) ---------------------------------------------------
+
+# Calls that open a store, read the command line, write a file or start a process: at the top level of a
+# script they ran whenever anything imported it. make_heldout_tasks rewrote a committed file on import,
+# the grids opened the working directory's store, and probe_rephrase parsed its importer's argv.
+_SIDE_EFFECTS = {"Client", "Store", "_local_store", "load_config", "parse_args", "write_text", "write_bytes",
+                 "mkdir", "unlink", "rmtree", "run", "Popen", "check_output", "print", "clean_env"}
+# Import-time work that reads and writes nothing, kept on purpose: (script, name it assigns): why.
+_IMPORT_TIME_ALLOWED = {("pick_fix.py", "COMMIT"): "reads HEAD once with git rev-parse to stamp its rows"}
+
+
+def _import_time_work(tree: ast.Module, name: str = "") -> list[int]:
+    """Lines of top-level statements that do work when the module is imported, outside its __main__ block.
+    Typing-only blocks and loading a sibling module (`exec_module`, an import by another name) are not work."""
+    bad = []
+    for n in tree.body:
+        if isinstance(n, ast.If) and ("__name__" in ast.unparse(n.test) or ast.unparse(n.test) == "TYPE_CHECKING"):
+            continue
+        if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call) and _dotted(n.value.func).endswith("exec_module"):
+            continue
+        targets = n.targets if isinstance(n, ast.Assign) else [n.target] if isinstance(n, ast.AnnAssign) else []
+        if any((name, getattr(t, "id", "")) in _IMPORT_TIME_ALLOWED for t in targets):
+            continue
+        if isinstance(n, (ast.For, ast.While, ast.With, ast.Try, ast.If)) or isinstance(n, ast.Expr) and isinstance(n.value, ast.Call) and "sys.path" not in ast.unparse(n.value.func) or isinstance(n, (ast.Assign, ast.AnnAssign)) and n.value is not None and any(
+                isinstance(c, ast.Call) and _dotted(c.func).rsplit(".", 1)[-1] in _SIDE_EFFECTS
+                for c in ast.walk(n.value)):
+            bad.append(n.lineno)
+    return bad
+
+
+def test_no_eval_script_does_work_when_imported():
+    """Every script's work is in main(), behind `if __name__ == "__main__"`; the top level only defines."""
+    found = {p.name: lines for p in sorted((REPO / "evals").glob("*.py"))
+             if (lines := _import_time_work(ast.parse(p.read_text()), p.name))}
+    assert len(list((REPO / "evals").glob("*.py"))) > 50
+    assert found == {}, found
+
+
+def test_the_import_check_finds_what_it_is_for():
+    """A top-level print, a store opened in an assignment, and a loop are found; definitions, constants, a
+    sys.path line and a guarded main are not."""
+    bad = ast.parse("import sys\nsys.path.insert(0, 'src')\nprint('x')\nstore = Client()._local_store()\n"
+                    "for i in range(2):\n    pass\n")
+    good = ast.parse("import sys\nREPO = 'okl'\nX = frozenset({1})\nif TYPE_CHECKING:\n    import y\n"
+                     "def main():\n    print(1)\nif __name__ == '__main__':\n    sys.exit(main())\n")
+    assert _import_time_work(bad) == [3, 4, 5] and _import_time_work(good) == []
+
+
+def test_importing_every_eval_module_does_nothing():
+    """Imported in a fresh interpreter, every eval module loads without running, printing or writing, and
+    leaves the clean_env mark unset. A module whose optional dependency is not installed is skipped by name."""
+    before = subprocess.run(["git", "status", "--porcelain", "--ignored"], cwd=REPO, capture_output=True,
+                            text=True).stdout
+    code = ("import sys, io, json, importlib, contextlib; sys.path[:0] = ['evals', 'src']; out = io.StringIO()\n"
+            "bad, missing = {}, []\n"
+            "for p in sorted(__import__('pathlib').Path('evals').glob('*.py')):\n"
+            "    try:\n        with contextlib.redirect_stdout(out): importlib.import_module(p.stem)\n"
+            "    except ModuleNotFoundError as e:\n        missing.append(e.name)\n"
+            "    except BaseException as e:\n        bad[p.stem] = repr(e)[:120]\n"
+            "import sandbox\nprint(json.dumps({'used': sandbox.USED, 'bad': bad, 'printed': out.getvalue()[:200]}))")
+    # Under a store URL that cannot open: a module that opens a store at import fails here, whether or not
+    # the checkout has an okl config (a local one let the grids open the live store silently; CI on #489).
+    env = {**__import__("os").environ, "OKL_DATABASE_URL": "sqlite:////nonexistent-okl-import-check/okl.db"}
+    got = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True, timeout=300, env=env)
+    result = __import__("json").loads(got.stdout.strip().splitlines()[-1])
+    assert result == {"used": False, "bad": {}, "printed": ""}, got.stderr[-600:]
+    after = subprocess.run(["git", "status", "--porcelain", "--ignored"], cwd=REPO, capture_output=True,
+                           text=True).stdout
+    assert after == before

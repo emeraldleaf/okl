@@ -237,6 +237,9 @@ convention = "google"
 max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
+# Scripts whose top-level work moved into main() (#486): their upper-case names were module constants
+# and matrices (REPO, D, Q), kept as written so the change is only the move.
+"evals/{admission_grid,common_word_grid,embedder_select,hybrid_grid,probe_rephrase,rerank_select,window_grid}.py" = ["N806"]
 "examples/**/tests/*.py" = ["S101", "ANN"]   # example apps ship their own pytest tests
 # The example app is a demo fixture: run_demo.sh copies it into both arms, its text must
 # describe the app and nothing else, and the README's results were measured on these exact

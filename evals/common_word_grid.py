@@ -11,21 +11,31 @@ Rows: hybrid off and linear, times a share of None (today's rule), 0.03, 0.05, 0
 is the issue's: the largest share that keeps the authored row at 8 of 8 and lowers the three
 heavy prompts.
 """
-from grid_setup import REPO, governing_hits, prompt_counts, store
+import grid_setup as gs
+from grid_setup import governing_hits, prompt_counts
 
 from okl import core  # grid_setup has put src/ on the path
 
-SHARES = (None, 0.03, 0.05, 0.10, 0.15, 0.25)
-shipped = core.COMMON_WORD_SHARE
 
-print(f"store {len(store.all_nodes())} records · repo={REPO} · reranker off · limit 12 · budget 3")
-print(f"{'hybrid':7} {'share':>5} | {'authored':>8} {'ticket':>6} {'para':>4} {'bug':>3} | refused  six prompts' counts")
-for hybrid in (None, "linear"):
-    for share in SHARES:
-        core.COMMON_WORD_SHARE = share
-        hits = governing_hits(hybrid, "common-word grid")
-        counts = prompt_counts(hybrid)
-        print(f"{hybrid or 'off':7} {share if share is not None else 'off':>5} | {hits['authored']:>8} {hits['ticket']:>6} "
-              f"{hits['paraphrase']:>4} {hits['bug-report']:>3} | {sum(c <= 3 for c in counts)} of 6  "
-              f"{', '.join(str(c) for c in counts)}")
-core.COMMON_WORD_SHARE = shipped
+def main() -> int:
+    """Everything common_word_grid does when run, which it did on import before #486: importing it now does nothing."""
+    store, REPO = gs.store, gs.REPO
+    SHARES = (None, 0.03, 0.05, 0.10, 0.15, 0.25)
+    shipped = core.COMMON_WORD_SHARE
+
+    print(f"store {len(store.all_nodes())} records · repo={REPO} · reranker off · limit 12 · budget 3")
+    print(f"{'hybrid':7} {'share':>5} | {'authored':>8} {'ticket':>6} {'para':>4} {'bug':>3} | refused  six prompts' counts")
+    for hybrid in (None, "linear"):
+        for share in SHARES:
+            core.COMMON_WORD_SHARE = share
+            hits = governing_hits(hybrid, "common-word grid")
+            counts = prompt_counts(hybrid)
+            print(f"{hybrid or 'off':7} {share if share is not None else 'off':>5} | {hits['authored']:>8} {hits['ticket']:>6} "
+                  f"{hits['paraphrase']:>4} {hits['bug-report']:>3} | {sum(c <= 3 for c in counts)} of 6  "
+                  f"{', '.join(str(c) for c in counts)}")
+    core.COMMON_WORD_SHARE = shipped
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
