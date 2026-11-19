@@ -544,6 +544,8 @@ def test_the_stop_hook_asks_when_only_another_worktree_has_new_work(worktrees, t
     r = stop("with-worktree")
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
     assert "REVIEW AFTER WRITING" in r.stderr and "feature.py" not in r.stderr and str(fresh) in r.stderr
+    # Only the worktrees whose last commit is months old are left: the hook's loop skips them.
     _git(main_dir, "worktree", "remove", "--force", str(fresh))
+    assert (fresh.parent / "stale").is_dir() and (fresh.parent / "idle").is_dir()
     r = stop("without")
-    assert r.returncode == 0 and r.stderr == "", "no work anywhere: nothing is asked, as before"
+    assert r.returncode == 0 and r.stderr == "", "no recent commit anywhere: nothing is asked, as before"

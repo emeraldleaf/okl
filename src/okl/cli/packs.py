@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from .. import core
-from ..client import Client, OKLUnreachableError, _find_config
+from ..client import Client, OKLUnreachableError, project_root
 
 
 def _bundled_seed_dir() -> Path:
@@ -83,8 +83,7 @@ def _empty_store_guidance(client: Client) -> list[str]:
     # walking up, so `check` runs fine from a subdirectory — where a cwd-relative lookup
     # both missed a command installed at the root and advised `okl scaffold .`, which
     # would have stamped the whole kit into that subdirectory.
-    cfg = _find_config()
-    root = cfg.parent.parent if cfg else Path.cwd()
+    root = project_root()
     if any(root.glob("*/commands/seed-from-codebase.md")):
         lines.append("    ask your agent to run /seed-from-codebase: it proposes cited records"
                      " from this repo's own code")

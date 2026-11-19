@@ -48,7 +48,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .. import core
-from ..client import Client, OKLUnreachableError, _find_config, _repo_relative, save_config
+from ..client import (
+    Client,
+    OKLUnreachableError,
+    _find_config,
+    _repo_relative,
+    project_root,
+    save_config,
+)
 from ..store import RETIRED_STATUSES
 from .verification import _run_check, _stored_check, shown
 
@@ -103,7 +110,7 @@ def _on_edit(args: argparse.Namespace, started: float) -> int:
         return 2
     args.action = args.action or "list"
     if args.action == "run":
-        return _run(args, path.parent.parent, approved, nodes, client.repo, started=started)
+        return _run(args, project_root(), approved, nodes, client.repo, started=started)
     change = {"add": _add, "remove": _remove}.get(args.action)
     code = change(args, approved, nodes, client) if change else None
     if code:

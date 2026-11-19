@@ -20,7 +20,10 @@
   in a worktree could not run. With no `.okl/config.json` at or above it, okl run in a linked
   worktree uses its main checkout's config, and so its store. It reads git's own files to find it,
   without running git; a worktree with a config of its own keeps it, and a submodule is not taken
-  for a worktree.
+  for a worktree. The repository okl works on stays the worktree: checks run there, governed paths
+  are read from it and `okl verify` writes its okl-drift.json. That was already wrong for a worktree
+  nested inside the checkout, where Claude Code puts its own: okl found the checkout's config by
+  walking up, and ran `okl reverify` in the checkout, stamping the checkout's commit.
 
 - **The architecture review keeps a failed call's exit status and error output** (review of #490). A
   reviewer call that failed said why only on its stderr, which was discarded, so its part had no

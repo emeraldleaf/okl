@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config
+from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config, project_root
 from .common import _print_json
 
 if TYPE_CHECKING:
@@ -577,8 +577,7 @@ def _snapshot_path() -> Path:
     """Where the committed drift snapshot lives: the project root, found the way the
     config is, so running from a subdirectory neither misses it nor writes a second one."""
     from .. import drift
-    cfg = _find_config()
-    return (cfg.parent.parent if cfg else Path.cwd()) / drift.SNAPSHOT_FILE
+    return project_root() / drift.SNAPSHOT_FILE
 
 
 def _no_ci_reads(snap: Path) -> bool:

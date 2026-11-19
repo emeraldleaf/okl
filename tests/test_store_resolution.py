@@ -93,3 +93,40 @@ def test_a_linked_worktree_uses_its_main_checkouts_store(tmp_path, monkeypatch):
     # The main checkout itself, and a directory outside any repository, resolve as before.
     assert _find_config(main) == (main / ".okl" / "config.json").resolve()
     assert _find_config(tmp_path) is None
+
+
+def test_okl_works_on_the_worktree_it_runs_in_with_the_main_checkouts_store(tmp_path, monkeypatch):
+    """The store is the main checkout's, the repository is the worktree's. Taking the config's folder as
+    the repository ran `okl reverify` in the main checkout from a worktree beside it: it stamped the main
+    checkout's commit and rewrote its okl-drift.json. A worktree nested inside the checkout, where
+    Claude Code puts its own, finds the config by walking up, and had the same fault."""
+    import shutil
+
+    import pytest
+
+    from okl.cli.verification import _snapshot_path
+    from okl.client import project_root
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    main = tmp_path / "main"; main.mkdir()
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", "-b", "main", str(main)], check=True)
+    (main / "a.py").write_text("a\n"); (main / ".gitignore").write_text(".okl/\n.claude/worktrees/\n")
+    subprocess.run([*git, "-C", str(main), "add", "-A"], check=True)
+    subprocess.run([*git, "-C", str(main), "commit", "-qm", "a"], check=True)
+    (main / ".okl").mkdir(); (main / ".okl" / "config.json").write_text('{"repo": "r"}')
+    beside, nested = tmp_path / "beside", main / ".claude" / "worktrees" / "agent-1"
+    for i, wt in enumerate((beside, nested)):
+        subprocess.run([*git, "-C", str(main), "worktree", "add", "-q", "-b", f"w{i}", str(wt)], check=True)
+        (wt / "pkg").mkdir()
+        monkeypatch.chdir(wt / "pkg")
+        assert project_root() == wt.resolve(), wt
+        assert _snapshot_path() == wt.resolve() / "okl-drift.json"
+    # The main checkout, and a subdirectory of it, are the repository as before.
+    (main / "pkg").mkdir(); monkeypatch.chdir(main / "pkg")
+    assert project_root() == main.resolve()
+    # A worktree with a config of its own is its own repository either way.
+    (beside / ".okl").mkdir(); (beside / ".okl" / "config.json").write_text('{"repo": "r"}')
+    monkeypatch.chdir(beside / "pkg")
+    assert project_root() == beside.resolve()
