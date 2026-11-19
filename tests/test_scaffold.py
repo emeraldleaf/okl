@@ -396,8 +396,8 @@ def test_mirror_files_identical():
     pairs.extend((h, root / ".claude" / "hooks" / h.name) for h in (root / "hooks").glob("*.sh"))
     pairs.append((scaffold_claude / "commands" / "record.md", root / ".claude" / "commands" / "record.md"))
     pairs.append((scaffold_claude / "commands" / "triggers.md", root / ".claude" / "commands" / "triggers.md"))
-    pairs.append((scaffold_claude / "skills" / "encoding-loop" / "SKILL.md",
-                  root / ".claude" / "skills" / "encoding-loop" / "SKILL.md"))
+    pairs.extend((scaffold_claude / "skills" / name / "SKILL.md", root / ".claude" / "skills" / name / "SKILL.md")
+                 for name in ("encoding-loop", "okl-review"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"
@@ -1030,6 +1030,36 @@ def test_review_agent_with_no_review_in_any_part_has_no_verdict_and_says_so(tmp_
     assert "must-fix" not in r.stdout.split("::warning")[0]
 
 
+def test_review_agent_keeps_a_failed_calls_exit_status_and_error_output(tmp_path):
+    """A reviewer call that fails says why only on its stderr. Discarded, a part had no review and no
+    cause (review of okl #490): the exit status and the last error line are named under not_checked,
+    and with no review at all, the end of each failed call's error output reaches the log."""
+    big = "".join(f"line {i}\n" for i in range(12))
+    base = _review_repo(tmp_path, {"a.py": big, "b.py": big})
+    fail = tmp_path / "fail.py"
+    fail.write_text("import sys, pathlib\n"
+                    f"d = pathlib.Path({str(tmp_path)!r})\n"
+                    "n = len(list(d.glob('call-*')))\n"
+                    "(d / ('call-%d' % n)).write_text(sys.stdin.read())\n"
+                    f"print({_verdict(None, checked='c1')!r}) if n == 0 else None\n"
+                    "if n: print('Error: credit balance too low', file=sys.stderr); sys.exit(3)\n")
+    env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(tmp_path),
+           "REVIEW_CMD": f"{sys.executable} {fail}", "REVIEW_BASE_REF": base, "GITHUB_ACTIONS": "true",
+           "REVIEW_MAX_LINES": "20"}
+    run = lambda: subprocess.run(["bash", str(tmp_path / "ci" / "review-agent.sh")], capture_output=True,  # noqa: E731
+                                 text=True, cwd=str(tmp_path), env=env)
+    r = run()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "part 2 of 2: the reviewer gave no review (it exited 3: Error: credit balance too low)" in r.stdout
+    # Every call fails: no verdict, and each failure's cause in the log.
+    for f in tmp_path.glob("call-*"):
+        f.unlink()
+    (tmp_path / "call-x").write_text("")      # every call from here on is past the first, so fails
+    r = run()
+    assert r.returncode == 0 and "no review verdict" in r.stdout
+    assert "the call for part 1 exited 3" in r.stderr and "credit balance too low" in r.stderr, r.stderr
+
+
 def test_review_agent_names_what_it_did_not_review_past_its_parts(tmp_path):
     """Parts past REVIEW_MAX_PARTS are not sent: their files are named in the log, on the PR and
     under not_checked, so a green check is never read as a review of them."""
@@ -1070,6 +1100,23 @@ def test_review_agent_hands_the_reviewer_the_ci_results_and_counts_a_silent_part
     assert "a failure the change caused is must-fix" in prompts[0]
     assert "a test that would pass" in prompts[0] and "on broken code" in prompts[0]
     assert r.returncode == 0 and "could not check: part 2 of 2: the reviewer gave no review" in r.stdout
+
+
+def test_no_workflow_runs_a_pull_requests_code_with_the_base_repos_secrets():
+    """`pull_request_target` and `workflow_run` run with the base repository's secrets and a write
+    token, on a pull request from anyone, fork included; a workflow that then checks out or runs the
+    pull request's code hands both to it (lesson seed:ci-security:gha_pwn_request). okl's own
+    workflows and the ones it installs use `pull_request`, which gives a fork none, and the review jobs
+    rely on that: on a fork's pull request they soft-pass with no secret to leak. A comment may name
+    either event; a trigger may not."""
+    root = Path(__file__).resolve().parents[1]
+    workflows = [*(root / ".github" / "workflows").glob("*.yml"), *(root / "ci").glob("*.yml"),
+                 *(root / "src" / "okl" / "scaffold" / "ci").glob("*.yml")]
+    assert len(workflows) >= 6, workflows
+    for wf in workflows:
+        code = "\n".join(line.split("#", 1)[0] for line in wf.read_text().splitlines())
+        found = re.findall(r"\b(pull_request_target|workflow_run)\b", code)
+        assert not found, f"{wf.relative_to(root)} triggers on {found[0]}"
 
 
 def test_stored_data_never_reaches_a_shell():
@@ -1486,7 +1533,7 @@ def test_okl_owned_files_carry_a_current_fingerprint():
     from okl import ownership
     root = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold"
     for rel in ("hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh", "hooks/okl-mcp.sh",
-                "ci/okl-verify.yml", "git-hooks/pre-push"):
+                "ci/okl-verify.yml", "git-hooks/pre-push", "claude/skills/okl-review/SKILL.md"):
         text = (root / rel).read_text()
         assert ownership.embedded(text) == ownership.digest(text), (
             f"{rel}: stale fingerprint; run `python -m okl.ownership --stamp "
@@ -1524,6 +1571,11 @@ def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
                           / "hooks" / "stop-okl-encode.sh").read_text()
     assert okl("init", "--repo", "r").returncode == 0
     assert hook.read_text() == shipped
+    # The skill the Stop hook names is installed beside it, fingerprinted inside its front matter.
+    skill = repo / ".claude" / "skills" / "okl-review" / "SKILL.md"
+    skill_src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "claude" / "skills"
+                 / "okl-review" / "SKILL.md").read_text()
+    assert skill.read_text() == skill_src and skill_src.startswith("---\n# okl-fingerprint: sha256:")
     # The bare "okl" entry an older init wrote is upgraded to start through the launcher (#206).
     from okl.cli.install import MCP_ENTRY
     launcher = repo / ".claude" / "hooks" / "okl-mcp.sh"
@@ -1567,6 +1619,7 @@ def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
     assert json.loads((repo / ".mcp.json").read_text())["mcpServers"] == {"other": {"command": "x"}}
     assert not hook.exists() and not (repo / ".github" / "workflows" / "okl-verify.yml").exists()
     assert not launcher.exists()
+    assert not skill.parent.exists() and (repo / ".claude" / "skills").is_dir(), "its folder only"
     assert prompt.exists() and "kept" in r.stdout, "an edited okl file is never deleted"
     assert (repo / ".okl" / "config.json").exists(), "the store is never removed"
 

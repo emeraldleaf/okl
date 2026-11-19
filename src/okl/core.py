@@ -1612,7 +1612,23 @@ REVIEW_STEPS = (
 )
 # What the Stop hook adds unless a repo turns the review off (`okl init --no-review-after-writing`).
 REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
-               "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
+               "code this session wrote against the lessons. Run `okl check --change` and follow its steps, "
+               "in the checkout or worktree that holds the code (the okl-review skill, where installed, does this).")
+WORKTREES_SHOWN = 5
+
+
+def review_note_worktrees(found: list[tuple[str, list[str]]]) -> str:
+    """The Stop hook's lines for work in other worktrees of the repo (`changes.worktrees_with_recent_work`),
+    each with the command that reviews it there, the path quoted for a shell: it is the user's text, and
+    the agent pastes the command (lesson n_adea7f2c7373)."""
+    lines = ["Other worktrees of this repo had work in the last hour. If this session's code is in one, "
+             "review it there:"]
+    for path, files in found[:WORKTREES_SHOWN]:
+        lines.append(f"- {path} ({len(files)} file(s) changed): "
+                     f"{_code(f'cd {shlex.quote(path)} && okl check --change')}")
+    if len(found) > WORKTREES_SHOWN:
+        lines.append(f"- and {len(found) - WORKTREES_SHOWN} more: `git worktree list` names them")
+    return "\n".join(lines)
 
 
 def render_review(result: dict[str, Any]) -> str:

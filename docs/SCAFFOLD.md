@@ -39,7 +39,8 @@ The kit's scripts read these environment variables, each optional:
 
 It also stamps two **first-party method skills** — `encoding-loop` (turn a finding
 into a promoted, recorded lesson) and `verify-before-claiming` (evidence before you
-assert a result). The broader engineering-discipline skills (systematic debugging,
+assert a result) — and `okl-review`, the review after writing that the Stop hook names
+(`okl init` installs that one too, since it needs the okl CLI). The broader engineering-discipline skills (systematic debugging,
 TDD, plan writing/execution, git-worktree isolation) are **not bundled** — they're
 best maintained in third-party collections, so `.claude/skills/RECOMMENDED-COMPANIONS.md`
 points at those instead of vendoring someone else's work and its cross-references.

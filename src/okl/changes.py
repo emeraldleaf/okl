@@ -15,10 +15,13 @@ language.
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
+import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 from .core import governing
@@ -132,6 +135,42 @@ def touched(base: str | None, repo_dir: str = ".") -> tuple[str, list[str]]:
     paths |= {p for p in _git(repo_dir, "ls-files", "--others", "--exclude-standard", "--full-name", "-z",
                               "--", ":/").split("\0") if p}
     return merge_base, sorted(paths)
+
+
+def worktrees_with_recent_work(base: str | None, window: int = 3600, repo_dir: str = ".",
+                               now: float | None = None) -> list[tuple[str, list[str]]]:
+    """This repository's other worktrees that saw work in the last `window` seconds, each with the
+    files `touched` lists there: a commit in the window, or a changed file modified in it.
+
+    An agent that does its work in a worktree, entering it in each command, leaves the checkout its
+    session started in untouched, and the Stop hook looks only there: on okl's own repository, a
+    week of pull requests made that way logged one review after writing. A worktree git cannot
+    read, or one whose directory is gone, is skipped."""
+    now = time.time() if now is None else now
+    try:
+        here = os.path.realpath(_git(repo_dir, "rev-parse", "--show-toplevel").strip())
+        listing = _git(repo_dir, "worktree", "list", "--porcelain")
+    except ChangesError:
+        return []
+    found = []
+    for path in (line[len("worktree "):] for line in listing.splitlines() if line.startswith("worktree ")):
+        if not Path(path).is_dir() or os.path.realpath(path) == here:
+            continue
+        try:
+            last = int(_git(path, "log", "-1", "--format=%ct").strip() or 0)
+            _, files = touched(base, path)
+        except (ChangesError, ValueError):
+            continue
+        if files and (now - last < window or any(_modified_since(Path(path) / f, now - window) for f in files)):
+            found.append((path, files))
+    return found
+
+
+def _modified_since(path: Path, since: float) -> bool:
+    try:
+        return path.stat().st_mtime >= since
+    except OSError:          # deleted in the change, or unreadable
+        return False
 
 
 def _name_status(base: str, head: str, repo_dir: str) -> tuple[list[str], list[str], list[Renamed], int]:

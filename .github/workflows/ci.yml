@@ -273,7 +273,7 @@ jobs:
         run: |
           out="$RUNNER_TEMP/ci-results.md"
           {
-            echo "Job results: lint-and-test $LINT_AND_TEST; tests on Python 3.11, 3.13, 3.14, 3.15 $OTHER_PYTHONS; end to end $E2E."
+            echo "Job results: lint-and-test $LINT_AND_TEST; tests-other-pythons (every version in its matrix) $OTHER_PYTHONS; end to end $E2E."
             for log in "$RUNNER_TEMP"/ci-results/*/*.log; do
               [[ -f "$log" ]] || continue
               echo

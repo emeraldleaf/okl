@@ -10,6 +10,7 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 | `root/CLAUDE.md` | `CLAUDE.md` and `AGENTS.md` (same file, two names) | skeleton + FILL slots for stack rules |
 | `root/METHOD.md` | `METHOD.md` | fully portable (the seven earned rules) |
 | `claude/skills/encoding-loop/`, `verify-before-claiming/` | `.claude/skills/` | fully portable |
+| `claude/skills/okl-review/` | `.claude/skills/` | needs the okl CLI: the review after writing, which the Stop hook names; `okl init` installs it too |
 | `claude/skills/RECOMMENDED-COMPANIONS.md` | `.claude/skills/` | reference — third-party skills worth pairing |
 | `claude/agents/architecture-reviewer.md` | `.claude/agents/` | skeleton + FILL for stack checks |
 | `claude/commands/feature-spec.md`, `check-rules.md`, `record.md`, `seed-from-codebase.md`, `seed-from-docs.md` | `.claude/commands/` | portable |

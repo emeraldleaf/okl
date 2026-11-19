@@ -206,7 +206,8 @@ def _review_flags_refused(args: argparse.Namespace) -> str | None:
 
 def _review_note(client: Client, args: argparse.Namespace) -> None:
     """The Stop hook's note: nothing, without a git call, where the review is off; the note where
-    it is on and the work changed something; and, where it is on but git cannot list the change,
+    it is on and the work changed something, here or in another worktree of the repo in the last
+    hour, those named with the command for each; and, where it is on but git cannot list the change,
     a note saying so, since the hook discards stderr and a review that never ran would otherwise
     look like one with nothing to review."""
     if not client.review_after_writing:
@@ -217,8 +218,11 @@ def _review_note(client: Client, args: argparse.Namespace) -> None:
         print(f"REVIEW AFTER WRITING is on in this repo, but okl could not list the changes ({e}). "
               "Run `okl check --change <the branch this work started from>` and follow its steps.")
         return
-    if files:
+    elsewhere = changes.worktrees_with_recent_work(args.change or None)
+    if files or elsewhere:
         print(core.REVIEW_NOTE)
+    if elsewhere:
+        print(core.review_note_worktrees(elsewhere))
 
 
 _BRIEFED_BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",

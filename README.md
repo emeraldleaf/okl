@@ -141,7 +141,7 @@ okl doctor                  # flags other memory tools, double wiring, where dri
 | Briefing before each task | a hook on every prompt, automatic, fails closed | the `okl_check` tool, when the agent calls it | `okl check` in the terminal or a script |
 | Briefing when a file is read | a hook after each Read: the lessons governing the file, once a session | `okl_check` with `path` | `okl check --path` |
 | A lesson's check after an edit (opt-in) | a hook after each edit in the repo runs every check you approved with `okl on-edit add`, those of the lessons governing the edited file first, and hands a failure back | not yet: an agent's own hook can call `okl on-edit run <file>` | `okl on-edit run <file>` |
-| Review after writing (on by default) | the Stop hook asks for it once the work changed files; `okl init --no-review-after-writing` turns it off | not yet: the list is about 20k tokens in a 300-lesson store, and the review starts a fresh sub-agent for each lesson it checks | `okl check --change` |
+| Review after writing (on by default) | the Stop hook asks for it once the work changed files, here or in another worktree of the repo, and points at the `okl-review` skill; `okl init --no-review-after-writing` turns it off | not yet: the list is about 20k tokens in a 300-lesson store, and the review starts a fresh sub-agent for each lesson it checks | `okl check --change` |
 | Recording what was learned | the Stop hook asks once per session that changed files | the `okl_record` tool | `okl record` |
 | Proof and drift | `okl verify`, `okl reverify`, `okl drift` | the same commands | the same commands |
 | The gate | the pre-push hook | the pre-push hook | the pre-push hook, or the CI workflow (`okl init --ci`) |
@@ -564,7 +564,9 @@ Your store and your tasks will differ.
 
 **Per session, the review after writing** (on by default since 0.17.0): in Claude Code, before the
 question below, the Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
-sub-agent of its own, on Sonnet, the model it was measured with. It is the largest cost per session. On 43 graded past bugs in this repository a
+sub-agent of its own, on Sonnet, the model it was measured with. `okl init` installs the steps as the `okl-review`
+skill, and the hook also names any other worktree of the repo that had a commit in the last hour, where an agent that
+works in worktrees leaves its own checkout untouched. It is the largest cost per session. On 43 graded past bugs in this repository a
 session with the review cost $0.85 API-priced on average and a median of 281 seconds, against $0.10
 and 108 seconds with no review, about 8.7 times the cost. It passed 0.267 of its sessions against 0.023
 with no review, a gain of 0.244 (95% interval 0.14 to 0.36), just under the 0.25 set in advance, with

@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+- **The review after writing is a skill, and the Stop hook sees work done in other worktrees.** On
+  okl's own repo a week of pull requests made in git worktrees logged one review after writing: the
+  agent entered each worktree command by command, its session's own checkout stayed untouched, and the
+  Stop hook, which looked only there, asked neither for the review nor what was learned. It now also
+  asks when another worktree of the repo had a commit in the last hour, and okl's note names each such
+  worktree, or one with an uncommitted file edited in that hour, with the command that reviews it there
+  (`cd <worktree> && okl check --change`, the path quoted for a shell). `okl init` installs the steps as
+  the `okl-review` skill (`.claude/skills/okl-review/SKILL.md`, removed by `--uninstall`, kept once
+  edited), the note names it, and okl's Claude Code plugin ships it. The skill runs `okl check
+  --change` and follows the steps it prints, so the measured steps stay as they were. okl's file
+  fingerprint now sits inside a skill's front matter, as a YAML comment, where a line before it would
+  stop Claude Code reading the front matter.
+
+- **The architecture review keeps a failed call's exit status and error output** (review of #490). A
+  reviewer call that failed said why only on its stderr, which was discarded, so its part had no
+  review and no cause. The part's line under `not_checked` now gives the exit status and the last
+  error line, and when no part has a review, the end of each failed call's error output goes to the
+  log. okl's own review job no longer lists the Python versions it tests in its summary by hand.
+
+- **No workflow okl runs or installs may trigger on `pull_request_target` or `workflow_run`.** Both run
+  with the base repository's secrets on a pull request from anyone; the review jobs rely on
+  `pull_request`, which gives a fork's pull request none. A test now fails on either trigger.
+
 ## 0.19.0
 
 - **Each check lists every path the lesson covers before it answers** (REPORT §4bl). §4bk found the

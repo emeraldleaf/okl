@@ -103,7 +103,8 @@ okl is developed with its own hooks switched on:
 - **Before every prompt,** the Claude Code UserPromptSubmit hook briefs the agent with the lessons that
   match the prompt.
 - **At the end of a session,** the Claude Code Stop hook first asks for the review after writing
-  (`okl check --change`, on by default), then asks what was learned and lists the lessons the
+  (`okl check --change`, or the `okl-review` skill; on by default), naming any other worktree
+  that had a commit in the last hour (run it there: `cd <worktree> && okl check --change`), then asks what was learned and lists the lessons the
   session touched (`okl recap`). Answer both.
 - **Recording:** `okl record` with a stable `--id`, a deliberate `--scope` (`org` if true
   in any repo, `repo` if true only here), and tags from the closed vocabulary.
