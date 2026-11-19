@@ -521,6 +521,10 @@ def test_the_hook_note_names_a_worktree_with_recent_work_and_quotes_its_path(wor
     command = re.search(r"`(cd .* && okl check --change)`", line).group(1)
     assert shlex.split(command)[1] == str(fresh) and "'" in command, command
     assert "stale" not in out and "idle" not in out
+    # The command it names runs there: the worktree has no .okl/ of its own, and finds the main checkout's.
+    monkeypatch.chdir(fresh)
+    assert main(["check", "--change"]) == 0
+    assert "1 file(s) changed since the default branch" in capsys.readouterr().out
 
 
 def test_the_stop_hook_asks_when_only_another_worktree_has_new_work(worktrees, tmp_path):

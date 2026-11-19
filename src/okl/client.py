@@ -72,6 +72,37 @@ def _find_config(start: Path | None = None) -> Path | None:
         cfg = d / CONFIG_DIR / CONFIG_FILE
         if cfg.exists():
             return cfg
+    # A linked git worktree beside the checkout has no .okl/ of its own (git ignores it), so
+    # nothing above it names a store: okl refused there, and `okl check --change` in the worktree,
+    # the command the Stop hook names for work done in one, could never run. Its main checkout's
+    # config, and so its store, is the one this repo set up.
+    main = _main_worktree(p)
+    if main is not None and (main / CONFIG_DIR / CONFIG_FILE).exists():
+        return main / CONFIG_DIR / CONFIG_FILE
+    return None
+
+
+def _main_worktree(p: Path) -> Path | None:
+    """The main checkout of the linked git worktree holding `p`, or None outside one.
+
+    Read from git's own files rather than by running git, since the prompt hook resolves the
+    store on every prompt: a linked worktree's `.git` is a file naming its git directory, which
+    holds a `commondir` file pointing at the main checkout's `.git`. A submodule's `.git` file
+    names a git directory with no `commondir`, and a main checkout's `.git` is a directory."""
+    for d in [p, *p.parents]:
+        marker = d / ".git"
+        if marker.is_dir():
+            return None
+        if marker.is_file():
+            try:
+                text = marker.read_text().strip()
+                if not text.startswith("gitdir:"):
+                    return None
+                gitdir = d / text[len("gitdir:"):].strip()      # an absolute path replaces d
+                common = (gitdir / (gitdir / "commondir").read_text().strip()).resolve()
+            except OSError:
+                return None
+            return common.parent if common.name == ".git" else None
     return None
 
 

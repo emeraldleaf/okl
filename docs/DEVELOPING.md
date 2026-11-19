@@ -38,7 +38,8 @@ src/okl/
 ## The everyday loop
 
 1. **Branch from main.** Use a git worktree if the main checkout is busy, for example
-   during an A/B run. A worktree has no store, so re-verify from the main checkout (step 6).
+   during an A/B run. A worktree has no `.okl/` of its own (git ignores it), so okl run in one
+   uses the main checkout's config and store, and step 6 works there as it does in the checkout.
 2. **Write the test first, and watch it fail on the old code.** A test that passes on both
    versions proves nothing. When a change touches shell hooks, run the tests under macOS's
    `/bin/bash` 3.2 as well: the hooks must work there.

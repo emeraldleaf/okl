@@ -15,6 +15,13 @@
   fingerprint now sits inside a skill's front matter, as a YAML comment, where a line before it would
   stop Claude Code reading the front matter.
 
+- **okl works in a git worktree beside the checkout.** git ignores `.okl/`, so such a worktree had
+  none, and okl refused there as not configured: the command the Stop hook now names for work done
+  in a worktree could not run. With no `.okl/config.json` at or above it, okl run in a linked
+  worktree uses its main checkout's config, and so its store. It reads git's own files to find it,
+  without running git; a worktree with a config of its own keeps it, and a submodule is not taken
+  for a worktree.
+
 - **The architecture review keeps a failed call's exit status and error output** (review of #490). A
   reviewer call that failed said why only on its stderr, which was discarded, so its part had no
   review and no cause. The part's line under `not_checked` now gives the exit status and the last
