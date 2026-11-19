@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="1388" viewBox="0 0 980 1388" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <rect width="980" height="1388" fill="#F5F3F0"/>
 <text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built</text>
-<text x="28" y="72" font-size="14" fill="#4E4740">183 records and one task sentence become 5 or fewer lessons in full and up to 12 named in a line. Only applies_to may exclude on</text>
+<text x="28" y="72" font-size="14" fill="#4E4740">199 records and one task sentence become 5 or fewer lessons in full and up to 12 named in a line. Only applies_to may exclude on</text>
 <text x="28" y="90" font-size="14" fill="#4E4740">validity.</text>
 <text x="28" y="114" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">GENERATED from the live pipeline - docs/render_pipeline_diagram.py</text>
 <text x="28" y="130" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">traced task: "Add an endpoint that returns a single order by id for the signed-in user."</text>
@@ -13,7 +13,7 @@
 <text x="65" y="232" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">STORE</text>
 <text x="120" y="197" font-size="15" font-weight="600" fill="#1E1B18">The corpus</text>
 <text x="120" y="216" font-size="12" fill="#4E4740">Every record carries scope (permission), tags (subject), applies_to (validity) and files (what it governs). Nothing is ranked yet.</text>
-<text x="120" y="250" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">183 records</text>
+<text x="120" y="250" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">199 records</text>
 <rect x="120" y="256" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="256" width="818" height="9" rx="2" fill="#B4531F"/>
 <rect x="28" y="276" width="924" height="98" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="276" width="74" height="98" fill="#EBE7E1" stroke="#DCD6CE"/>
@@ -49,11 +49,11 @@
 <text x="65" y="630" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">4</text>
 <text x="65" y="648" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">VALID</text>
 <text x="120" y="613" font-size="15" font-weight="600" fill="#1E1B18">applies_to - the only filter allowed to exclude</text>
-<text x="120" y="632" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 50 of 183 records, only where a lesson is false off-stack. Unset means anywhere, which is why it is safe.</text>
+<text x="120" y="632" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 50 of 199 records, only where a lesson is false off-stack. Unset means anywhere, which is why it is safe.</text>
 <text x="938" y="613" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
-<text x="120" y="666" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">30 survive</text>
-<text x="938" y="666" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">2 dropped: off-stack</text>
-<rect x="120" y="672" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="672" width="682" height="9" rx="2" fill="#B4531F"/><rect x="802" y="672" width="45" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="666" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">31 survive</text>
+<text x="938" y="666" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">1 dropped: off-stack</text>
+<rect x="120" y="672" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="672" width="704" height="9" rx="2" fill="#B4531F"/><rect x="824" y="672" width="23" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="692" width="924" height="98" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="692" width="74" height="98" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="734" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">5</text>
@@ -63,8 +63,8 @@
 <text x="120" y="751" font-size="12" fill="#4E4740">reproduced a defect it dropped.</text>
 <text x="938" y="717" font-size="9.5" fill="#4A6B3D" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">ANY-MATCH</text>
 <text x="120" y="770" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">22 survive</text>
-<text x="938" y="770" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: no shared subject</text>
-<rect x="120" y="776" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="776" width="500" height="9" rx="2" fill="#B4531F"/><rect x="620" y="776" width="182" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="938" y="770" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">9 dropped: no shared subject</text>
+<rect x="120" y="776" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="776" width="500" height="9" rx="2" fill="#B4531F"/><rect x="620" y="776" width="204" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="796" width="924" height="98" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="796" width="74" height="98" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="838" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>

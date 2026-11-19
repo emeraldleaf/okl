@@ -249,8 +249,10 @@ Such a prompt is now briefed nothing, under either decision.
 
 **The benchmark** (`evals/bench/`):
 
-- **Corpus**: the twelve committed seed packs, 183 records, rebuilt on every run so anyone can
-  reproduce a receipt.
+- **Corpus**: the committed seed packs, rebuilt on every run so anyone can reproduce a receipt
+  at its commit. The figures here were measured on the twelve packs then committed, 183 records;
+  the two added since (`test-quality` and `ci-security`, 16 lessons) carry triggers but no
+  queries yet, so a run counts them only as distractors.
 - **Queries**: 519 (a ticket, a paraphrase and a bug report per advice lesson), written by one
   model from the lesson alone, under a protocol written before any query existed. Its
   structural rules are checked mechanically; the paraphrase may not use any content word from
@@ -327,7 +329,7 @@ the A/B harness's own tasks; §4x supersedes it.
   prompts is the check, not a cure; observed triggers from real sessions are the long-term one.
 - **One developer's prompts calibrated the line.** The guarantee holds for prompts like those.
   Another team's line is its own calibration; the procedure is in `evals/bench/run_v2.py`.
-- **The benchmark's corpus is 183 records** (173 advice lessons), all with triggers. A live
+- **The benchmark's corpus was 183 records when measured** (173 advice lessons), all with triggers. A live
   store holds lessons recorded without them, and the decision needs them: `okl record` asks for
   them, `okl triggers` lists the lessons that lack them, and the briefing says how many do.
 - **The second tier is named, not shown.** Reach counts a lesson named in a line; whether an

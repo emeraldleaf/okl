@@ -5,7 +5,7 @@ produced.
 
 ## The corpus and the lessons queried
 
-The corpus is the twelve committed seed packs (183 records). Every advice record in them (Rule,
+The corpus was the twelve seed packs committed then (183 records). Every advice record in them (Rule,
 Defect, Gate, Decision: 173 lessons) gets three queries. Claims, tombstones and prior art are in
 the corpus as distractors and are never the answer.
 

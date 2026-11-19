@@ -28,8 +28,8 @@ and editing `KNOWN_TAGS` changes the floor every store ships with.
   refreshed. CI's drift gate reads that committed snapshot, not the store, so a
   verification left uncommitted fails CI. Verifying before the code commit re-drifts.
   Give a rule `--files` only when CI does not already run its check (#39).
-- The local store (`.okl/okl.db`, gitignored) should hold all 12 seed files plus
-  recorded nodes; `okl seed seed/` (or `okl seed --all`) loads all 12 packs.
+- The local store (`.okl/okl.db`, gitignored) should hold all 14 seed files plus
+  recorded nodes; `okl seed seed/` (or `okl seed --all`) loads all 14 packs.
 
 ## Commands
 
@@ -73,7 +73,7 @@ okl drift                          # rules whose governed source changed after v
 ## Layout truth
 
 `src/okl/` is the package (store/core/client/cli/service/mcp + scaffold templates);
-`seed/` is the curated 183-node corpus (real lessons, real project names — deliberate);
+`seed/` is the curated 199-node corpus (real lessons, real project names — deliberate);
 `evals/` is the A/B harness and receipts; `docs/posts/` is the 4-part write-up;
 `e2e/` (gitignored) holds scratch repos for end-to-end loop tests.
 
