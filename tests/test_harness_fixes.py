@@ -558,7 +558,10 @@ def test_importing_every_eval_module_does_nothing():
             "    except ModuleNotFoundError as e:\n        missing.append(e.name)\n"
             "    except BaseException as e:\n        bad[p.stem] = repr(e)[:120]\n"
             "import sandbox\nprint(json.dumps({'used': sandbox.USED, 'bad': bad, 'printed': out.getvalue()[:200]}))")
-    got = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True, timeout=300)
+    # Under a store URL that cannot open: a module that opens a store at import fails here, whether or not
+    # the checkout has an okl config (a local one let the grids open the live store silently; CI on #489).
+    env = {**__import__("os").environ, "OKL_DATABASE_URL": "sqlite:////nonexistent-okl-import-check/okl.db"}
+    got = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True, timeout=300, env=env)
     result = __import__("json").loads(got.stdout.strip().splitlines()[-1])
     assert result == {"used": False, "bad": {}, "printed": ""}, got.stderr[-600:]
     after = subprocess.run(["git", "status", "--porcelain", "--ignored"], cwd=REPO, capture_output=True,

@@ -34,11 +34,15 @@ def load() -> SimpleNamespace:
         prompts=json.loads(Path("evals/probe_prompts.json").read_text())["prompts"])
 
 
+_LOADED = frozenset({"store", "cfg", "REPO", "INTERESTS", "src", "variants", "tasks", "prompts"})
+
+
 def __getattr__(name: str) -> Any:
-    """`grid_setup.store` and the other names the grids read, from `load()` on first access."""
-    loaded = load()
-    if hasattr(loaded, name):
-        return getattr(loaded, name)
+    """`grid_setup.store` and the other names the grids read, from `load()` on first access. Only those:
+    the import machinery asks a module for `__path__` and the like during `from grid_setup import ...`,
+    and loading for any name opened the store at import after all (CI on #489)."""
+    if name in _LOADED:
+        return getattr(load(), name)
     raise AttributeError(f"module 'grid_setup' has no attribute {name!r}")
 
 
