@@ -550,8 +550,8 @@ Installing okl is not free. It is worth knowing exactly what you are signing up 
 before you wire it into every prompt. Every number below was measured rather than
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
-bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261102-0123.json`](evals/results/briefing-size-20261102-0123.json)); the latency from the 161 seed records bundled before that.
+bundled seed pack, 199 records (`python3 evals/briefing_size.py`, receipt
+[`evals/results/briefing-size-20261119-0548.json`](evals/results/briefing-size-20261119-0548.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -597,8 +597,8 @@ because subagents are exactly where org rules get lost: a focused worker handlin
 subtask has the least context and the most need for "here is the mistake this codebase
 already made."
 
-**Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261102-0123.json)): the action list alone is ~400
+**Measured on every bundled seed pack (199 records), one representative task**
+([receipt](evals/results/briefing-size-20261119-0548.json)): the action list alone is ~400
 tokens at `--limit 3`, ~710 at `--limit 5` and ~1,150 at `--limit 12` (its one-line entries
 follow the limit), against ~1,580 for the full briefing. Cheap enough to call per subtask;
 `--decision calibrated` drops the one-line entries for the smallest list.
