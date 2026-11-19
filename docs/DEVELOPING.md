@@ -217,6 +217,9 @@ honest:
 - **More than 20% failures means RESULTS NOT USABLE.** Never quote a number from such a
   run.
 - **Every cited figure has a committed receipt** in `evals/results/`.
+- **An eval script does nothing when imported.** Its work is in `main()`, behind
+  `if __name__ == "__main__":`; `tests/test_harness_fixes.py` fails a top-level call, loop, or an
+  assignment that opens a store, reads the command line or writes a file (#486).
 - **A changed instrument starts a new series.** That covers a different judge, judge
   prompt or resolved model, and the new run is not pooled with older ones.
 - **The thesis quotes only what its receipts hold.** Every figure on `docs/THESIS.md` is

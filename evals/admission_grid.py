@@ -16,73 +16,84 @@ checked by hand.
 """
 import sys
 
-from grid_setup import INTERESTS, LABELS, REPO, prompts, store, tasks, variants
+import grid_setup as gs
+from grid_setup import LABELS
 
 from okl import core, semantic  # grid_setup has put src/ on the path
 
-COSINES = (0.0, 0.25, 0.30, 0.35)
-RANKS = (1, 2, 3, 5)
+
+def main() -> int:
+    """Everything admission_grid does when run, which it did on import before #486: importing it now does nothing."""
+    store, REPO, INTERESTS, prompts, tasks, variants = (gs.store, gs.REPO, gs.INTERESTS, gs.prompts, gs.tasks,
+                                                        gs.variants)
+    COSINES = (0.0, 0.25, 0.30, 0.35)
+    RANKS = (1, 2, 3, 5)
 
 
-def pool_view(text: str, interests: list[str] | None) -> tuple[list[dict], set[str]]:
-    """Each in-scope live candidate of check's window with its cosine, reranker rank and
-    whether the floor keeps it, plus the ids the floor keeps."""
-    cand = core.ranked_candidates(store, text, 36, "linear", rerank=True)
-    # Both stages must have run: a lexical-only fallback would print a cosine grid with no
-    # cosines in it and read as a measurement (review on #275).
-    if cand.note:
-        sys.exit(f"admission grid: the semantic arm did not run ({cand.note})")
-    if cand.rerank_note:
-        sys.exit(f"admission grid: the reranker did not run ({cand.rerank_note})")
-    scope = f"repo:{REPO}"
-    live = [n for n in cand.nodes if core._in_scope(n, scope, interests) and n.status not in core.RETIRED_STATUSES]
-    kept, _matched, _weak = core._apply_floor(store, live, core.briefing_terms(text), cand)
-    kept_ids = {n.id for n in kept}
-    rank = {n.id: i + 1 for i, n in enumerate(cand.nodes[:core.rerank_stage.RERANK_POOL])}
-    rows = [{"id": n.id, "title": n.title, "cos": cand.scores.get(n.id), "rank": rank.get(n.id),
-             "lexical": n.id in cand.lexical, "kept": n.id in kept_ids} for n in live]
-    return rows, kept_ids
+    def pool_view(text: str, interests: list[str] | None) -> tuple[list[dict], set[str]]:
+        """Each in-scope live candidate of check's window with its cosine, reranker rank and
+        whether the floor keeps it, plus the ids the floor keeps."""
+        cand = core.ranked_candidates(store, text, 36, "linear", rerank=True)
+        # Both stages must have run: a lexical-only fallback would print a cosine grid with no
+        # cosines in it and read as a measurement (review on #275).
+        if cand.note:
+            sys.exit(f"admission grid: the semantic arm did not run ({cand.note})")
+        if cand.rerank_note:
+            sys.exit(f"admission grid: the reranker did not run ({cand.rerank_note})")
+        scope = f"repo:{REPO}"
+        live = [n for n in cand.nodes if core._in_scope(n, scope, interests) and n.status not in core.RETIRED_STATUSES]
+        kept, _matched, _weak = core._apply_floor(store, live, core.briefing_terms(text), cand)
+        kept_ids = {n.id for n in kept}
+        rank = {n.id: i + 1 for i, n in enumerate(cand.nodes[:core.rerank_stage.RERANK_POOL])}
+        rows = [{"id": n.id, "title": n.title, "cos": cand.scores.get(n.id), "rank": rank.get(n.id),
+                 "lexical": n.id in cand.lexical, "kept": n.id in kept_ids} for n in live]
+        return rows, kept_ids
 
 
-def admitted(row: dict, c: float, k: int) -> bool:
-    """The cell's rule on one dropped candidate."""
-    return (not row["kept"] and row["cos"] is not None and row["cos"] >= c
-            and row["rank"] is not None and row["rank"] <= k)
+    def admitted(row: dict, c: float, k: int) -> bool:
+        """The cell's rule on one dropped candidate."""
+        return (not row["kept"] and row["cos"] is not None and row["cos"] >= c
+                and row["rank"] is not None and row["rank"] <= k)
 
 
-print(f"store {len(store.all_nodes())} records · repo={REPO} · window 36 per arm, linear, reranked pool "
-      f"{core.rerank_stage.RERANK_POOL} · floor {semantic.SUBJECT_SIMILARITY} cosine for a semantic-only candidate")
-print("\nA. Governing lessons the floor DROPS on the selection set (harness config), with what the rule would see:")
-print(f"{'task':16} {'variant':11} {'in pool':7} {'lexical':7} {'cosine':>6} {'rank':>4}")
-dropped: list[dict] = []
-for tid, t in tasks.items():
-    for label, text in zip(LABELS, [t["task"], *variants[tid]], strict=True):
-        rows, kept_ids = pool_view(text, None)
-        g = next((r for r in rows if r["id"] == t["defect_node"]), None)
-        if g is None or g["kept"]:
-            continue
-        dropped.append({**g, "task": tid, "variant": label})
-        print(f"{tid:16} {label:11} {'yes' if g['rank'] else 'no':7} {'yes' if g['lexical'] else 'no':7} "
-              f"{g['cos'] if g['cos'] is None else round(g['cos'], 2)!s:>6} {g['rank']!s:>4}")
-print(f"{len(dropped)} governing lessons dropped of {len(tasks) * len(LABELS)} queries")
+    print(f"store {len(store.all_nodes())} records · repo={REPO} · window 36 per arm, linear, reranked pool "
+          f"{core.rerank_stage.RERANK_POOL} · floor {semantic.SUBJECT_SIMILARITY} cosine for a semantic-only candidate")
+    print("\nA. Governing lessons the floor DROPS on the selection set (harness config), with what the rule would see:")
+    print(f"{'task':16} {'variant':11} {'in pool':7} {'lexical':7} {'cosine':>6} {'rank':>4}")
+    dropped: list[dict] = []
+    for tid, t in tasks.items():
+        for label, text in zip(LABELS, [t["task"], *variants[tid]], strict=True):
+            rows, kept_ids = pool_view(text, None)
+            g = next((r for r in rows if r["id"] == t["defect_node"]), None)
+            if g is None or g["kept"]:
+                continue
+            dropped.append({**g, "task": tid, "variant": label})
+            print(f"{tid:16} {label:11} {'yes' if g['rank'] else 'no':7} {'yes' if g['lexical'] else 'no':7} "
+                  f"{g['cos'] if g['cos'] is None else round(g['cos'], 2)!s:>6} {g['rank']!s:>4}")
+    print(f"{len(dropped)} governing lessons dropped of {len(tasks) * len(LABELS)} queries")
 
-print("\nB. The six chat prompts (hook config): records the floor drops, best three by reranker rank, with cosine:")
-chat: list[list[dict]] = []
-for p in prompts:
-    rows, kept_ids = pool_view(p, INTERESTS)
-    drop = sorted((r for r in rows if not r["kept"] and r["rank"] is not None), key=lambda r: r["rank"])
-    chat.append(drop)
-    best = [(r["rank"], None if r["cos"] is None else round(r["cos"], 2), r["title"][:40]) for r in drop[:3]]
-    print(f"  kept {len(kept_ids):2} · dropped {len(drop):2} · {best}  <- {p[:44]!r}")
+    print("\nB. The six chat prompts (hook config): records the floor drops, best three by reranker rank, with cosine:")
+    chat: list[list[dict]] = []
+    for p in prompts:
+        rows, kept_ids = pool_view(p, INTERESTS)
+        drop = sorted((r for r in rows if not r["kept"] and r["rank"] is not None), key=lambda r: r["rank"])
+        chat.append(drop)
+        best = [(r["rank"], None if r["cos"] is None else round(r["cos"], 2), r["title"][:40]) for r in drop[:3]]
+        print(f"  kept {len(kept_ids):2} · dropped {len(drop):2} · {best}  <- {p[:44]!r}")
 
-print("\nC. GRID: governing lessons admitted (of the dropped ones above) / records the six prompts would gain in total")
-print(f"{'cosine >=':>10} " + " ".join(f"{'rank <= ' + str(k):>14}" for k in RANKS))
-for c in COSINES:
-    cells = []
-    for k in RANKS:
-        gain = sum(admitted(r, c, k) for r in dropped)
-        filler = sum(admitted(r, c, k) for drop in chat for r in drop)
-        per_prompt = [sum(admitted(r, c, k) for r in drop) for drop in chat]
-        cells.append(f"{gain:>2} / {filler:>2} {''.join(str(x) for x in per_prompt):>7}")
-    print(f"{c:>10} " + " ".join(f"{cell:>14}" for cell in cells))
-print("(each cell: lessons admitted / filler records admitted, then the six prompts' gains as digits)")
+    print("\nC. GRID: governing lessons admitted (of the dropped ones above) / records the six prompts would gain in total")
+    print(f"{'cosine >=':>10} " + " ".join(f"{'rank <= ' + str(k):>14}" for k in RANKS))
+    for c in COSINES:
+        cells = []
+        for k in RANKS:
+            gain = sum(admitted(r, c, k) for r in dropped)
+            filler = sum(admitted(r, c, k) for drop in chat for r in drop)
+            per_prompt = [sum(admitted(r, c, k) for r in drop) for drop in chat]
+            cells.append(f"{gain:>2} / {filler:>2} {''.join(str(x) for x in per_prompt):>7}")
+        print(f"{c:>10} " + " ".join(f"{cell:>14}" for cell in cells))
+    print("(each cell: lessons admitted / filler records admitted, then the six prompts' gains as digits)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
