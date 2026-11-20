@@ -82,5 +82,42 @@ jobs:
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
         run: bash ci/review-agent.sh
 
+      # The review after writing, on every pull request: one call picks the ten lessons the change
+      # is likeliest to break and one fresh call checks each (ci/lesson-review.sh). Eleven calls a
+      # run, so it is off until you also set the LESSON_REVIEW repository variable to "on". It
+      # reports in this job's summary and blocks nothing unless LESSON_REVIEW_BLOCKING is "1".
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        if: vars.LESSON_REVIEW == 'on'
+        with:
+          python-version: "3.13"
+      - name: Lesson review (off unless LESSON_REVIEW is on and REVIEW_CMD is set)
+        if: vars.LESSON_REVIEW == 'on'
+        env:
+          REVIEW_CMD: ${{ vars.REVIEW_CMD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REVIEW_BASE_REF: origin/${{ github.base_ref }}
+          # What the change says it does, passed as data, never interpolated into the script.
+          REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
+          LESSON_REVIEW_BLOCKING: ${{ vars.LESSON_REVIEW_BLOCKING }}
+          # Your shared store, if you run one. Without it the review reads okl's bundled packs:
+          # the lessons you record stay in your gitignored .okl/.
+          OKL_SERVICE_URL: ${{ secrets.OKL_SERVICE_URL }}
+          OKL_TOKEN: ${{ secrets.OKL_TOKEN }}
+        run: |
+          # .github/okl-version pins the okl release, as okl-verify.yml reads it.
+          if [ -s .github/okl-version ]; then
+            pip install "observed-knowledge-ledger==$(tr -d '[:space:]' < .github/okl-version)"
+          else
+            pip install observed-knowledge-ledger
+          fi
+          if [ -z "$OKL_SERVICE_URL" ]; then
+            export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/lessons.db" OKL_BRIEFING_LOG=0
+            export LESSON_REVIEW_STORE_NOTE="Checked against okl's bundled packs only: the lessons this repository recorded stay in its gitignored .okl/."
+            okl seed --all > /dev/null
+          fi
+          bash ci/lesson-review.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
   # Optional: emit VERIFIED_ON receipts to the org knowledge layer when gates pass.
   # See okl README + ci/okl-verify.yml.

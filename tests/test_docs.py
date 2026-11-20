@@ -1076,6 +1076,8 @@ def test_the_config_and_environment_checks_name_what_is_missing():
 OPEN_PHRASE = re.compile(r"(?i)\b(?:not|never) (?:yet )?(?:been )?measured\b|\bunmeasured\b|\bstill open\b")
 OPEN_QUESTIONS = {
     # (file, words of the sentence around the phrase): the question it waits on.
+    ("docs/COSTS-AND-KNOBS.md", "how often a check in CI raises a false alarm is not measured yet"):
+        "lesson-review-ci-false-alarms",
     ("docs/ACROSS-AN-ORG.md", "Reporting the rate per pack rather than per store is still open in #252"):
         "per-pack-rate",
     ("docs/overview/okl-anatomy.html", "a working session is not yet measured"):

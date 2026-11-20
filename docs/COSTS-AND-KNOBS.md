@@ -220,8 +220,29 @@ Two things worth knowing:
   where no human and no agent is in the loop — a PR nobody reviewed.
 
 Unset, the step prints one line saying it is off and exits 0. Every other gate in the kit is
-deterministic and free; this is the only one that calls a model, which is why it is the only
-one that is opt-in.
+deterministic and free, except the lesson review below; the two that call a model are the two
+that are opt-in.
+
+## Lesson review in CI (off by default)
+
+`ci/lesson-review.sh` runs the review after writing on a pull request: one call picks the ten
+lessons the change is likeliest to break (`LESSON_REVIEW_PICK`), then one fresh call checks each,
+so **eleven model calls a run**, four at a time (`LESSON_REVIEW_PARALLEL`). It uses the same
+`REVIEW_CMD`, and the kit's workflow runs it only when the `LESSON_REVIEW` repository variable is
+also `on`:
+
+```bash
+gh variable set LESSON_REVIEW --body on
+```
+
+It reports and blocks nothing unless `LESSON_REVIEW_BLOCKING` is `1`: how often a check in CI
+raises a false alarm is not measured yet. On a runner it reads okl's bundled packs, or your shared
+store when `OKL_SERVICE_URL` is set, since the lessons you record stay in your gitignored `.okl/`.
+Run on your machine, from the checkout or one of its worktrees, it reads your whole store:
+
+```bash
+REVIEW_CMD="claude -p --model sonnet" bash ci/lesson-review.sh
+```
 
 ## The semantic arm (`--hybrid`), off by default
 

@@ -22,6 +22,7 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 | `ci/okl-verify.yml` | `.github/workflows/okl-verify.yml` | not copied by scaffold — okl's drift gate in CI, installed by `okl init --ci` |
 | `ci/dependabot.yml` | `.github/dependabot.yml` | portable — keeps the workflows' SHA-pinned actions current |
 | `ci/review-agent.sh` | `ci/review-agent.sh` | portable, opt-in (see below) |
+| `ci/lesson-review.sh` | `ci/lesson-review.sh` | portable, opt-in (see below) |
 | `hooks/*` | `.claude/hooks/` | UserPromptSubmit briefing (fail-closed in repos set up with okl) + Stop encode reminder; copied by scaffold, registered by `okl init` |
 | `git-hooks/pre-push` | git's hooks directory (honours `core.hooksPath`) | portable; not copied by scaffold — installed by `okl init` (the default in a git repo without okl's CI workflow; `--git-hook` forces it, `--no-git-hook` skips it) |
 | `MANIFEST.md` (this file) | `docs/method-kit-manifest.md` | reference |
@@ -71,7 +72,18 @@ between repos) lives in okl and surfaces via `okl check`.
 fails on must-fix findings. **Off unless the `REVIEW_CMD` repository variable is set** to
 a CLI that reads a prompt on stdin — `claude -p` (uses your existing Claude Code login,
 no separate API key), `ollama run <model>` (local, free), or any other. Unset, it prints
-one line and passes. It is the only gate in this kit that calls a model. A long diff is
+one line and passes. It and the lesson review below are the only gates in this kit that call a model. A long diff is
 reviewed in parts, one call each, and any file past the last part is named as not reviewed;
 lockfiles are left out of the diff as data and listed. Give it your CI's test results
 (`REVIEW_CI_RESULTS_FILE`) so a reviewer that runs nothing still reads what they found.
+
+## Lesson review (opt-in)
+
+`ci/lesson-review.sh` runs okl's review after writing on a pull request, whoever wrote the change:
+one call says what the change does and picks the ten lessons it is likeliest to break, then one
+fresh call per lesson checks it, asked to list and check every path the lesson's rule covers
+first. Eleven calls a run, so the kit's workflow runs it only when **both** `REVIEW_CMD` and the
+`LESSON_REVIEW` repository variable (set to `on`) are set. It reports in the job summary and as
+annotations, and blocks nothing unless `LESSON_REVIEW_BLOCKING` is `1`. In CI it reads okl's
+bundled packs, or your shared store if `OKL_SERVICE_URL` is set: the lessons you record stay in
+your gitignored `.okl/` and do not reach the runner.

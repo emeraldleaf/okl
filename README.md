@@ -575,6 +575,9 @@ an interval that includes it, and 0.145 on the 31 bugs whose lesson was written 
 before 0.19.0, which asks each check to list every path the lesson's rule covers first: on single prompts that
 found the break 0.429 of the time against 0.279 ([REPORT §4bl](evals/REPORT.md)), not yet measured in sessions.
 `okl init --no-review-after-writing` turns it off; `OKL_REVIEW_AFTER_WRITING=0` skips it for one session.
+The same review runs on a pull request with any model's CLI, whoever wrote the change: `ci/lesson-review.sh`
+makes one call to pick the ten lessons and one fresh call per lesson, off unless set up
+([COSTS-AND-KNOBS.md](docs/COSTS-AND-KNOBS.md#lesson-review-in-ci-off-by-default)).
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With

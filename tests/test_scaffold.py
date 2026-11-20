@@ -398,6 +398,10 @@ def test_mirror_files_identical():
     pairs.append((scaffold_claude / "commands" / "triggers.md", root / ".claude" / "commands" / "triggers.md"))
     pairs.extend((scaffold_claude / "skills" / name / "SKILL.md", root / ".claude" / "skills" / name / "SKILL.md")
                  for name in ("encoding-loop", "okl-review"))
+    # The CI review scripts the kit ships run on this repo's own pull requests: a fix in one copy and
+    # not the other ships a reviewer this repo never ran.
+    pairs.extend((root / "ci" / name, root / "src" / "okl" / "scaffold" / "ci" / name)
+                 for name in ("review-agent.sh", "lesson-review.sh"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"

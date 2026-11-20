@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **The review after writing runs on a pull request, with any model's CLI** (`ci/lesson-review.sh`).
+  Until now it ran only when an agent's Stop hook asked for it, so a change made by hand, by another
+  agent, or in a session whose hook never fired went unchecked. The script follows the steps `okl
+  check --change` prints with the calls a script can make: one call says what the change does and
+  picks the ten lessons it is likeliest to break (`LESSON_REVIEW_PICK`), from `okl check --change
+  --format json`; then one fresh call per lesson, from an empty folder, gets the lesson's full text,
+  the change and the path question. It writes one report, to the job summary, as annotations, and
+  for okl's CI as one pull-request comment that each run replaces, posted by a job that runs no model
+  and none of the change's code. A pick that names no lesson, and a check that fails, are said in the
+  report, with the call's exit status and last error line. It blocks nothing unless
+  `LESSON_REVIEW_BLOCKING` is `1`, since its false-alarm rate in CI is not measured. It is off by
+  default: `okl scaffold` ships it, and the kit's workflow runs it when `REVIEW_CMD` is set and the
+  `LESSON_REVIEW` repository variable is `on`, eleven calls a run. On a runner it reads okl's bundled
+  packs (or a shared store, `OKL_SERVICE_URL`), since a repo's recorded lessons stay in its gitignored
+  `.okl/` (#186); run on your machine, it reads your whole store. `ci/review-agent.sh` and the new
+  script are now in the mirror test with their scaffold copies.
+
 - **The review after writing is a skill, and the Stop hook sees work done in other worktrees.** On
   okl's own repo a week of pull requests made in git worktrees logged one review after writing: the
   agent entered each worktree command by command, its session's own checkout stayed untouched, and the

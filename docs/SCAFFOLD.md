@@ -26,15 +26,22 @@ The kit's scripts read these environment variables, each optional:
 |---|---|---|
 | `CANON_WARN`, `CANON_FAIL` | `gates/check-canon-size.sh` | the line counts above which `CLAUDE.md` warns and fails: 200 and 300 unless set |
 | `OKL_DIAGRAM_SRC_EXT`, `OKL_DIAGRAM_OUT_EXT` | `gates/check-diagram-pairs.sh` | the extensions of a diagram's source and its render: `excalidraw` and `svg` unless set |
-| `REVIEW_CMD` | `ci/review-agent.sh` | the reviewer: any CLI that reads a prompt on stdin. Unset, the review is skipped ([COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md) has what it costs) |
-| `REVIEW_BASE_REF` | `ci/review-agent.sh` | what the diff is taken against: `origin/main` unless set. The kit's workflow passes the pull request's base |
+| `REVIEW_CMD` | `ci/review-agent.sh`, `ci/lesson-review.sh` | the reviewer: any CLI that reads a prompt on stdin. Unset, the review is skipped ([COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md) has what it costs) |
+| `REVIEW_BASE_REF` | `ci/review-agent.sh`, `ci/lesson-review.sh` | what the diff is taken against: `origin/main` unless set. The kit's workflow passes the pull request's base |
 | `AGENT_FILE` | `ci/review-agent.sh` | the reviewer's instructions. Unset, the first `architecture-reviewer.md` within three directories of the root |
-| `REVIEW_REPO_DIR` | `ci/review-agent.sh` | the checkout, so a reviewer that can read files is told where it is. With `GIT_DIR` set as well, it is also told that git already points there |
-| `REVIEW_PR_TITLE`, `REVIEW_PR_BODY` | `ci/review-agent.sh` | what the change says it does (the body's first 4,000 bytes) |
+| `REVIEW_REPO_DIR` | `ci/review-agent.sh`, `ci/lesson-review.sh` | the checkout, so a reviewer that can read files is told where it is. With `GIT_DIR` set as well, it is also told that git already points there |
+| `REVIEW_PR_TITLE`, `REVIEW_PR_BODY` | `ci/review-agent.sh`, `ci/lesson-review.sh` | what the change says it does (the body's first 4,000 bytes) |
 | `REVIEW_BRIEFING_FILE` | `ci/review-agent.sh` | a file holding `okl check`'s briefing for the change (its first 20,000 bytes) |
 | `REVIEW_CI_RESULTS_FILE` | `ci/review-agent.sh` | a file holding what the change's tests, linters and type checks reported (its first 30,000 bytes), so a reviewer that runs nothing still reads them |
-| `REVIEW_EXCLUDE` | `ci/review-agent.sh` | git globs left out of the diff the reviewer reads, as data, and listed for it to open: lockfiles unless set |
+| `REVIEW_EXCLUDE` | `ci/review-agent.sh`, `ci/lesson-review.sh` | git globs left out of the diff the reviewer reads, as data, and listed for it to open: lockfiles unless set |
 | `REVIEW_MAX_LINES`, `REVIEW_MAX_PARTS` | `ci/review-agent.sh` | the diff is reviewed in parts of at most 4,000 lines, one fresh call each, at most 4 parts; files past the last part are named as not reviewed, on the PR and in the log |
+| `REVIEW_MAX_LINES` | `ci/lesson-review.sh` | the most lines of the diff each call is given: 4,000 unless set; the files past the cut are named, for a reviewer that can read the repository |
+| `LESSON_REVIEW_PICK` | `ci/lesson-review.sh` | how many lessons the picking call picks: 10 unless set |
+| `LESSON_REVIEW_PARALLEL` | `ci/lesson-review.sh` | how many lesson checks run at once: 4 unless set. Each is a call of its own either way |
+| `LESSON_REVIEW_TIMEOUT` | `ci/lesson-review.sh` | the seconds one call may take before its lesson counts as not checked: 900 unless set |
+| `LESSON_REVIEW_BLOCKING` | `ci/lesson-review.sh` | `1` fails the job when a check says the change breaks a lesson. Unset, the review reports and blocks nothing |
+| `LESSON_REVIEW_REPORT` | `ci/lesson-review.sh` | a file the report is also written to, for a step that posts it on the pull request |
+| `LESSON_REVIEW_STORE_NOTE` | `ci/lesson-review.sh` | a line the report carries about the lessons it read: the kit's workflow says when they are only okl's bundled packs |
 | `GENERATOR_MODEL`, `JUDGE_MODEL` | `evals/run_evals.py` | the models that answer and grade. The harness refuses to run when both are set and the same |
 
 It also stamps two **first-party method skills** — `encoding-loop` (turn a finding
