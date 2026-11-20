@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.20.0
 
 - **A session started in a git worktree gets okl's hooks, `okl init` there refuses to start a second
   store, and `okl drift` works from any folder.** Three gaps left after okl learned to work in a

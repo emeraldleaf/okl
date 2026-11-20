@@ -1101,6 +1101,17 @@ def test_review_agent_reviews_a_diff_that_is_not_utf8(tmp_path):
     assert "LATIN-MARKER" in prompts[0]
 
 
+def test_review_agent_with_no_part_to_send_has_no_verdict_and_calls_no_reviewer(tmp_path):
+    """A diff that yields no part once sent the reviewer an empty prompt built from an unmatched file
+    pattern. It is now no review, said as a warning on the pull request, with no call made."""
+    base = _review_repo(tmp_path, {"a.py": "x = 1\n"})
+    r, prompts = _run_review(tmp_path, base, [_verdict(None)], REVIEW_MAX_PARTS="0")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert prompts == []
+    assert "::warning title=architecture review::no review verdict" in r.stdout
+    assert "must-fix" not in r.stdout
+
+
 def test_review_agent_leaves_data_files_out_of_the_diff_but_lists_them(tmp_path):
     """A lockfile is listed for the reviewer to open, not sent as diff lines; so is a pattern the repo
     names in REVIEW_EXCLUDE."""
