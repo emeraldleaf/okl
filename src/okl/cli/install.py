@@ -105,6 +105,9 @@ MCP_ENTRY = {"command": "/bin/sh",
 # What okl wrote before: init upgrades it, uninstall still recognises it.
 LEGACY_MCP_ENTRIES = ({"command": "okl", "args": ["mcp"]},)
 MCP_LAUNCHER = Path(".claude/hooks/okl-mcp.sh")
+# The review after writing as a skill: the Stop hook names it, so init installs it beside the hooks.
+REVIEW_SKILL = Path(".claude/skills/okl-review/SKILL.md")
+REVIEW_SKILL_SRC = Path(__file__).parent.parent / "scaffold" / "claude" / "skills" / "okl-review" / "SKILL.md"
 
 # The GitHub Actions drift workflow: where init installs it, and the copy okl ships.
 WORKFLOW = Path(".github") / "workflows" / "okl-verify.yml"
@@ -207,6 +210,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
              (Path(".claude/hooks/posttooluse-okl-read.sh"), scaffold / "hooks" / "posttooluse-okl-read.sh"),
              (Path(".claude/hooks/posttooluse-okl-edit.sh"), scaffold / "hooks" / "posttooluse-okl-edit.sh"),
              (MCP_LAUNCHER, scaffold / "hooks" / "okl-mcp.sh"),
+             (REVIEW_SKILL, REVIEW_SKILL_SRC),
              (WORKFLOW, WORKFLOW_SRC)]
     hooks, _ = _git_hooks_dir()
     if hooks is not None:
@@ -219,12 +223,19 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
         if state == ownership.OKL:
             if not dry_run:
                 dst.unlink()
+                if dst == REVIEW_SKILL:
+                    _remove_if_empty(dst.parent)   # the skill's own folder, never .claude/skills
             print(f"✓ {act} {dst}")
             workflow_removed = workflow_removed or dst == WORKFLOW
         elif state != ownership.MISSING:
             why = "edited" if state == ownership.MODIFIED else "not recognisably okl's"
             kept.append(f"{dst} ({why})")
     return kept + _uninstall_pin(act, dry_run, workflow_removed)
+
+
+def _remove_if_empty(folder: Path) -> None:
+    with contextlib.suppress(OSError):      # not empty: something of the person's is in it, and stays
+        folder.rmdir()
 
 
 def _uninstall_pin(act: str, dry_run: bool, workflow_removed: bool) -> list[str]:
@@ -550,6 +561,7 @@ def _init_dry_run(args: argparse.Namespace) -> int:
         print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
         print("  .claude/hooks/posttooluse-okl-read.sh        executable; runs after the agent reads a file")
         print("  .claude/hooks/posttooluse-okl-edit.sh        executable; runs approved lesson checks after an edit")
+        print("  .claude/skills/okl-review/SKILL.md      the review after writing as a skill; the Stop hook names it")
         print("  .claude/settings.json                   registers those four hooks (merged, existing keys kept)")
         print("  .claude/hooks/okl-mcp.sh                     executable; starts the okl MCP server the way the hooks do")
         print("  .mcp.json                               registers the okl MCP server (both only if the [mcp] extra is installed)")
@@ -739,6 +751,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     _wire_claude_code(args)
     _say_review_after_writing(cfg)
+    _say_stop_hook_sees_worktrees()
     _wire_drift_gates(cfg, force=getattr(args, "force", False))
     _wire_owner_paths(cfg, args)
     if not getattr(args, "no_seed", False):
@@ -875,6 +888,8 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
                         ("posttooluse-okl-edit.sh", "edit checks (PostToolUse on edits; runs only checks "
                                                     "approved with okl on-edit add)")]:
         _place_owned(hooks / name, (scaffold_hooks / name).read_text(), label, force)
+    _place_owned(claude / REVIEW_SKILL.relative_to(".claude"), REVIEW_SKILL_SRC.read_text(),
+                 "review-after-writing skill (okl-review; the Stop hook names it)", force)
     if _merge_hook_settings(claude):
         print("✓ registered the hooks in .claude/settings.json (UserPromptSubmit, Stop, PostToolUse on Read "
               "and on edits)")
@@ -1034,6 +1049,21 @@ def _say_review_after_writing(cfg: dict) -> None:
     if not any("check --change" in line for line in text.splitlines() if not line.lstrip().startswith("#")):
         print(f"! {STOP_HOOK} is an edited copy that does not ask for it, so the review will not run. "
               "`okl init --force` replaces it with okl's.")
+
+
+def _say_stop_hook_sees_worktrees() -> None:
+    """Say when this project's Stop hook is an edited copy from before it looked at other worktrees: init
+    keeps it, and then work committed only in another worktree asks neither the review nor what was
+    learned (lesson owned-file-features-check-the-kept-copy). Read as _say_review_after_writing reads it,
+    and whether the review is on or off, since the hook asks the encode question either way."""
+    try:
+        text = STOP_HOOK.read_text(errors="replace")
+    except OSError:
+        return   # no project hook: okl's plugin provides it, or Claude Code is not wired here
+    if not any("worktree list" in line for line in text.splitlines() if not line.lstrip().startswith("#")):
+        print(f"! {STOP_HOOK} is an edited copy from before the Stop hook looked at other worktrees: work "
+              "committed only in another worktree of this repo will not make it ask. `okl init --force` "
+              "replaces it with okl's.")
 
 
 STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")

@@ -1075,7 +1075,7 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     assert cmd_init(args) == 0
     out = capsys.readouterr().out
     assert "DRY RUN" in out
-    for expected in ("hooks/userpromptsubmit-okl-check.sh", "settings.json",
+    for expected in ("hooks/userpromptsubmit-okl-check.sh", "settings.json", "skills/okl-review/SKILL.md",
                      "no CI workflow", "pre-push", ".okl/config.json"):
         assert expected in out, f"dry run must disclose {expected}"
     assert sorted(p.name for p in tmp_path.iterdir()) == before, "dry run wrote something"

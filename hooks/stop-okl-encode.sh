@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:14544536ce98352b907bd51d773a5e95de1727b8b46f12ffbee6a4fc32e4e1ac
+# okl-fingerprint: sha256:78402511ff5c41fd2fa57fcfd4dc20cb12b2a82a899578c16b1d4c1ba4858cad
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -148,9 +148,25 @@ if [[ -e "$marker" ]]; then log_review 2>/dev/null; exit 0; fi
 changed=0
 if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
   changed=1
-elif last=$(git log -1 --format=%ct 2>/dev/null); then
+elif last=$(git log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]]; then
+  # A whole number first, base 10: git prints a commit's date as written, and `08` is a bash
+  # arithmetic error (lesson bash-double-brackets).
   now=$(date +%s)
-  [[ $((now - last)) -lt 3600 ]] && changed=1
+  [[ $((now - 10#$last)) -lt 3600 ]] && changed=1
+fi
+# A commit in the last hour in another worktree of this repo counts too. An agent that works in a
+# worktree, entering it in each command, leaves this checkout untouched, so neither question was
+# asked: on okl's own repo, a week of pull requests made that way logged one review after writing.
+# okl names the worktrees in its note, below.
+if [[ "$changed" = "0" ]]; then
+  now=$(date +%s)
+  while IFS= read -r wt; do
+    [[ -n "$wt" && -d "$wt" ]] || continue
+    if last=$(git -C "$wt" log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]] \
+       && [[ $((now - 10#$last)) -lt 3600 ]]; then
+      changed=1; break
+    fi
+  done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
 fi
 [[ "$changed" = "1" ]] || exit 0
 
@@ -158,7 +174,8 @@ touch "$marker" 2>/dev/null || true
 
 # The review after writing (REPORT §4at), first, unless the repo turns it off (on by default
 # since 0.17.0; `review_after_writing` in .okl/config.json): okl prints a one-line note pointing at
-# `okl check --change`, or nothing. Advisory, as the recap below: an okl too old to know
+# `okl check --change` and the okl-review skill, with any worktree that had work in the last hour
+# named, or nothing. Advisory, as the recap below: an okl too old to know
 # --change, or one that cannot read git, adds nothing and the question stands as it was.
 "${OKL[@]}" check --change --format hook >&2 2>/dev/null || true
 

@@ -218,12 +218,16 @@ fi
 # Only the reviewer runs there: the prompt is built here first, because it reads repo-relative
 # paths (the agent file, as `find` names it), and building it inside the clean room sent the
 # reviewer a prompt without its checklist (cat failed on okl #490's own review).
+# Each call's error output and exit status are kept beside its reply: a call that failed said why
+# only there, and discarding both left a part with no review and no cause (review of okl #490).
 replies_dir="$(mktemp -d)"
+trap 'rm -rf "$parts_dir" "$replies_dir"' EXIT
 for part in "$parts_dir"/part-*.diff; do
   n="$(basename "$part" .diff)"; n="${n#part-}"
   build_prompt "$((10#$n))" "$part" > "$parts_dir/prompt-$n.txt"
   clean="$(mktemp -d)"
-  (cd "$clean" && $REVIEW_CMD < "$parts_dir/prompt-$n.txt" 2>/dev/null) > "$replies_dir/reply-$n.txt"
+  (cd "$clean" && $REVIEW_CMD < "$parts_dir/prompt-$n.txt" 2> "$replies_dir/err-$n.txt") > "$replies_dir/reply-$n.txt"
+  echo "$?" > "$replies_dir/status-$n.txt"
   rmdir "$clean" 2>/dev/null || true
 done
 raw="$(cat "$replies_dir"/reply-*.txt 2>/dev/null)"
@@ -239,7 +243,9 @@ folder, skipped = sys.argv[1], sys.argv[2].split()
 dec, merged, any_review = json.JSONDecoder(), {"findings": [], "checked": [], "not_checked": []}, False
 names = sorted(f for f in os.listdir(folder) if f.startswith("reply-"))
 for name in names:
-    text, found = open(os.path.join(folder, name)).read(), None
+    # errors="replace": a reply or error output in another encoding raised, the whole merge failed in
+    # silence, and every part lost its review (review of okl #492).
+    text, found = open(os.path.join(folder, name), errors="replace").read(), None
     for i, ch in enumerate(text):
         if ch == "{":
             try:
@@ -251,7 +257,16 @@ for name in names:
                 found = obj
     part = name[len("reply-"):-len(".txt")]
     if found is None:
-        merged["not_checked"].append("part %s of %d: the reviewer gave no review" % (int(part), len(names)))
+        why = ""
+        try:
+            status = open(os.path.join(folder, "status-%s.txt" % part)).read().strip()
+            err = [x for x in open(os.path.join(folder, "err-%s.txt" % part), errors="replace").read().splitlines()
+                   if x.strip()]
+        except OSError:
+            status, err = "", []
+        if status and status != "0":
+            why = " (it exited %s%s)" % (status, ": " + err[-1][:200] if err else "")
+        merged["not_checked"].append("part %s of %d: the reviewer gave no review%s" % (int(part), len(names), why))
         continue
     any_review = True
     merged["findings"] += found["findings"]
@@ -263,7 +278,6 @@ if not any_review:
     sys.exit(1)
 print(json.dumps(merged))
 ' "$replies_dir" "$not_reviewed" 2>/dev/null)" || json=""
-rm -rf "$parts_dir" "$replies_dir"
 
 if [[ -z "$json" ]]; then
   # Fail OPEN when no review can be found in the reply, but never quietly. A reviewer that
@@ -275,6 +289,13 @@ if [[ -z "$json" ]]; then
     echo "::warning title=architecture review::no review verdict: the reviewer's reply held no review (findings, checked, not_checked). Re-run the job before relying on this check."
   fi
   printf '%s\n' "$raw" | head -20 >&2
+  for status in "$replies_dir"/status-*.txt; do
+    n="$(basename "$status" .txt)"; n="${n#status-}"
+    if [[ "$(cat "$status")" != "0" ]]; then
+      echo "review-agent: the call for part $((10#$n)) exited $(cat "$status"); the end of its error output:" >&2
+      tail -n 20 "$replies_dir/err-$n.txt" >&2
+    fi
+  done
   exit 0
 fi
 

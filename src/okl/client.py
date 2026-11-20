@@ -72,6 +72,59 @@ def _find_config(start: Path | None = None) -> Path | None:
         cfg = d / CONFIG_DIR / CONFIG_FILE
         if cfg.exists():
             return cfg
+    # A linked git worktree beside the checkout has no .okl/ of its own (git ignores it), so
+    # nothing above it names a store: okl refused there, and `okl check --change` in the worktree,
+    # the command the Stop hook names for work done in one, could never run. Its main checkout's
+    # config, and so its store, is the one this repo set up.
+    linked = _linked_worktree(p)
+    if linked is not None and (linked[1] / CONFIG_DIR / CONFIG_FILE).exists():
+        return linked[1] / CONFIG_DIR / CONFIG_FILE
+    return None
+
+
+def project_root(start: Path | None = None) -> Path:
+    """The repository okl works on from `start` (the current directory): where checks run, governed
+    paths are read from and the drift snapshot is written. That is the folder holding the config,
+    except in a linked git worktree whose config is its main checkout's, found beside it or above
+    it: there it is the worktree's own top folder, since the code is the worktree's. Taking the
+    config's folder there ran `okl reverify` in the main checkout, stamped the main checkout's
+    commit, and rewrote its okl-drift.json. With no config at all, the current directory."""
+    p = (start or Path.cwd()).resolve()
+    cfg = _find_config(p)
+    if cfg is None:
+        return Path.cwd()
+    root = cfg.parent.parent
+    linked = _linked_worktree(p)
+    if linked is not None and root != linked[0] and linked[0] not in root.parents:
+        return linked[0]
+    return root
+
+
+def _linked_worktree(p: Path) -> tuple[Path, Path] | None:
+    """(the top folder of the linked git worktree holding `p`, its main checkout), or None outside one.
+
+    Read from git's own files rather than by running git, since the prompt hook resolves the
+    store on every prompt: a linked worktree's `.git` is a file naming its git directory, which
+    holds a `commondir` file pointing at the main checkout's `.git`. A submodule's `.git` file
+    names a git directory with no `commondir`, and a main checkout's `.git` is a directory."""
+    for d in [p, *p.parents]:
+        marker = d / ".git"
+        # Every probe inside the try: is_dir() and is_file() raise for a path in a folder they cannot
+        # open on Python 3.11 to 3.13 (lesson is-file-raises-in-unreadable-dir), and a .git file that
+        # is not UTF-8 raises a ValueError. Unreadable is not a worktree, so okl resolves as before.
+        try:
+            if marker.is_dir():
+                return None
+            if not marker.is_file():
+                continue
+            text = marker.read_text().strip()
+            if not text.startswith("gitdir:"):
+                return None
+            gitdir = d / text[len("gitdir:"):].strip()      # an absolute path replaces d
+            common = (gitdir / (gitdir / "commondir").read_text().strip()).resolve()
+        except (OSError, ValueError, RuntimeError):     # RuntimeError: a symlink loop, on 3.11
+            return None
+        return (d, common.parent) if common.name == ".git" else None
     return None
 
 
@@ -396,8 +449,7 @@ class Client:
         reached or fails on its side (a network error or any 5xx).
         """
         repo = repo or self.repo
-        cfg = _find_config()
-        root = cfg.parent.parent if cfg else Path.cwd()
+        root = project_root()
         if paths is not None:
             return self._check_files(repo, paths, root, log=log)
         payload = {"repo": repo, "task": task, "interests": self.interests or None,

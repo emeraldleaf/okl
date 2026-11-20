@@ -9,7 +9,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..client import Client, OKLUnreachableError, _find_config, store_url
+from ..client import Client, OKLUnreachableError, _find_config, project_root, store_url
 from .common import _print_json
 
 
@@ -28,7 +28,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     """
     from .. import coexist
     cfg = _find_config()
-    root = cfg.parent.parent if cfg else Path.cwd()
+    root = project_root()
     found = coexist.detect(root, Path.home())
     print(coexist.render(found))
     twice = coexist.double_wiring(root, Path.home())

@@ -5,9 +5,9 @@ to overwrite the hooks on every `okl init`, silently discarding a local edit, an
 was no uninstall -- removing okl meant hand-editing settings next to other tools' hooks.
 
 Each okl-owned file carries one line, `# okl-fingerprint: sha256:<hex>`, the hash of the
-file with that line removed. A file whose hash still matches is an unmodified okl file of
-ANY version, so it is safe to upgrade or remove; a mismatch means someone edited it, and
-okl keeps it. The check needs no local state, so it works the same for a teammate who
+file with that line removed (in a skill, a YAML comment inside its front matter). A file
+whose hash still matches is an unmodified okl file of ANY version, so it is safe to upgrade
+or remove; a mismatch means someone edited it, and okl keeps it. The check needs no local state, so it works the same for a teammate who
 cloned the repo as for whoever ran `okl init`.
 
 After editing an okl-owned file in this repo, re-stamp it:
@@ -41,10 +41,12 @@ def digest(text: str) -> str:
 
 
 def stamp(text: str) -> str:
-    """Return `text` carrying a correct fingerprint line: after a shebang, else first."""
+    """Return `text` carrying a correct fingerprint line: after a shebang, inside front matter (a
+    skill's SKILL.md, where a line before the opening `---` would end it as front matter, and a
+    `#` line within it is a YAML comment), else first."""
     clean = body(text)
     line = f"{PREFIX}{hashlib.sha256(clean.encode('utf-8')).hexdigest()}\n"
-    if clean.startswith("#!"):
+    if clean.startswith(("#!", "---\n")):
         first, _, rest = clean.partition("\n")
         return f"{first}\n{line}{rest}"
     return line + clean

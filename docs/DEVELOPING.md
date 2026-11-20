@@ -38,7 +38,8 @@ src/okl/
 ## The everyday loop
 
 1. **Branch from main.** Use a git worktree if the main checkout is busy, for example
-   during an A/B run. A worktree has no store, so re-verify from the main checkout (step 6).
+   during an A/B run. A worktree has no `.okl/` of its own (git ignores it), so okl run in one
+   uses the main checkout's config and store, and step 6 works there as it does in the checkout.
 2. **Write the test first, and watch it fail on the old code.** A test that passes on both
    versions proves nothing. When a change touches shell hooks, run the tests under macOS's
    `/bin/bash` 3.2 as well: the hooks must work there.
@@ -103,7 +104,8 @@ okl is developed with its own hooks switched on:
 - **Before every prompt,** the Claude Code UserPromptSubmit hook briefs the agent with the lessons that
   match the prompt.
 - **At the end of a session,** the Claude Code Stop hook first asks for the review after writing
-  (`okl check --change`, on by default), then asks what was learned and lists the lessons the
+  (`okl check --change`, or the `okl-review` skill; on by default), naming any other worktree
+  that had a commit in the last hour (run it there: `cd -- <worktree> && okl check --change`), then asks what was learned and lists the lessons the
   session touched (`okl recap`). Answer both.
 - **Recording:** `okl record` with a stable `--id`, a deliberate `--scope` (`org` if true
   in any repo, `repo` if true only here), and tags from the closed vocabulary.
