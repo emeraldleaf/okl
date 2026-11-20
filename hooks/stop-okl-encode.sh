@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:c5b22df37ec6a9d8684a062c08ccebe101ab462336714d4d3bc3b82d1d1705cb
+# okl-fingerprint: sha256:aa0c23ee2dd326f3715eaf011b1ab54493a5011665be769a4dd41b4aa1dcded5
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -149,27 +149,58 @@ if [[ "${stop_hook_active}" = "true" ]]; then log_review 2>/dev/null; exit 0; fi
 marker="${TMPDIR:-/tmp}/okl-encode-reminder-${session_id:-$(pwd | cksum | cut -d' ' -f1)}"
 if [[ -e "$marker" ]]; then log_review 2>/dev/null; exit 0; fi
 
+# A commit time that counts as work in the last hour. A whole number first, base 10: git prints a
+# commit's date as written, and `08` is a bash arithmetic error (lesson bash-double-brackets). And
+# never one ahead of the clock: its age is negative, which is under an hour, so a commit dated a day
+# ahead made the hook ask in every new session of a repo nobody had touched.
+now=$(date +%s)
+recent() {
+  [[ "$1" =~ ^[0-9]{1,12}$ ]] || return 1
+  local age=$((now - 10#$1))
+  [[ "$age" -ge 0 && "$age" -lt 3600 ]]
+}
+# An uncommitted file in the worktree $1 that was modified in the last hour, untracked ones included:
+# the rule okl's note uses for another worktree (changes.worktrees_with_recent_work). A file deleted
+# there has no time to read and does not count. Python reads git's NUL-separated list, where a path
+# with a space or a newline in it stays one path.
+edited_lately() {
+  git -C "$1" status --porcelain -z --untracked-files=all 2>/dev/null | python3 -c '
+import os, sys, time
+root, now = os.fsencode(sys.argv[1]), time.time()
+entries, i = sys.stdin.buffer.read().split(b"\0"), 0
+while i < len(entries):
+    entry = entries[i]; i += 1
+    if len(entry) < 4:
+        continue
+    if entry[0:1] in (b"R", b"C") or entry[1:2] in (b"R", b"C"):
+        i += 1                       # a rename or a copy is followed by the path it came from
+    try:
+        age = now - os.stat(os.path.join(root, entry[3:])).st_mtime
+    except OSError:
+        continue
+    if 0 <= age < 3600:
+        sys.exit(0)
+sys.exit(1)' "$1" 2>/dev/null
+}
+
 # Only fire when the session plausibly did work: uncommitted changes, or a commit in the
 # last hour (covers commit-then-stop sessions).
 changed=0
 if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
   changed=1
-elif last=$(git log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]]; then
-  # A whole number first, base 10: git prints a commit's date as written, and `08` is a bash
-  # arithmetic error (lesson bash-double-brackets).
-  now=$(date +%s)
-  [[ $((now - 10#$last)) -lt 3600 ]] && changed=1
+elif last=$(git log -1 --format=%ct 2>/dev/null) && recent "$last"; then
+  changed=1
 fi
-# A commit in the last hour in another worktree of this repo counts too. An agent that works in a
-# worktree, entering it in each command, leaves this checkout untouched, so neither question was
-# asked: on okl's own repo, a week of pull requests made that way logged one review after writing.
-# okl names the worktrees in its note, below.
+# Work in the last hour in another worktree of this repo counts too: a commit, or a file edited and
+# not yet committed. An agent that works in a worktree, entering it in each command, leaves this
+# checkout untouched, so neither question was asked: on okl's own repo, a week of pull requests made
+# that way logged one review after writing. Commits alone were counted at first, so an agent that
+# stopped before it committed there was asked nothing, while okl's note would have named the
+# worktree. okl names the worktrees in its note, below.
 if [[ "$changed" = "0" ]]; then
-  now=$(date +%s)
   while IFS= read -r wt; do
     [[ -n "$wt" && -d "$wt" ]] || continue
-    if last=$(git -C "$wt" log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]] \
-       && [[ $((now - 10#$last)) -lt 3600 ]]; then
+    if { last=$(git -C "$wt" log -1 --format=%ct 2>/dev/null) && recent "$last"; } || edited_lately "$wt"; then
       changed=1; break
     fi
   done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
@@ -184,6 +215,15 @@ touch "$marker" 2>/dev/null || true
 # named, or nothing. Advisory, as the recap below: an okl too old to know
 # --change, or one that cannot read git, adds nothing and the question stands as it was.
 "${OKL[@]}" check --change --format hook >&2 2>/dev/null || true
+
+# Where `okl` is not a command in this shell, name the one this hook resolved. Every command the
+# note, the question below and the okl-review skill give starts with a bare `okl`, and a repo whose
+# okl is only the one pinned in .okl/config.json was asked for a review whose first command could not
+# start. Each word quoted for a shell, since the agent pastes it and a pinned path is the user's text.
+if ! command -v okl >/dev/null 2>&1; then
+  resolved=$(printf '%q ' "${OKL[@]}")
+  printf '%s\n' "\`okl\` is not a command in this shell. Wherever okl's output, this message or the okl-review skill says \`okl\`, run this in its place: ${resolved% }" >&2
+fi
 
 cat >&2 <<'MSG'
 ENCODING LOOP — before this session ends: did it surface a lesson worth keeping?
