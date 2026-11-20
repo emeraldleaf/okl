@@ -36,6 +36,7 @@ import run_guard
 from okl import semantic, warm
 
 KS = (10, 30, 50, 100)
+MODEL_PICK_RECEIPT = "lesson-finding-20261117-0441.json"      # §4bl: the model's pick this is held against
 HUNK_CHARS = 4000        # a hunk past this is cut for the warm model, which reads tokens, not a bag of words
 _WARM: dict[str, list[float]] = {}
 RRF_K = 60
@@ -170,7 +171,9 @@ def main() -> int:
     print(f"{'arm':<20}" + "".join(f"top{k:<6}" for k in KS) + "median rank")
     for a in arms:
         print(f"{a:<20}" + "".join(f"{rates[a][f'top{k}']:<9}" for k in KS) + str(rates[a]["median_rank"]))
-    print("for comparison (REPORT §4bl): a model's ten from the full list 0.628, its thirty 0.791")
+    was = json.loads((g.REPO / "evals" / "results" / MODEL_PICK_RECEIPT).read_text())["reach"]
+    print(f"for comparison (REPORT §4bl, {MODEL_PICK_RECEIPT}): a model's ten from the full list "
+          f"{was['n10']['rate']}, its thirty {was['n30']['rate']}")
     if args.receipt:
         out = g.REPO / "evals" / "results" / f"pick-prefilter-{datetime.now(UTC):%Y%m%d-%H%M}.json"
         out.write_text(json.dumps({"written_by": "evals/pick_prefilter.py", "at": g.o.git("rev-parse", "HEAD").strip(),

@@ -568,3 +568,17 @@ def test_importing_every_eval_module_does_nothing():
     after = subprocess.run(["git", "status", "--porcelain", "--ignored"], cwd=REPO, capture_output=True,
                            text=True).stdout
     assert after == before
+
+
+def test_the_pre_filters_comparison_figures_are_the_receipts():
+    """evals/pick_prefilter.py's docstring quotes the model's pick from REPORT §4bl; the figures are that
+    receipt's, so a re-scored receipt cannot leave the script quoting the old ones."""
+    import json
+    import re
+    script = (REPO / "evals" / "pick_prefilter.py").read_text()
+    name = re.search(r'MODEL_PICK_RECEIPT = "([^"]+)"', script)[1]
+    reach = json.loads((REPO / "evals" / "results" / name).read_text())["reach"]
+    doc = " ".join(script.split('"""')[1].split())
+    assert f"its ten held the right lesson on {reach['n10']['rate']} of" in doc
+    assert f"its thirty on {reach['n30']['rate']} (REPORT §4bl)" in doc
+
