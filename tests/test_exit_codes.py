@@ -75,6 +75,7 @@ def test_a_command_with_no_store_refuses_with_2_and_says_why_on_stderr(name, tmp
 
 CHECKS_NOT_SWEPT = {"e2e.py": "installs okl into a fresh environment, for minutes; CI runs it",
                     "review-agent.sh": "runs a model on the pull request",
+                    "lesson-review.sh": "runs a model on the pull request",
                     "_ran.py": "the helper each check installs, not a check"}
 GATE_SKIP_SAYS = {"check-canon-size.sh": "skipping", "check-diagram-pairs.sh": "nothing to check",
                   "check-doc-orphans.sh": "skipping", "check-links.sh": "nothing to check",
