@@ -8,7 +8,7 @@ from .. import __version__, core, decide, semantic
 from .changes import cmd_changes
 from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
-from .install import cmd_connect, cmd_init, cmd_scaffold
+from .install import cmd_connect, cmd_init, cmd_push, cmd_scaffold
 from .intake import cmd_intake
 from .lessons import (
     cmd_bootstrap,
@@ -122,6 +122,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pc = sub.add_parser("connect", help="point this repo at a shared OKL service URL")
     pc.add_argument("url"); pc.add_argument("--token")
     pc.set_defaults(func=cmd_connect)
+
+    pp = sub.add_parser("push", help="copy this repo's lessons to a deployed okl service, one way (the copy CI reads)")
+    pp.add_argument("--to", metavar="URL", help="the service's https URL; remembered in .okl/config.json")
+    pp.add_argument("--token", help="the service's OKL_TOKEN; remembered beside the URL")
+    pp.add_argument("--dry-run", action="store_true", help="say what would be sent; send and save nothing")
+    pp.set_defaults(func=cmd_push)
 
     pk = sub.add_parser("check", help="the lessons for a task before it starts, for the files about to be read "
                                       "or edited, or for a change just written (--change)")

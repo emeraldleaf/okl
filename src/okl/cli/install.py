@@ -1197,6 +1197,58 @@ def cmd_connect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _push_refusal(url: str) -> str | None:
+    """Why `url` cannot be pushed to, or None. Plain http is taken only for this machine: a push
+    sends every lesson, which say where the code is weak, and the token with them."""
+    from urllib.parse import urlsplit
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        return f"the target must be an https:// URL of an okl service, got {url!r}"
+    if parts.scheme == "http" and parts.hostname not in ("localhost", "127.0.0.1", "::1"):
+        return (f"plain http to {parts.hostname} would send the lessons and the token unencrypted: "
+                "use https, or http only for a service on this machine")
+    return None
+
+
+def cmd_push(args: argparse.Namespace) -> int:
+    """Copy this repo's lessons to a deployed okl service, one way: the copy CI reads, since a
+    runner cannot see the gitignored local store. `--to` names the service and `--token` its
+    token; both are remembered in .okl/config.json (gitignored), so later a bare `okl push`
+    repeats it. `--dry-run` says what would be sent and sends and saves nothing.
+
+    Exit 0 when the copy matches the local store, 2 when there is no target, no local store, or
+    the service refused or could not be reached; then nothing is remembered."""
+    from urllib.parse import urlsplit
+    cfg = load_config()
+    url = args.to or cfg.get("push_url")
+    # The remembered token belongs to the remembered service. `--to` naming another one without
+    # `--token` reused it at first, which sent one service's token to a different host.
+    token = args.token or (cfg.get("push_token") if url == cfg.get("push_url") else None)
+    if not url:
+        print("okl push: no service to push to. Name it once with `okl push --to <https url> "
+              "[--token <token>]`; it is remembered in .okl/config.json.", file=sys.stderr)
+        return 2
+    refusal = _push_refusal(url)
+    if refusal:
+        print(f"okl push: {refusal}", file=sys.stderr)
+        return 2
+    sent = Client().push_to(Client.for_service(url, token), dry_run=args.dry_run)
+    where = urlsplit(url).hostname      # never the whole URL: it can carry a password
+    counts = f"{sent['nodes']} lesson(s) and {sent['edges']} edge(s)"
+    if args.dry_run:
+        print(f"okl push --dry-run: would send {counts} to {where}; {sent['unchanged']} lesson(s) there "
+              "already match. Nothing was sent.")
+        return 0
+    if args.to or args.token:
+        cfg["push_url"] = url
+        cfg.pop("push_token", None)      # never the last target's token beside a new target
+        if token:
+            cfg["push_token"] = token
+        save_config(cfg)
+    print(f"✓ pushed {counts} to {where}; {sent['unchanged']} lesson(s) there already matched")
+    return 0
+
+
 def cmd_scaffold(args: argparse.Namespace) -> int:
     """Stamp the portable method kit (canon, skills, agent, commands, gates, evals, hook) into a repo."""
     from ..scaffold_cmd import scaffold

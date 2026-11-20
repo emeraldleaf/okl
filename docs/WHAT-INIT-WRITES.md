@@ -49,7 +49,9 @@ touches only the current directory, and only these:
 
 Other commands keep their own keys in `.okl/config.json`. `okl connect` writes
 `"service_url"` and, with `--token`, `"token"`; a config holding a token is written readable by
-you alone, and `OKL_SERVICE_URL` and `OKL_TOKEN` win over both keys. `okl standing` keeps
+you alone, and `OKL_SERVICE_URL` and `OKL_TOKEN` win over both keys. `okl push` writes
+`"push_url"` and, with `--token`, `"push_token"`, the service it copies the lessons to, in a
+config protected the same way; no environment variable stands in for either. `okl standing` keeps
 `"standing"`, and `okl on-edit` keeps `"on_edit"`. The settings you add by hand (`"decision"`,
 `"warm"`, `"hybrid"`, `"rerank"` and `"review_log"`) are in [COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md).
 

@@ -48,10 +48,11 @@ def _no_real_store():
 
 
 @pytest.fixture
-def remote(tmp_path, monkeypatch):
-    """A repo connected to an okl service served in-process: the Client's real remote code
-    (urllib, its error mapping) talks to the real app, with no socket. Both reviews found
-    remote paths that only ever had their service posted to directly, never via Client."""
+def serve_in_process(monkeypatch):
+    """Send the Client's requests to an okl service app in this process: the Client's real remote
+    code (urllib, its error mapping) talks to the real app, with no socket. Call it with the app;
+    it returns what the client sent: `sent`, each posted (path, body) as it left the client, and
+    `headers`, each request's headers."""
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
     import io
@@ -60,6 +61,41 @@ def remote(tmp_path, monkeypatch):
     from urllib.parse import urlsplit
 
     from fastapi.testclient import TestClient
+
+    class Reply(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.close()
+
+    def serve(app):
+        api = TestClient(app)
+        seen = SimpleNamespace(api=api, sent=[], headers=[])
+
+        def urlopen(req, timeout=None):
+            u = urlsplit(req.full_url)
+            if req.data:
+                seen.sent.append((u.path, json.loads(req.data)))
+            seen.headers.append({k.lower(): v for k, v in req.header_items()})
+            r = api.request(req.get_method(), u.path + (f"?{u.query}" if u.query else ""),
+                            content=req.data, headers=dict(req.header_items()))
+            if r.status_code >= 400:
+                raise HTTPError(req.full_url, r.status_code, r.reason_phrase, None,
+                                io.BytesIO(r.content))
+            return Reply(r.content)
+
+        monkeypatch.setattr("okl.client._req.urlopen", urlopen)
+        return seen
+
+    return serve
+
+
+@pytest.fixture
+def remote(tmp_path, monkeypatch, serve_in_process):
+    """A repo connected to an okl service served in-process (`serve_in_process`). Both reviews
+    found remote paths that only ever had their service posted to directly, never via Client."""
+    from types import SimpleNamespace
 
     from okl.service import create_app
     from okl.store import Store
@@ -72,27 +108,5 @@ def remote(tmp_path, monkeypatch):
         json.dumps({"repo": "r", "service_url": "http://okl.test"}))
     store = Store("sqlite:///:memory:")
     app = create_app(store=store)
-    api = TestClient(app)
-
-    class Reply(io.BytesIO):
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *exc):
-            self.close()
-
-    sent: list[tuple[str, dict]] = []   # each body the client posted, as it left the client
-
-    def urlopen(req, timeout=None):
-        u = urlsplit(req.full_url)
-        if req.data:
-            sent.append((u.path, json.loads(req.data)))
-        r = api.request(req.get_method(), u.path + (f"?{u.query}" if u.query else ""),
-                        content=req.data, headers=dict(req.header_items()))
-        if r.status_code >= 400:
-            raise HTTPError(req.full_url, r.status_code, r.reason_phrase, None,
-                            io.BytesIO(r.content))
-        return Reply(r.content)
-
-    monkeypatch.setattr("okl.client._req.urlopen", urlopen)
-    return SimpleNamespace(store=store, app=app, api=api, sent=sent)
+    seen = serve_in_process(app)
+    return SimpleNamespace(store=store, app=app, api=seen.api, sent=seen.sent)

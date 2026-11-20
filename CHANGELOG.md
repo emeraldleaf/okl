@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **`okl push` copies a repo's lessons to a deployed okl service, so CI can read them** (#504).
+  The review on a pull request read okl's bundled packs alone in CI, since a runner cannot see
+  the gitignored local store. `okl push --to <https url> --token <token>` copies the local
+  store's lessons and edges to a service, one way, and remembers the target (`push_url` and
+  `push_token` in `.okl/config.json`, which is then readable by its owner only); CI reads the
+  copy with `OKL_SERVICE_URL` and `OKL_TOKEN`. The local store stays the source of truth. Each
+  lesson arrives whole, with its id, times, status and proof; only rows that differ are sent,
+  so a push with nothing new is two reads; and nothing is deleted. `--dry-run` says what would
+  be sent. Plain `http://` is refused except for a service on the same machine, and the token
+  named for the target is the only one sent, whatever `OKL_TOKEN` holds. The service gained
+  `POST /sync` and `GET /edges` (a capped page at a time) for it; an older service is named as
+  too old, not read as "nothing to push". The remembered token goes only to the remembered
+  service: `--to` naming another one sends none unless `--token` gives it. A push that stops
+  part-way says how many rows were written, and the next one sends only the rest. One store
+  pushes to one copy: a second repo pushing to the same service overwrites the lessons both hold.
+
 - **The two store backends now agree in the places they differed, and a store that cannot be
   opened is exit 2, not a traceback** (#125). Found while okl's own stores were all SQLite; they
   matter once a team shares a Postgres one.

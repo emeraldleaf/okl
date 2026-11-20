@@ -31,7 +31,7 @@ def _version() -> str:
 
 try:
     from fastapi import FastAPI, Header, HTTPException
-    from pydantic import BaseModel, ConfigDict
+    from pydantic import BaseModel, ConfigDict, Field
 except ImportError as e:  # pragma: no cover
     raise RuntimeError("The service needs FastAPI: install 'observed-knowledge-ledger[service]'") from e
 
@@ -154,6 +154,15 @@ class RetireReq(BaseModel):
     reason: str
     by: str | None = None
     obsolete: bool = False
+
+
+class SyncReq(BaseModel):
+    """Request body for POST /sync (core.import_rows): whole rows of another store."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+    edges: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CheckRunReq(BaseModel):
@@ -370,6 +379,29 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         from dataclasses import asdict
         rows = [asdict(n) for n in _store.all_nodes()]
         return {"nodes": rows, "count": len(rows)}
+
+    # A page of the edges, never all of them whatever is asked: `count` is how many there are,
+    # and a reader asks again from `offset` until it has them. The cap is the service's, so one
+    # request cannot ask for a reply that grows with the store.
+    @app.get("/edges")
+    def edges(offset: int = 0, limit: int = core.IMPORT_MAX_ROWS,
+              authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        rows = core.all_edges(_store)
+        start = max(offset, 0)
+        return {"edges": rows[start:start + max(1, min(limit, core.IMPORT_MAX_ROWS))], "count": len(rows)}
+
+    # A copy of another store's rows, as `okl push` sends them: this service is then what CI
+    # reads in place of the gitignored store a runner cannot see. A malformed row is the
+    # caller's error and says which.
+    @app.post("/sync")
+    def sync(req: SyncReq, authorization: str | None = Header(default=None)) -> dict[str, int]:
+        _auth(authorization)
+        try:
+            with _write:
+                return core.import_rows(_store, req.nodes, req.edges)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     return app
 

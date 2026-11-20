@@ -23,6 +23,7 @@ REPO = Path(__file__).resolve().parent.parent
 # Each command run in a directory where no store is named. Expected: 2 with nothing on stdout, or
 # 0 where the command needs no store; a command the sweep cannot run says why.
 COMMANDS: dict[str, list[str] | str] = {
+    "push": ["--to", "https://okl.invalid"],
     "check": ["--task", "add a login page"], "record": ["--type", "Rule", "--title", "t", "--scope", "org"],
     "update": ["x", "--title", "y"], "retire": ["x", "--reason", "wrong"], "show": ["x"], "triggers": [],
     "recap": [], "link": ["a", "supersedes", "b"], "verify": ["x", "--run", "true", "--expect", "ok"],

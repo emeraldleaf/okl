@@ -45,7 +45,8 @@ def test_each_core_function_behind_the_service_has_a_field_for_every_keyword():
     from okl import service
     for fn, model in ((core.record, service.RecordReq), (core.retire, service.RetireReq),
                       (core.log_check, service.CheckRunReq), (core.search, service.SearchReq),
-                      (core.link, service.LinkReq), (core.verify, service.VerifyReq)):
+                      (core.link, service.LinkReq), (core.verify, service.VerifyReq),
+                      (core.import_rows, service.SyncReq)):
         takes = {RENAMED.get(p, p) for p in inspect.signature(fn).parameters} - {"store"}
         assert takes == set(model.model_fields), (fn.__name__, sorted(takes ^ set(model.model_fields)))
     assert set(core.UPDATABLE_FIELDS) == set(service.UpdateFields.model_fields)
@@ -67,6 +68,11 @@ def test_every_field_the_real_client_posts_is_one_the_service_reads(remote):
     c.log_check(first, passed=True, command="true", outcome="exit 0", expect="ok", commit="abc1234")
     c.verify(first, evidence="`true` exit 0", commit="abc1234")
     c.retire(second, "wrong", by=None, obsolete=False)
+    # `okl push`: a repo with a local store of its own copies it to the service.
+    local = Client({"repo": "r"})
+    a = local.record(type="Rule", title="Pushed from a local store", scope="org", fix="f")
+    local.link(a, "SUPERSEDES", "an-older-lesson")
+    assert local.push_to(Client.for_service("http://okl.test")) == {"nodes": 1, "edges": 1, "unchanged": 0}
 
     bound = models()
     for path, body in remote.sent:
