@@ -135,7 +135,7 @@ settings or workflow path that is a link, or sits under one, is refused and name
 The Stop hook asks the agent, before it finishes a session that changed files, to run
 `okl check --change` and check the code it wrote against the lessons
 ([REPORT §4at](../evals/REPORT.md)). Work in another worktree of the repo counts when that worktree had a
-commit in the last hour, and the hook names it, since an agent working there leaves its own checkout
+commit or an uncommitted edit in the last hour, and the hook names it, since an agent working there leaves its own checkout
 untouched. `okl init` installs the steps as the `okl-review` skill too; `okl init --no-review-after-writing` turns it off and
 `okl init --review-after-writing` turns it back on (`init` records the choice as
 `"review_after_writing"` in `.okl/config.json`), and `OKL_REVIEW_AFTER_WRITING=0` (or `1`)

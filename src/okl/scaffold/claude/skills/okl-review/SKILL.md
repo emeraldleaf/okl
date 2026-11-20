@@ -1,8 +1,8 @@
 ---
-# okl-fingerprint: sha256:bcfd9f4680971be02772f66d280acfe11ceb2c5bd77871cd22030adcbcbf6404
+# okl-fingerprint: sha256:089ec64053d7ecf12f43a010c4fa8617de594c2af2685732d38a5f0d968af7cb
 name: okl-review
 description: Check the code you just wrote against this repo's okl lessons, each lesson on its own in a fresh context, and fix what a check finds. Use when the Stop hook asks for the review after writing, before you open or update a pull request, or when asked to review a change against the lessons.
-allowed-tools: Bash(okl check:*), Bash(okl show:*)
+allowed-tools: Bash(okl check:*), Bash(okl show:*), Bash(python3 -m okl check:*), Bash(python3 -m okl show:*)
 ---
 
 # okl-review: the review after writing
@@ -23,6 +23,13 @@ It compares with the remote's default branch, then `main`, then `master`. If the
 from another branch, name it: `okl check --change <branch>`. If the work is in another
 worktree, run it there (`cd <worktree> && okl check --change`): from any other checkout it does
 not see the work. The Stop hook names the worktrees that had work in the last hour.
+
+If `okl` is not a command in this shell, the repo runs okl another way, and every `okl` in these
+steps and in okl's output means that command. Use the first of these that starts:
+
+1. the command the Stop hook named, where it said `okl` is not a command in this shell;
+2. the `okl_bin` value in `.okl/config.json` (in a worktree, the main checkout's);
+3. `python3 -m okl`.
 
 ## 2. Read every page
 
@@ -45,5 +52,8 @@ weaker.
 ## When it cannot run
 
 - Nothing changed since the base: say so. There is nothing to review.
-- okl is not set up here, or cannot reach its store (it exits 2 and says why): say so. Never
-  report a clean review that did not run.
+- okl is not set up here, or cannot reach its store (it exits 2 and says why): say so.
+- No okl command starts (`command not found`, from each of the three above): say so, and name
+  what you tried.
+
+Never report a clean review that did not run.
