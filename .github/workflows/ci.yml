@@ -378,6 +378,9 @@ jobs:
         run: |
           if [[ "${REVIEW_SEEDED:-}" != 1 ]]; then
             echo "::warning title=lesson review::not run: the seed packs did not load"
+            # A report all the same, so the comment an earlier push left does not stand for this one.
+            printf '%s\n### Lesson review\n\nNo review: the seed packs did not load, so this push was not checked against the lessons.\n' \
+              '<!-- okl-lesson-review -->' > "$RUNNER_TEMP/lesson-review.md"
             exit 0
           fi
           REVIEW_REPO_DIR="$GITHUB_WORKSPACE" LESSON_REVIEW_REPORT="$RUNNER_TEMP/lesson-review.md" \

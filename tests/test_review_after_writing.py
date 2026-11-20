@@ -613,3 +613,16 @@ def test_the_stop_hook_reads_a_commit_date_bash_cannot_count_as_no_date(worktree
                        input=json.dumps({"session_id": "odd-date", "stop_hook_active": False}))
     assert r.returncode == 2 and str(fresh) in r.stderr, r.stderr
     assert "value too great" not in r.stderr
+
+
+def test_the_worktree_notes_command_reviews_against_the_base_the_files_were_counted_from():
+    """The note counted a worktree's files against the base the hook was given, then named a command
+    with no base, which reviews against the default branch: another change (CodeRabbit's sweep before
+    0.20.0). The command carries the base, quoted, and none when none was given."""
+    import shlex
+
+    from okl import core
+    note = core.review_note_worktrees([("/tmp/my wt", ["a.py"])], "release/1.x; echo hi")
+    command = note.split("`")[1]
+    assert shlex.split(command) == ["cd", "--", "/tmp/my wt", "&&", "okl", "check", "--change", "release/1.x; echo hi"]
+    assert core.review_note_worktrees([("/tmp/wt", ["a.py"])]).split("`")[1] == "cd -- /tmp/wt && okl check --change"

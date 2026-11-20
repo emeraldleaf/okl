@@ -11,7 +11,16 @@
   the worktree's own beside a new, empty store, which every later command then read instead; it now
   exits 2 and names the checkout to run it in. `okl drift` run from a subfolder read git from there, so
   no governed path matched and the gate said nothing was checked; with no `--repo-dir` it reads from the
-  top of the repository, and a `--snapshot` path is named from where it runs.
+  top of the repository, and a `--snapshot` path is named from where it runs. A main checkout okl
+  cannot read names no store, where every command in its worktrees died on a traceback.
+
+- **Fixes from the review sweep before 0.20.0.** The architecture review split a diff holding bytes
+  that are not UTF-8 with a traceback, wrote no part and ran on nothing; the bytes are now replaced,
+  and a diff that yields no part is said to have no verdict. The Stop hook's note for another
+  worktree names a review against the base its files were counted from. The `ci-security` pack's
+  expression-injection lesson no longer calls every `with:` input safe: one an action runs as code
+  (`script:` in actions/github-script) is injectable too. In okl's CI, a lesson review whose seed
+  packs did not load replaces the last comment instead of leaving it.
 
 - **The review after writing runs on a pull request, with any model's CLI** (`ci/lesson-review.sh`).
   Until now it ran only when an agent's Stop hook asked for it, so a change made by hand, by another

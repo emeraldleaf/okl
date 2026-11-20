@@ -1086,6 +1086,21 @@ def test_review_agent_names_what_it_did_not_review_past_its_parts(tmp_path):
     assert "could not check: not reviewed, past REVIEW_MAX_PARTS: c.py" in r.stdout
 
 
+def test_review_agent_reviews_a_diff_that_is_not_utf8(tmp_path):
+    """A changed file in another encoding ended the split into parts with a traceback: no part was
+    written, and the loop ran on the unmatched pattern (CodeRabbit's sweep before 0.20.0). The bytes
+    are replaced and the change is reviewed."""
+    base = _review_repo(tmp_path, {"a.py": "x = 1\n"})
+    (tmp_path / "latin.py").write_bytes(b"caf\xe9 = 1  # LATIN-MARKER\n")
+    for args in (["add", "latin.py"], ["-c", "user.email=t@example.invalid", "-c", "user.name=t", "commit", "-qm", "latin"]):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+    r, prompts = _run_review(tmp_path, base, ['{"findings":[],"checked":["c"],"not_checked":[]}'])
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "0 must-fix, 0 to consider" in r.stdout
+    assert len(prompts) == 1
+    assert "LATIN-MARKER" in prompts[0]
+
+
 def test_review_agent_leaves_data_files_out_of_the_diff_but_lists_them(tmp_path):
     """A lockfile is listed for the reviewer to open, not sent as diff lines; so is a pattern the repo
     names in REVIEW_EXCLUDE."""
@@ -1132,7 +1147,9 @@ def test_no_workflow_runs_a_pull_requests_code_with_the_base_repos_secrets():
                  if re.fullmatch(r"(\.github/workflows|ci|src/okl/scaffold/ci)/[^/]+\.ya?ml", rel)]
     assert len(workflows) >= 6, workflows
     for rel in workflows:
-        code = "\n".join(line.split("#", 1)[0] for line in (root / rel).read_text().splitlines())
+        text = subprocess.run(["git", "-C", str(root), "show", f":{rel}"], capture_output=True, text=True,
+                              encoding="utf-8", check=True).stdout      # as git holds it, not as the tree has it
+        code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
         found = re.findall(r"\b(pull_request_target|workflow_run)\b", code)
         assert not found, f"{rel} triggers on {found[0]}"
 
