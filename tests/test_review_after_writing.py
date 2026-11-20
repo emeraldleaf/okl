@@ -476,6 +476,7 @@ def test_the_docs_give_the_page_size_the_code_uses():
 
 
 OLD = {"GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z"}
+MONTHS_AGO = 1767225600   # OLD's date, 2026-01-01, as a file time
 
 
 def _git_at(r: Path, env: dict, *a: str) -> str:
@@ -499,10 +500,9 @@ def worktrees(tmp_path):
     (fresh / "feature.py").write_text("x = 1\n"); _git(fresh, "add", "-A"); _git(fresh, "commit", "-qm", "now")
     _git(r, "worktree", "add", "-q", "-b", "stale", str(stale))
     (stale / "old.py").write_text("y = 2\n"); _git_at(stale, OLD, "add", "-A"); _git_at(stale, OLD, "commit", "-qm", "old")
-    months_ago = 1767225600   # 2026-01-01
     for f in stale.rglob("*"):
         if ".git" not in f.parts:
-            os.utime(f, (months_ago, months_ago))
+            os.utime(f, (MONTHS_AGO, MONTHS_AGO))
     _git(r, "worktree", "add", "-q", "-b", "idle", str(idle))
     return r, fresh
 
@@ -630,7 +630,6 @@ def test_the_worktree_notes_command_reviews_against_the_base_the_files_were_coun
 
 STOP_HOOK = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "stop-okl-encode.sh"
 REVIEW_SKILL = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "claude" / "skills" / "okl-review" / "SKILL.md"
-MONTHS_AGO = 1767225600   # 2026-01-01, the fixture's old date
 
 
 def _stop(checkout: Path, tmp_path: Path, session: str, **env: str) -> subprocess.CompletedProcess:
