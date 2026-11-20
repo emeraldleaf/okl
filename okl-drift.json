@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1795148412707,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit bbedda8bd7b1 @ 2026-11-20T04:20Z",
-      "verified_commit": "bbedda8bd7b1359227bb0b7d4ce34d9642722c07"
+      "verified_at": 1795148745181,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 2ff4af6f3a04 @ 2026-11-20T04:25Z",
+      "verified_commit": "2ff4af6f3a04fb61a3a7c79e7fdcda156eecac48"
     },
     {
       "id": "doc-init-flags",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1795148414561,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit bbedda8bd7b1 @ 2026-11-20T04:20Z",
-      "verified_commit": "bbedda8bd7b1359227bb0b7d4ce34d9642722c07"
+      "verified_at": 1795148745957,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 2ff4af6f3a04 @ 2026-11-20T04:25Z",
+      "verified_commit": "2ff4af6f3a04fb61a3a7c79e7fdcda156eecac48"
     },
     {
       "id": "n_9ba48d85ed19",
