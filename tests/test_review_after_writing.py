@@ -626,3 +626,107 @@ def test_the_worktree_notes_command_reviews_against_the_base_the_files_were_coun
     command = note.split("`")[1]
     assert shlex.split(command) == ["cd", "--", "/tmp/my wt", "&&", "okl", "check", "--change", "release/1.x; echo hi"]
     assert core.review_note_worktrees([("/tmp/wt", ["a.py"])]).split("`")[1] == "cd -- /tmp/wt && okl check --change"
+
+
+STOP_HOOK = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "stop-okl-encode.sh"
+REVIEW_SKILL = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "claude" / "skills" / "okl-review" / "SKILL.md"
+MONTHS_AGO = 1767225600   # 2026-01-01, the fixture's old date
+
+
+def _stop(checkout: Path, tmp_path: Path, session: str, **env: str) -> subprocess.CompletedProcess:
+    """One stop of the shipped hook in `checkout`, as the first of `session`."""
+    markers = tmp_path / "markers"; markers.mkdir(exist_ok=True)
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(markers),
+           "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"), "OKL_BIN": f"{sys.executable} -m okl",
+           "CLAUDE_PROJECT_DIR": str(checkout), **env}
+    return subprocess.run(["bash", str(STOP_HOOK)], cwd=checkout, text=True, capture_output=True, env=env,
+                          input=json.dumps({"session_id": session, "stop_hook_active": False}))
+
+
+def test_the_stop_hook_asks_when_another_worktree_holds_an_edit_not_yet_committed(worktrees, tmp_path):
+    """The hook counted only commits in another worktree, so an agent that edited there and stopped
+    before it committed was asked nothing, while okl's note would have named the worktree (found by the
+    review of the 0.20.0 refresh in a repo that uses okl). A tracked file edited now counts, and so does
+    a new file git does not track yet; a worktree whose files are all months old still does not."""
+    main_dir, fresh = worktrees
+    stale, idle = fresh.parent / "stale", fresh.parent / "idle"
+    _git(main_dir, "worktree", "remove", "--force", str(fresh))
+    assert _stop(main_dir, tmp_path, "nothing-recent").returncode == 0
+    (stale / "old.py").write_text("y = 3\n")
+    r = _stop(main_dir, tmp_path, "edited")
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+    assert "REVIEW AFTER WRITING" in r.stderr and str(stale) in r.stderr
+    os.utime(stale / "old.py", (MONTHS_AGO, MONTHS_AGO))
+    assert _stop(main_dir, tmp_path, "edited-long-ago").returncode == 0, "a months-old edit is not this session's"
+    (idle / "new dir").mkdir(); (idle / "new dir" / "a file.py").write_text("z = 1\n")
+    r = _stop(main_dir, tmp_path, "untracked")
+    assert r.returncode == 2 and str(idle) in r.stderr, r.stderr
+
+
+def test_a_time_ahead_of_the_clock_is_not_recent_work(worktrees, tmp_path):
+    """A commit dated a day ahead has a negative age, which is under an hour: the hook asked in every
+    new session of a repo nobody had touched, and okl's note named the worktree each time (found by the
+    same review). Neither a commit nor a file dated ahead counts, in another worktree or in this one."""
+    import time
+    main_dir, fresh = worktrees
+    _git(main_dir, "worktree", "remove", "--force", str(fresh))
+    ahead = int(time.time()) + 86400
+    dated = {"GIT_AUTHOR_DATE": f"{ahead} +0000", "GIT_COMMITTER_DATE": f"{ahead} +0000"}
+    future = tmp_path / "future"
+    _git(main_dir, "worktree", "add", "-q", "-b", "future", str(future))
+    (future / "later.py").write_text("w = 1\n"); _git_at(future, dated, "add", "-A"); _git_at(future, dated, "commit", "-qm", "ahead")
+    os.utime(future / "later.py", (MONTHS_AGO, MONTHS_AGO))
+    assert int(_git(future, "log", "-1", "--format=%ct").strip()) == ahead
+    assert changes.worktrees_with_recent_work(None, repo_dir=str(main_dir)) == []
+    assert _stop(main_dir, tmp_path, "sibling-ahead").returncode == 0
+    # A changed file whose own time is ahead of the clock, in a worktree whose commit is old.
+    stale = fresh.parent / "stale"
+    (stale / "old.py").write_text("y = 3\n"); os.utime(stale / "old.py", (ahead, ahead))
+    assert changes.worktrees_with_recent_work(None, repo_dir=str(main_dir)) == []
+    assert _stop(main_dir, tmp_path, "file-ahead").returncode == 0
+    # This checkout's own last commit, dated ahead, on a clean tree.
+    _git_at(main_dir, dated, "commit", "-q", "--allow-empty", "-m", "ahead here")
+    assert _stop(main_dir, tmp_path, "here-ahead").returncode == 0
+
+
+def test_the_stop_hook_names_the_command_it_resolved_where_okl_is_not_on_path(worktrees, tmp_path):
+    """Every command the hook's note, its question and the okl-review skill give starts with a bare
+    `okl`. In a repo whose okl is only the one pinned in .okl/config.json the hook asked for a review
+    whose first command could not start (found by the same review). The hook now names the command it
+    resolved, quoted for a shell since the agent pastes it; where `okl` is a command, it says nothing."""
+    main_dir, fresh = worktrees
+    bare = tmp_path / "bin"; bare.mkdir()       # python3 and git, and no okl, whatever this machine's PATH holds
+    for name, real in (("python3", sys.executable), ("git", shutil.which("git"))):
+        (bare / name).write_text(f'#!/bin/sh\nexec {shlex.quote(str(real))} "$@"\n'); (bare / name).chmod(0o755)
+    pinned = tmp_path / "my tools" / "okl-here"; pinned.parent.mkdir()
+    pinned.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -m okl "$@"\n'); pinned.chmod(0o755)
+    path = f"{bare}:/usr/bin:/bin"
+    assert shutil.which("okl", path=path) is None
+    r = _stop(main_dir, tmp_path, "pinned-only", PATH=path, OKL_BIN=str(pinned))
+    assert r.returncode == 2 and "REVIEW AFTER WRITING" in r.stderr, r.stderr
+    line = next(x for x in r.stderr.splitlines() if "is not a command in this shell" in x)
+    assert shlex.split(line.split("run this in its place: ")[1]) == [str(pinned)], line
+    assert r.stderr.index(line) < r.stderr.index("ENCODING LOOP")
+    r = _stop(main_dir, tmp_path, "python-form", PATH=path)
+    line = next(x for x in r.stderr.splitlines() if "is not a command in this shell" in x)
+    assert shlex.split(line.split("run this in its place: ")[1]) == [sys.executable, "-m", "okl"], line
+    (bare / "okl").write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -m okl "$@"\n'); (bare / "okl").chmod(0o755)
+    r = _stop(main_dir, tmp_path, "on-path", PATH=path)
+    assert r.returncode == 2 and "is not a command in this shell" not in r.stderr, r.stderr
+
+
+def test_the_review_skill_covers_an_okl_that_is_not_on_path():
+    """The skill ran a bare `okl` and allowed only that form, and its "cannot run" list had no line for
+    a command that does not start, so in a pinned-only repo the review neither ran nor was reported as
+    not run. It names what to run in that case, in the hook's own words for it, and its allowed tools
+    cover each form it names that a rule can match."""
+    skill, hook = REVIEW_SKILL.read_text(), STOP_HOOK.read_text()
+    allowed = re.search(r"^allowed-tools: (.+)$", skill, re.M).group(1)
+    for form in ("okl", "python3 -m okl"):
+        for sub in ("check", "show"):
+            assert f"Bash({form} {sub}:*)" in allowed, (form, sub)
+    said = "`okl` is not a command in this shell"
+    assert said in skill and said.replace("`", "\\`") in hook, "the skill quotes the hook's line: change both"
+    assert "`python3 -m okl`" in skill and "`okl_bin`" in skill
+    cannot = skill.split("## When it cannot run")[1]
+    assert "command not found" in cannot and "Never report a clean review that did not run." in cannot

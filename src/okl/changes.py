@@ -140,7 +140,9 @@ def touched(base: str | None, repo_dir: str = ".") -> tuple[str, list[str]]:
 def worktrees_with_recent_work(base: str | None, window: int = 3600, repo_dir: str = ".",
                                now: float | None = None) -> list[tuple[str, list[str]]]:
     """This repository's other worktrees that saw work in the last `window` seconds, each with the
-    files `touched` lists there: a commit in the window, or a changed file modified in it.
+    files `touched` lists there: a commit in the window, or a changed file modified in it. A time ahead
+    of the clock is not in the window: its age is negative, which is under any window, so a commit
+    dated a day ahead named its worktree in every session.
 
     An agent that does its work in a worktree, entering it in each command, leaves the checkout its
     session started in untouched, and the Stop hook looks only there: on okl's own repository, a
@@ -161,7 +163,8 @@ def worktrees_with_recent_work(base: str | None, window: int = 3600, repo_dir: s
             _, files = touched(base, path)
         except (ChangesError, ValueError):
             continue
-        if files and (now - last < window or any(_modified_since(Path(path) / f, now - window) for f in files)):
+        if files and (0 <= now - last < window
+                      or any(_modified_between(Path(path) / f, now - window, now) for f in files)):
             found.append((path, files))
     return found
 
@@ -175,9 +178,9 @@ def _is_dir(path: Path) -> bool:
         return False
 
 
-def _modified_since(path: Path, since: float) -> bool:
+def _modified_between(path: Path, since: float, until: float) -> bool:
     try:
-        return path.stat().st_mtime >= since
+        return since <= path.stat().st_mtime <= until
     except OSError:          # deleted in the change, or unreadable
         return False
 

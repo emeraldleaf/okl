@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **The review after writing is asked for, and can start, in three cases where it was not.** The
+  review of the 0.20.0 refresh in two repos that use okl found them in okl's own files. The Stop
+  hook counted only commits in another worktree of the repo, so an agent that edited there and
+  stopped before it committed was asked nothing; a file changed there in the last hour now counts,
+  one git does not track yet included, as it already did in okl's note. A commit or a file dated
+  ahead of the clock had a negative age, which is under an hour, so the hook asked in every new
+  session of a repo nobody had touched, and the note named the worktree each time; a time ahead of
+  the clock no longer counts, in the hook or the note. And every command the hook's note, its
+  question and the `okl-review` skill give starts with a bare `okl`: in a repo whose okl is only the
+  one pinned in `.okl/config.json`, the hook asked for a review whose first command could not start.
+  Where `okl` is not a command in the session's shell, the hook now names the command it resolved,
+  quoted for a shell, and the skill says what to run in that case, allows `python3 -m okl`, and has
+  the agent say so when no okl command starts (#501).
+
 ## 0.20.0
 
 - **A session started in a git worktree gets okl's hooks, `okl init` there refuses to start a second
