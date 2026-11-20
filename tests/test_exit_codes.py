@@ -158,20 +158,30 @@ def test_a_database_that_cannot_be_opened_is_exit_2_and_not_a_traceback(tmp_path
 
 
 def test_a_postgres_server_that_cannot_be_reached_is_exit_2(tmp_path, monkeypatch, capsys):
-    """The same for the shared store: a Postgres URL nothing answers on. psycopg's message lists every
-    address it tried; the first line says what failed, and the rest is left out."""
+    """The same for the shared store: a Postgres URL nothing answers on. Which error the driver
+    raises is the machine's to say (refused on macOS, a timeout on CI's Linux runner, where the
+    first version of this test named the kind and failed), so the kind is not asserted."""
     import socket
     pytest.importorskip("psycopg")
-    with socket.socket() as a, socket.socket() as b:   # two ports free a moment ago, nothing listening
-        a.bind(("127.0.0.1", 0)); b.bind(("127.0.0.1", 0))
-        ports = f"{a.getsockname()[1]},{b.getsockname()[1]}"
+    with socket.socket() as s:                 # a port that was free a moment ago, with nothing listening
+        s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
     monkeypatch.chdir(tmp_path)
-    # Two addresses, so the driver's message runs to several lines on every machine.
-    monkeypatch.setenv("OKL_DATABASE_URL", f"postgresql://okl@127.0.0.1,127.0.0.1:{ports}/okl?connect_timeout=3")
+    monkeypatch.setenv("OKL_DATABASE_URL", f"postgresql://okl@127.0.0.1:{port}/okl?connect_timeout=2")
     assert main(["check", "--task", "add a login page"]) == 2
     said = capsys.readouterr()
     assert said.out == "" and "Traceback" not in said.err
-    assert said.err.startswith("OKL: the store could not be opened or read (OperationalError)") and said.err.count("\n") == 1
+    assert said.err.startswith("OKL: the store could not be opened or read (") and said.err.count("\n") == 1
+
+
+def test_a_database_error_is_reported_in_one_line():
+    """A driver's message can run to many lines: psycopg lists every address it tried. The first
+    line says what failed, and an error with no message still names its kind."""
+    import sqlite3
+
+    from okl.cli import store_error_line
+    assert store_error_line(sqlite3.OperationalError("connection failed: refused\n- host: a\n- host: b")) \
+        == "OKL: the store could not be opened or read (OperationalError): connection failed: refused"
+    assert store_error_line(sqlite3.DatabaseError("")) == "OKL: the store could not be opened or read (DatabaseError): no message"
 
 
 def test_a_postgres_store_without_its_driver_names_the_extra(tmp_path, monkeypatch, capsys):

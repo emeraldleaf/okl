@@ -711,7 +711,12 @@ TRIGGERS_WEIGHT = 4.0
 # on real prompts (§4ad): with the warm model on, it named 17.5% more lessons a prompt, past the
 # rule's 15%, so it stays a setting, off.
 FTS_TOKENIZE = "unicode61"
-_FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
+# One weight per full-text column, in the index's column order, written here and nowhere else: the
+# FTS5 ranking reads it, and so does the ranking an SQLite without FTS5 does in Python. They were two
+# literals for a moment, which the lesson review of that change caught. The id is not matched.
+_FTS_WEIGHTS = {"id": 0.0, "title": 8.0, "body": 4.0, "symptom": 4.0, "fix": 2.0, "tags": 1.0,
+                "aliases": 4.0, "triggers": TRIGGERS_WEIGHT}
+_FTS_COLS = "id UNINDEXED, " + ", ".join(c for c in _FTS_WEIGHTS if c != "id")
 _TOKENIZE = re.compile(r"""tokenize\s*=\s*(?:'([^']*)'|"([^"]*)"|(\w+)\s*[,)])""", re.I)
 
 
@@ -778,10 +783,10 @@ def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
 # ---------------------------------------------------------------------------
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
-# The fields a search matches, with the weight of a word found there. The ratios are the ones the
-# FTS5 and tsvector paths rank by; tags are left to those paths, where a tag-only match sorts last.
-_MATCHED = (("title", 8.0), ("body", 4.0), ("symptom", 4.0), ("fix", 2.0), ("aliases", 4.0),
-            ("triggers", TRIGGERS_WEIGHT))
+# The fields that say what a record is about, with the weight of a word found there: every full-text
+# column but the id and the tags. A match in these sorts ahead of a tag-only one, and they are what a
+# search with no index to ask reads.
+_MATCHED = tuple((name, weight) for name, weight in _FTS_WEIGHTS.items() if name not in ("id", "tags"))
 
 
 def _words(q: str) -> list[str]:
@@ -1026,10 +1031,10 @@ class _SQLiteBackend(_Backend):
             # real store, tiering keeps every gain tag indexing bought, because the
             # records tags lifted already matched on content — the tag was reordering
             # within that tier, which is all it is now allowed to do.
-            # The one interpolated value is this module's float weight, never input.
+            # The interpolated values are this module's own weights and column names, never input.
             sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"  # noqa: S608
-                    f" bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0, 4.0, {TRIGGERS_WEIGHT})")
-            params.append("{title body symptom fix aliases triggers} : (" + params[0] + ")")
+                    f" bm25(node_fts, {', '.join(str(w) for w in _FTS_WEIGHTS.values())})")
+            params.append("{" + " ".join(name for name, _ in _MATCHED) + "} : (" + params[0] + ")")
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()

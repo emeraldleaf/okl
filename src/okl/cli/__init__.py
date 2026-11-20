@@ -54,6 +54,11 @@ def main(argv: list[str] | None = None) -> int:
         # `okl check` ended in psycopg's traceback and exit 1, which this CLI keeps for
         # "findings": a drift gate would have read an outage as drift. The first line says
         # what failed; the rest of a driver's message is a list of the addresses it tried.
-        said = str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
-        print(f"OKL: the store could not be opened or read ({type(e).__name__}): {said}", file=sys.stderr)
+        print(store_error_line(e), file=sys.stderr)
         return 2
+
+
+def store_error_line(e: Exception) -> str:
+    """One line for a database error: its kind and the first line of what the driver said."""
+    said = str(e).strip().splitlines()[0] if str(e).strip() else "no message"
+    return f"OKL: the store could not be opened or read ({type(e).__name__}): {said}"
