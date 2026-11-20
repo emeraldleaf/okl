@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:de6de581ee5e4684dddb973b4f78924929d34a66aa8d46686ec1d27b37ebeecb
+# okl-fingerprint: sha256:d0132d8b235b13c191761c1e5212615d94acfcfcc2ec840eff30b54eebc50aaa
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -32,6 +32,21 @@ fi
 # the operator makes explicitly, never a fallback the hook takes on its own.
 case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
 
+# The .okl/config.json okl reads here: the nearest at or above this folder, or else, in a git worktree
+# with none (git ignores .okl/, so a worktree beside the checkout never has one), its main checkout's,
+# as okl itself resolves it since #492. Walking up alone, a session started in such a worktree found
+# no config, and every hook stepped aside as if the repo had never been set up.
+okl_config() {
+  local d="$PWD" common
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
+    d=$(dirname "$d")
+  done
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
+  printf '%s\n' "${common%/.git}/.okl/config.json"
+}
+
 # Not enrolled: step aside. okl's Claude Code plugin is installed per user, so these hooks
 # run in EVERY repo the user opens, and most were never set up with `okl init`. There the
 # pre-task hook blocked every prompt as "OKL NOT CONFIGURED" and the Stop hook asked
@@ -40,12 +55,7 @@ case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
 # CLAUDE_PROJECT_DIR the hook cannot tell an unenrolled repo from a session that drifted
 # out of an enrolled one, and fail-closed still wins there.
 if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]]; then
-  enrolled=0; d="$PWD"
-  while [[ "$d" != "/" ]]; do
-    if [[ -f "$d/.okl/config.json" ]]; then enrolled=1; break; fi
-    d=$(dirname "$d")
-  done
-  [[ "$enrolled" = 1 ]] || exit 0
+  okl_config >/dev/null || exit 0
 fi
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
@@ -83,20 +93,16 @@ resolve_okl() {
     if try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
     resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
-  local d="$PWD"
-  while [[ "$from" -le 2 ]] && [[ "$d" != "/" ]]; do
-    if [[ -f "$d/.okl/config.json" ]]; then
-      local bin
-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-            "$d/.okl/config.json" 2>/dev/null || true)
-      if [[ -n "$bin" ]]; then
-        if try_pinned "$bin"; then okl_layer=2; return 0; fi
-        resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
-      fi
-      break
+  local cfg
+  if [[ "$from" -le 2 ]] && cfg=$(okl_config); then
+    local bin
+    bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+          "$cfg" 2>/dev/null || true)
+    if [[ -n "$bin" ]]; then
+      if try_pinned "$bin"; then okl_layer=2; return 0; fi
+      resolve_note="${resolve_note}the okl_bin pinned in $cfg ($bin) cannot be run -- re-run okl init to re-pin; "
     fi
-    d=$(dirname "$d")
-  done
+  fi
   if [[ "$from" -le 3 ]] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
   if [[ "$from" -le 4 ]] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
   return 1

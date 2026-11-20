@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:f73122baf088cf70313c136f02cf946db1c4a8a0f4cc885c63443f3f301f23c1
+# okl-fingerprint: sha256:fcd3d9198ff66e11dbe712a6bd21a54c024c20d0b3caf21decd1de49cec9e52f
 # The okl MCP server, started the way the hooks start okl (#206). `.mcp.json` named a bare
 # `okl`, so a Claude Code session launched from an IDE, with PATH=/usr/bin:/bin and none of
 # the directories uv tool or pipx install into, failed with "Executable not found in $PATH:
@@ -15,6 +15,21 @@ if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -d "$CLAUDE_PROJECT_DIR" ]]; then
     exit 1
   fi
 fi
+
+# The .okl/config.json okl reads here: the nearest at or above this folder, or else, in a git worktree
+# with none (git ignores .okl/, so a worktree beside the checkout never has one), its main checkout's,
+# as okl itself resolves it since #492. Walking up alone, a session started in such a worktree found
+# no config, and every hook stepped aside as if the repo had never been set up.
+okl_config() {
+  local d="$PWD" common
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
+    d=$(dirname "$d")
+  done
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
+  printf '%s\n' "${common%/.git}/.okl/config.json"
+}
 
 # The layers, in the hooks' order: 1 OKL_BIN, 2 the okl_bin `okl init` pinned in
 # .okl/config.json (an absolute path, so it needs no PATH), 3 okl on PATH, 4 python3 -m okl.
@@ -38,26 +53,22 @@ resolve_okl() {
     if try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
     resolve_note="OKL_BIN=$OKL_BIN cannot be run; "
   fi
-  local d="$PWD"
-  while [[ "$from" -le 2 ]] && [[ "$d" != "/" ]]; do
-    if [[ -f "$d/.okl/config.json" ]]; then
-      local bin=""
-      if command -v python3 >/dev/null 2>&1; then
-        bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-              "$d/.okl/config.json" 2>/dev/null || true)
-      else
-        # No python3 on the PATH an IDE gives, which is where the pinned path matters most, as in
-        # the pre-push hook. okl writes one key per line; a value holding a JSON escape is skipped.
-        bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' "$d/.okl/config.json" 2>/dev/null || true)
-      fi
-      if [[ -n "$bin" ]]; then
-        if try_pinned "$bin"; then okl_layer=2; return 0; fi
-        resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run; "
-      fi
-      break
+  local cfg
+  if [[ "$from" -le 2 ]] && cfg=$(okl_config); then
+    local bin=""
+    if command -v python3 >/dev/null 2>&1; then
+      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+            "$cfg" 2>/dev/null || true)
+    else
+      # No python3 on the PATH an IDE gives, which is where the pinned path matters most, as in
+      # the pre-push hook. okl writes one key per line; a value holding a JSON escape is skipped.
+      bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' "$cfg" 2>/dev/null || true)
     fi
-    d=$(dirname "$d")
-  done
+    if [[ -n "$bin" ]]; then
+      if try_pinned "$bin"; then okl_layer=2; return 0; fi
+      resolve_note="${resolve_note}the okl_bin pinned in $cfg ($bin) cannot be run; "
+    fi
+  fi
   if [[ "$from" -le 3 ]] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
   if [[ "$from" -le 4 ]] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
   return 1

@@ -712,11 +712,30 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _git_top(given: str | None) -> str:
+    """The folder drift reads git from: --repo-dir when given, else the top of the git repository this
+    runs in, since a lesson's governed paths are written from there. Run from a subfolder, "." matched
+    none of them and drift said nothing was checked. "." outside git, where git answers nothing."""
+    if given:
+        return given
+    # No git on PATH is "." too, never a traceback: Python exits 1 on one, which the pre-push hook and
+    # CI read as drift (lesson n_e7988ff536fb).
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace")
+    except OSError:
+        return "."
+    return top.stdout.strip() if top.returncode == 0 and top.stdout.strip() else "."
+
+
 def cmd_drift(args: argparse.Namespace) -> int:
     """Source-vs-spec drift: rules whose governed code changed after last verification."""
     from .. import drift
     client = Client()
+    args.repo_dir = _git_top(args.repo_dir)
     if args.snapshot:
+        # Named from where it is run, as any path on a command line is, though git now reads from the top.
+        args.snapshot = str(Path(args.snapshot).absolute())
         return _drift_from_snapshot(args, client)
     # Refused before any store is opened. Reading an unconfigured directory created an
     # empty okl.db as a side effect, found nothing in it, and printed OK -- which is what

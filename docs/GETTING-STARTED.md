@@ -562,6 +562,7 @@ a CI gate as well.
 | You see | It means | Do |
 |---|---|---|
 | `OKL: not configured: no .okl/config.json here or in any parent directory…` (exit 2) | Nothing names a store here: a fresh clone, or the wrong directory. A git worktree uses its main checkout's `.okl/config.json`, so in one this means the checkout has none either | Run `okl init` here, `okl connect <url>`, or set `OKL_DATABASE_URL` |
+| `okl init: this is a git worktree of <checkout>…` (exit 2) | okl in a git worktree already uses its main checkout's config and store; a store of the worktree's own would start empty | Run `okl init` in the checkout it names. Nothing needs setting up in the worktree: okl and the hooks there use the checkout's |
 | Prompts are not briefed | this repo has no `.okl/config.json`; the hooks step aside | run `okl init` here |
 | A prompt is blocked with "OKL CHECK DID NOT RUN" | okl is set up here but could not brief the prompt; the message says why | fix the cause, or start the session with `OKL_OFFLINE=1`, which lets prompts through and tells the agent each one was not briefed |
 | "okl: not briefed (OKL_OFFLINE=1)" on each prompt | `OKL_OFFLINE=1` is set and okl could not brief the prompt; the agent was told it has no briefing | fix the cause the line names, then start a session without `OKL_OFFLINE` |

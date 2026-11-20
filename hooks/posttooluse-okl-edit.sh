@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:3aa7d839b0c50130cb88fd747262f212430728830774aa6fc330d347e0414e5c
+# okl-fingerprint: sha256:f63095acc39affc2727cdf1065b7e742ff9eb6381e8db11de28a9a6ae28a8be8
 # PostToolUse hook on Edit|Write|MultiEdit|NotebookEdit — after the agent edits a file in the
 # repository, run every lesson check the person approved, those of the lessons governing the file
 # first, and hand any failure back beside the edit (#435, #450).
@@ -23,14 +23,24 @@ fi
 # Switched off by name: OKL_DISABLED_HOOKS=edit (or briefing,encode,read,edit).
 case ",${OKL_DISABLED_HOOKS:-}," in *,edit,*) exit 0 ;; esac
 
+# The .okl/config.json okl reads here: the nearest at or above this folder, or else, in a git worktree
+# with none (git ignores .okl/, so a worktree beside the checkout never has one), its main checkout's,
+# as okl itself resolves it since #492. Walking up alone, a session started in such a worktree found
+# no config, and every hook stepped aside as if the repo had never been set up.
+okl_config() {
+  local d="$PWD" common
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
+    d=$(dirname "$d")
+  done
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
+  printf '%s\n' "${common%/.git}/.okl/config.json"
+}
+
 # The approvals live in .okl/config.json: no config, nothing approved, nothing to run. The plugin's
 # hooks run in every repo the user opens, and most were never set up with `okl init`.
-config=""; d="$PWD"
-while [[ "$d" != "/" ]]; do
-  if [[ -f "$d/.okl/config.json" ]]; then config="$d/.okl/config.json"; break; fi
-  d=$(dirname "$d")
-done
-[[ -n "$config" ]] || exit 0
+config=$(okl_config) || exit 0
 grep -q '"on_edit"' "$config" 2>/dev/null || exit 0
 
 # python3 reads the payload below. Checks were approved here, so a silence would read as "they

@@ -2518,6 +2518,61 @@ def test_drift_gate_never_reports_clean_having_checked_nothing(tmp_path, monkeyp
     assert okl("drift", "--gate").returncode == 1
 
 
+def test_drift_from_a_subfolder_reads_the_whole_repository(tmp_path, monkeypatch):
+    """Run from a subfolder, drift ran git there: no governed path matched, and the gate said nothing
+    was checked (exit 2) in a repository whose lesson had drifted. It now reads from the top of the
+    repository unless --repo-dir names a folder, and a --snapshot path is named from where it runs."""
+    import subprocess
+    import sys
+    import time
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "src/a.py"], check=True)
+    subprocess.run([*git, "commit", "-qm", "a"], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    okl("init", "--repo", "r")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t",
+              "--files", "src/a.py").stdout.strip().splitlines()[-1]
+    okl("verify", rid, "--run", "true", "--expect", "")
+    assert okl("export", "--drift").returncode == 0
+    subprocess.run(["git", "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "commit", "-qm", "snapshot"], check=True)
+
+    monkeypatch.chdir(tmp_path / "src")
+    for extra in ([], ["--snapshot", "../okl-drift.json"]):
+        r = okl("drift", "--gate", *extra)
+        assert r.returncode == 0, (extra, r.stdout + r.stderr)
+        assert "1 rule(s) checked" in r.stdout
+    # --repo-dir still means the folder it names.
+    assert okl("drift", "--gate", "--repo-dir", ".").returncode == 2
+    # The commands reference states this default (lesson doc-claim-governs-doc-and-code).
+    commands = " ".join((Path(__file__).resolve().parents[1] / "docs" / "COMMANDS.md").read_text().replace("#", "").split())
+    assert "--repo-dir names the git checkout whose history it reads (default: the top of the git repository" in commands
+    # With no git to ask, drift is refused (2), never a traceback's exit 1, which a gate reads as drift.
+    empty = tmp_path / "no-git-here"
+    empty.mkdir()
+    r = subprocess.run([sys.executable, "-m", "okl", "drift", "--gate"], capture_output=True, text=True,
+                       env={**os.environ, "PATH": str(empty)})
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "Traceback" not in r.stderr
+
+    (tmp_path / "src" / "a.py").write_text("x = 2\n")
+    later = {**os.environ, "GIT_COMMITTER_DATE": f"@{int(time.time()) + 60} +0000",
+             "GIT_AUTHOR_DATE": f"@{int(time.time()) + 60} +0000"}
+    subprocess.run([*git, "commit", "-qam", "b"], check=True, env=later)
+    for extra in ([], ["--snapshot", "../okl-drift.json"]):
+        assert okl("drift", "--gate", *extra).returncode == 1, extra
+
+
 def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monkeypatch):
     """#36: CI has no store, so drift checked nothing. A committed snapshot is its store.
 

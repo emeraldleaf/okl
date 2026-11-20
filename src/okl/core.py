@@ -1617,15 +1617,17 @@ REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the qu
 WORKTREES_SHOWN = 5
 
 
-def review_note_worktrees(found: list[tuple[str, list[str]]]) -> str:
+def review_note_worktrees(found: list[tuple[str, list[str]]], base: str | None = None) -> str:
     """The Stop hook's lines for work in other worktrees of the repo (`changes.worktrees_with_recent_work`),
-    each with the command that reviews it there, the path quoted for a shell: it is the user's text, and
-    the agent pastes the command (lesson n_adea7f2c7373)."""
+    each with the command that reviews it there, the path and any `base` quoted for a shell: they are
+    the user's text, and the agent pastes the command (lesson n_adea7f2c7373). `base` is the one the
+    files were counted against, so the review it names covers the same change."""
+    review = shlex.join(["okl", "check", "--change", *([base] if base else [])])
     lines = ["Other worktrees of this repo had work in the last hour. If this session's code is in one, "
              "review it there:"]
     for path, files in found[:WORKTREES_SHOWN]:
         lines.append(f"- {path} ({len(files)} file(s) changed): "
-                     f"{_code(f'cd -- {shlex.quote(path)} && okl check --change')}")
+                     f"{_code(f'cd -- {shlex.quote(path)} && {review}')}")
     if len(found) > WORKTREES_SHOWN:
         lines.append(f"- and {len(found) - WORKTREES_SHOWN} more: `git worktree list` names them")
     return "\n".join(lines)

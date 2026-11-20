@@ -42,7 +42,7 @@ if [[ ! -f "$AGENT" ]]; then
   echo "review-agent: no $AGENT — skipping (the reviewer ships with \`okl scaffold\`)."
   exit 0
 fi
-# shellcheck disable=SC2086 — REVIEW_CMD is a command line, so word splitting is intended
+# shellcheck disable=SC2086 # REVIEW_CMD is a command line, so word splitting is intended
 if ! command -v ${REVIEW_CMD%% *} >/dev/null 2>&1; then
   echo "review-agent: '${REVIEW_CMD%% *}' from REVIEW_CMD is not on PATH — skipping (soft pass)." >&2
   exit 0
@@ -78,7 +78,9 @@ not_reviewed="$(printf '%s\n' "$diff_text" | python3 -c '
 import os, re, sys
 out, max_lines, max_parts = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 files, cur = [], None
-for line in sys.stdin.read().splitlines():
+# Bytes that are not UTF-8 are replaced, not raised on: a changed file in another encoding ended this
+# split with a traceback, no part was written, and the loop below ran on the unmatched pattern.
+for line in sys.stdin.buffer.read().decode("utf-8", "replace").splitlines():
     if line.startswith("diff --git ") or cur is None:
         m = re.match(r"diff --git a/(.*) b/(.*)", line)
         cur = [m.group(2) if m else "?", []]
@@ -97,11 +99,20 @@ for path, lines in files:
 if part:
     parts.append(part)
 for i, part in enumerate(parts[:max_parts], 1):
-    with open(os.path.join(out, "part-%02d.diff" % i), "w") as f:
+    with open(os.path.join(out, "part-%02d.diff" % i), "w", encoding="utf-8") as f:
         f.write("\n".join(line for _p, lines in part for line in lines) + "\n")
 print(" ".join(path for part in parts[max_parts:] for path, _l in part))
 ' "$parts_dir" "$max_lines" "$max_parts")"
 n_parts=$(find "$parts_dir" -name 'part-*.diff' | wc -l | tr -d ' ')
+if [[ "$n_parts" == 0 ]]; then
+  # No part to send is no review, said so: never an empty prompt, and never a clean verdict.
+  echo "review-agent: the diff could not be split into parts — not blocking, but this change has no review verdict." >&2
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::warning title=architecture review::no review verdict: the diff could not be split into parts, so nothing was reviewed."
+  fi
+  rm -rf "$parts_dir"
+  exit 0
+fi
 
 # With REVIEW_REPO_DIR, a reviewer that can read files (REVIEW_CMD's own tools, e.g. claude -p
 # with --add-dir) is told where the checkout is, so it can hold a figure to the receipt it

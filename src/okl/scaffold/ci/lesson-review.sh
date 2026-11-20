@@ -36,7 +36,7 @@ if [[ -z "${REVIEW_CMD:-}" ]]; then
   echo "  e.g. REVIEW_CMD=\"claude -p --model sonnet\" or REVIEW_CMD=\"ollama run qwen2.5-coder\"."
   exit 0
 fi
-# shellcheck disable=SC2086 — REVIEW_CMD is a command line, so its first word is the program
+# shellcheck disable=SC2086 # REVIEW_CMD is a command line, so its first word is the program
 if ! command -v ${REVIEW_CMD%% *} >/dev/null 2>&1; then
   echo "lesson-review: '${REVIEW_CMD%% *}' from REVIEW_CMD is not on PATH — skipping (soft pass)." >&2
   exit 0

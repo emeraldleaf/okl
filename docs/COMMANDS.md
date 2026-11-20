@@ -96,7 +96,8 @@ okl drift --gate     # flag lessons whose governed source changed after they wer
                      #   (exit 1 on drift, 2 when nothing could be checked; the pre-push hook
                      #   and CI run it; lessons last checked on another branch are listed
                      #   below the report, exit code unchanged). --repo-dir names the git
-                     #   checkout whose history it reads (default: the current directory).
+                     #   checkout whose history it reads (default: the top of the git repository
+                     #   it runs in, from any folder of it).
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` creates it for the first lesson
                      #   with --files and refreshes it after that (with no CI workflow, it

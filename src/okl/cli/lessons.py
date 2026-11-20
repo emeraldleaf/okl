@@ -222,7 +222,7 @@ def _review_note(client: Client, args: argparse.Namespace) -> None:
     if files or elsewhere:
         print(core.REVIEW_NOTE)
     if elsewhere:
-        print(core.review_note_worktrees(elsewhere))
+        print(core.review_note_worktrees(elsewhere, args.change or None))
 
 
 _BRIEFED_BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",

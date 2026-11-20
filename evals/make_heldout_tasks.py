@@ -16,12 +16,12 @@ REPO = Path(__file__).resolve().parent.parent
 def main() -> int:
     """Everything make_heldout_tasks does when run, which it did on import before #486: importing it now does nothing."""
     tasks = {json.loads(line)["id"]: json.loads(line)
-             for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines() if line.strip()}
-    held = json.loads((REPO / "evals" / "heldout_variants.json").read_text())
+             for line in (REPO / "evals" / "tasks.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()}
+    held = json.loads((REPO / "evals" / "heldout_variants.json").read_text(encoding="utf-8"))
     out = [{"id": f"{tid}/{label}", "base": tid, "variant": label, "task": held[tid][label],
             "signal": base["signal"], "defect_node": base["defect_node"]}
            for tid, base in tasks.items() for label in ("ticket", "paraphrase", "bug-report")]
-    (REPO / "evals" / "heldout_tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in out))
+    (REPO / "evals" / "heldout_tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in out), encoding="utf-8")
     print(f"wrote evals/heldout_tasks.jsonl ({len(out)} tasks)")
     return 0
 
