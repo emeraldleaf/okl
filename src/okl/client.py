@@ -49,6 +49,13 @@ _HTTP_TIMEOUT_S = 5
 _PUSH_ROWS = 100
 
 
+def _same_row(mine: dict[str, Any], theirs: dict[str, Any] | None) -> bool:
+    """Whether the service already holds this lesson as the local store does, by the fields both
+    know. A service one release older or newer has a column more or fewer, and a comparison of
+    whole rows then called every lesson changed and sent the whole store on every push."""
+    return theirs is not None and all(theirs[k] == v for k, v in mine.items() if k in theirs)
+
+
 def store_url(start: Path | None = None) -> str | None:
     """Where the local store is: the one place okl resolves it (lesson n_02cc84da158d).
 
@@ -795,22 +802,42 @@ class Client:
         store = self._local_store()      # before any request: with no store there is nothing to send
         try:
             there = {r.get("id"): r for r in target._get("/nodes")["nodes"]}
-            edges_there = {(e["src"], e["rel"], e["dst"], e["created_at"]) for e in target._get("/edges")["edges"]}
+            edges_there = {(e["src"], e["rel"], e["dst"], e["created_at"]) for e in target._all_edges()}
         except OKLRejectedError as e:
             if e.status != 404:
                 raise
             raise OKLRejectedError(_TOO_OLD.format(what="takes a push (/edges and /sync)"), status=404) from e
         mine = [asdict(n) for n in store.all_nodes()]
-        nodes = sorted((row for row in mine if there.get(row["id"]) != row),
+        nodes = sorted((row for row in mine if not _same_row(row, there.get(row["id"]))),
                        key=lambda r: (r["type"] != "Vocabulary", r["id"]))
         edges = [e for e in core.all_edges(store)
                  if (e["src"], e["rel"], e["dst"], e["created_at"]) not in edges_there]
         if not dry_run:
-            for i in range(0, len(nodes), _PUSH_ROWS):
-                target._post("/sync", {"nodes": nodes[i:i + _PUSH_ROWS], "edges": []})
-            for i in range(0, len(edges), _PUSH_ROWS):
-                target._post("/sync", {"nodes": [], "edges": edges[i:i + _PUSH_ROWS]})
+            batches = [{"nodes": nodes[i:i + _PUSH_ROWS], "edges": []} for i in range(0, len(nodes), _PUSH_ROWS)] \
+                + [{"nodes": [], "edges": edges[i:i + _PUSH_ROWS]} for i in range(0, len(edges), _PUSH_ROWS)]
+            done = 0
+            for batch in batches:
+                try:
+                    target._post("/sync", batch)
+                except (OKLRejectedError, OKLUnreachableError) as e:
+                    # A push that stops part-way has written the batches before this one. Say so:
+                    # exit 2 alone read as "nothing was pushed", and the copy was half new.
+                    partly = (f"{e} ({done} of {len(nodes) + len(edges)} row(s) were written before this; "
+                              "`okl push` again sends only the rest)")
+                    if isinstance(e, OKLRejectedError):
+                        raise OKLRejectedError(partly, status=e.status, detail=e.detail) from e
+                    raise type(e)(partly) from e
+                done += len(batch["nodes"]) + len(batch["edges"])
         return {"nodes": len(nodes), "edges": len(edges), "unchanged": len(mine) - len(nodes)}
+
+    def _all_edges(self) -> list[dict[str, Any]]:
+        """Every edge the service holds, read a page at a time: the service caps a page."""
+        out: list[dict[str, Any]] = []
+        while True:
+            page = self._get(f"/edges?{urlencode({'offset': len(out)})}")
+            out += page["edges"]
+            if not page["edges"] or len(out) >= page.get("count", 0):
+                return out
 
     def all_nodes(self) -> list[Node]:
         """Return every node in the store, unfiltered (local store, or /nodes on a remote service).

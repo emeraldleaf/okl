@@ -1450,8 +1450,10 @@ def import_rows(store: Store, nodes: list[dict[str, Any]], edges: list[dict[str,
 
 
 def all_edges(store: Store) -> list[dict[str, Any]]:
-    """Every edge in the store, as rows: what `okl push` compares its own against."""
-    return [asdict(e) for e in store.edges(sorted(EDGE_RELS))]
+    """Every edge in the store, as rows in one fixed order (source, relation, target), so a
+    reader can take them a page at a time: what `okl push` compares its own against."""
+    return sorted((asdict(e) for e in store.edges(sorted(EDGE_RELS))),
+                  key=lambda e: (e["src"], e["rel"], e["dst"]))
 
 
 def verify(store: Store, node_id: str, evidence: str, commit: str | None = None) -> dict[str, Any]:

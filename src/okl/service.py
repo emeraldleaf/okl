@@ -380,11 +380,16 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         rows = [asdict(n) for n in _store.all_nodes()]
         return {"nodes": rows, "count": len(rows)}
 
+    # A page of the edges, never all of them whatever is asked: `count` is how many there are,
+    # and a reader asks again from `offset` until it has them. The cap is the service's, so one
+    # request cannot ask for a reply that grows with the store.
     @app.get("/edges")
-    def edges(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    def edges(offset: int = 0, limit: int = core.IMPORT_MAX_ROWS,
+              authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         rows = core.all_edges(_store)
-        return {"edges": rows, "count": len(rows)}
+        start = max(offset, 0)
+        return {"edges": rows[start:start + max(1, min(limit, core.IMPORT_MAX_ROWS))], "count": len(rows)}
 
     # A copy of another store's rows, as `okl push` sends them: this service is then what CI
     # reads in place of the gitignored store a runner cannot see. A malformed row is the

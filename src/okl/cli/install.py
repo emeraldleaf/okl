@@ -1205,8 +1205,8 @@ def _push_refusal(url: str) -> str | None:
     if parts.scheme not in ("http", "https") or not parts.hostname:
         return f"the target must be an https:// URL of an okl service, got {url!r}"
     if parts.scheme == "http" and parts.hostname not in ("localhost", "127.0.0.1", "::1"):
-        return (f"http://{parts.hostname} would send the lessons and the token unencrypted: "
-                "use https://, or http:// only for a service on this machine")
+        return (f"plain http to {parts.hostname} would send the lessons and the token unencrypted: "
+                "use https, or http only for a service on this machine")
     return None
 
 
@@ -1221,7 +1221,9 @@ def cmd_push(args: argparse.Namespace) -> int:
     from urllib.parse import urlsplit
     cfg = load_config()
     url = args.to or cfg.get("push_url")
-    token = args.token or cfg.get("push_token")
+    # The remembered token belongs to the remembered service. `--to` naming another one without
+    # `--token` reused it at first, which sent one service's token to a different host.
+    token = args.token or (cfg.get("push_token") if url == cfg.get("push_url") else None)
     if not url:
         print("okl push: no service to push to. Name it once with `okl push --to <https url> "
               "[--token <token>]`; it is remembered in .okl/config.json.", file=sys.stderr)
@@ -1239,6 +1241,7 @@ def cmd_push(args: argparse.Namespace) -> int:
         return 0
     if args.to or args.token:
         cfg["push_url"] = url
+        cfg.pop("push_token", None)      # never the last target's token beside a new target
         if token:
             cfg["push_token"] = token
         save_config(cfg)

@@ -14,7 +14,7 @@ import pytest
 from okl import core
 from okl.cli import main
 from okl.cli.install import _push_refusal
-from okl.client import Client
+from okl.client import Client, _same_row
 from okl.store import Edge, Node, Store
 
 TARGET = "https://okl.test"
@@ -147,6 +147,84 @@ def test_a_push_never_sends_another_services_token(deployed, monkeypatch):
     deployed.headers.clear()
     assert main(["push", "--to", TARGET, "--token", "wrong"]) == 2      # a 401 is a refusal, not an outage
     assert {h.get("authorization") for h in deployed.headers} == {"Bearer wrong"}
+
+
+def test_a_new_target_never_gets_the_last_targets_token(deployed, serve_in_process, capsys):
+    """`--to` naming another service without `--token` reused the remembered token, which sent one
+    service's token to a different host (found by the review of this change). The remembered token
+    goes only to the remembered service, and is dropped when another target is remembered."""
+    from okl.service import create_app
+    _fill(Client())
+    assert main(["push", "--to", TARGET, "--token", "s3cret"]) == 0
+    other = serve_in_process(create_app(store=Store("sqlite:///:memory:")))     # another service, with no token
+    assert main(["push", "--to", "https://other.test"]) == 0
+    assert other.headers and all("authorization" not in h for h in other.headers)
+    cfg = json.loads((deployed.repo / ".okl" / "config.json").read_text())
+    assert cfg["push_url"] == "https://other.test" and "push_token" not in cfg
+    # Back to the first one, by name and without its token: it is not remembered any more, so none is sent.
+    other.headers.clear()
+    assert main(["push", "--to", TARGET]) == 0
+    assert all("authorization" not in h for h in other.headers)
+    assert "s3cret" not in capsys.readouterr().out
+
+
+def test_a_row_is_compared_by_the_fields_both_sides_know():
+    """A service one release older or newer has a column more or fewer. Comparing whole rows then
+    called every lesson changed, and every push sent the whole store (found by the same review)."""
+    mine = {"id": "a", "title": "t", "fix": None, "created_at": 5}
+    assert _same_row(mine, dict(mine))
+    assert _same_row(mine, {**mine, "a_column_from_a_newer_service": "x"})
+    assert _same_row(mine, {k: v for k, v in mine.items() if k != "fix"})      # an older service lacks it
+    assert not _same_row(mine, {**mine, "title": "changed"})
+    assert not _same_row(mine, {**mine, "created_at": 6})
+    assert not _same_row(mine, None)
+
+
+def test_a_push_that_stops_part_way_says_what_was_written(deployed, monkeypatch, capsys):
+    """Exit 2 alone read as "nothing was pushed" while the batches before the failure were on the
+    service. It says how many rows were written, and the next push sends only the rest."""
+    store = Client()._local_store()
+    for i in range(121):
+        store.add_node(Node(id=f"a-{i:03d}", type="Rule", title=f"lesson {i}", scope="org"))
+    real, calls = core.import_rows, []
+
+    def fails_on_the_second(s, nodes, edges):
+        calls.append(len(nodes))
+        if len(calls) == 2:
+            raise ValueError("the database went away")
+        return real(s, nodes, edges)
+
+    monkeypatch.setattr(core, "import_rows", fails_on_the_second)
+    assert main(["push", "--to", TARGET, "--token", "s3cret"]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and "the database went away" in said.err
+    assert "100 of 121 row(s) were written before this" in said.err and len(deployed.copy.all_nodes()) == 100
+    assert "push_url" not in json.loads((deployed.repo / ".okl" / "config.json").read_text())
+    monkeypatch.setattr(core, "import_rows", real)
+    assert main(["push", "--to", TARGET, "--token", "s3cret"]) == 0
+    assert "pushed 21 lesson(s)" in capsys.readouterr().out and _rows(deployed.copy) == _rows(store)
+
+
+def test_the_edges_come_a_capped_page_at_a_time(deployed, capsys):
+    """One request never returns a reply that grows with the store: the service caps a page of
+    edges whatever is asked, and the push reads page after page until it has them all."""
+    store = Client()._local_store()
+    store.add_node(Node(id="hub", type="Rule", title="hub", scope="org"))
+    n = core.IMPORT_MAX_ROWS + 100
+    for i in reversed(range(n)):       # written last-first, so the store's own order is not the pages'
+        store.add_edge(Edge(src="hub", rel="RECURS_IN", dst=f"repo-{i:04d}", created_at=1_000 + i))
+    assert main(["push", "--to", TARGET, "--token", "s3cret"]) == 0
+    auth = {"Authorization": "Bearer s3cret"}
+    page = deployed.api.get("/edges?limit=100000", headers=auth).json()
+    assert (len(page["edges"]), page["count"]) == (core.IMPORT_MAX_ROWS, n)
+    assert [e["dst"] for e in page["edges"]] == [f"repo-{i:04d}" for i in range(core.IMPORT_MAX_ROWS)], \
+        "pages are cut from one fixed order, or two pages could repeat an edge and skip another"
+    rest = deployed.api.get(f"/edges?offset={core.IMPORT_MAX_ROWS}", headers=auth).json()["edges"]
+    assert len(rest) == 100 and not {e["dst"] for e in rest} & {e["dst"] for e in page["edges"]}
+    writes = len(deployed.sent)
+    capsys.readouterr()
+    assert main(["push"]) == 0          # it read both pages, so no edge looks new
+    assert "pushed 0 lesson(s) and 0 edge(s)" in capsys.readouterr().out and len(deployed.sent) == writes
 
 
 def test_push_refuses_where_it_cannot_or_must_not_run(deployed, monkeypatch, capsys):
