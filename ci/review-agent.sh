@@ -243,7 +243,9 @@ folder, skipped = sys.argv[1], sys.argv[2].split()
 dec, merged, any_review = json.JSONDecoder(), {"findings": [], "checked": [], "not_checked": []}, False
 names = sorted(f for f in os.listdir(folder) if f.startswith("reply-"))
 for name in names:
-    text, found = open(os.path.join(folder, name)).read(), None
+    # errors="replace": a reply or error output in another encoding raised, the whole merge failed in
+    # silence, and every part lost its review (review of okl #492).
+    text, found = open(os.path.join(folder, name), errors="replace").read(), None
     for i, ch in enumerate(text):
         if ch == "{":
             try:
@@ -258,7 +260,8 @@ for name in names:
         why = ""
         try:
             status = open(os.path.join(folder, "status-%s.txt" % part)).read().strip()
-            err = [x for x in open(os.path.join(folder, "err-%s.txt" % part)).read().splitlines() if x.strip()]
+            err = [x for x in open(os.path.join(folder, "err-%s.txt" % part), errors="replace").read().splitlines()
+                   if x.strip()]
         except OSError:
             status, err = "", []
         if status and status != "0":

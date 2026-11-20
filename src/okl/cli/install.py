@@ -751,6 +751,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     _wire_claude_code(args)
     _say_review_after_writing(cfg)
+    _say_stop_hook_sees_worktrees()
     _wire_drift_gates(cfg, force=getattr(args, "force", False))
     _wire_owner_paths(cfg, args)
     if not getattr(args, "no_seed", False):
@@ -1048,6 +1049,21 @@ def _say_review_after_writing(cfg: dict) -> None:
     if not any("check --change" in line for line in text.splitlines() if not line.lstrip().startswith("#")):
         print(f"! {STOP_HOOK} is an edited copy that does not ask for it, so the review will not run. "
               "`okl init --force` replaces it with okl's.")
+
+
+def _say_stop_hook_sees_worktrees() -> None:
+    """Say when this project's Stop hook is an edited copy from before it looked at other worktrees: init
+    keeps it, and then work committed only in another worktree asks neither the review nor what was
+    learned (lesson owned-file-features-check-the-kept-copy). Read as _say_review_after_writing reads it,
+    and whether the review is on or off, since the hook asks the encode question either way."""
+    try:
+        text = STOP_HOOK.read_text(errors="replace")
+    except OSError:
+        return   # no project hook: okl's plugin provides it, or Claude Code is not wired here
+    if not any("worktree list" in line for line in text.splitlines() if not line.lstrip().startswith("#")):
+        print(f"! {STOP_HOOK} is an edited copy from before the Stop hook looked at other worktrees: work "
+              "committed only in another worktree of this repo will not make it ask. `okl init --force` "
+              "replaces it with okl's.")
 
 
 STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")

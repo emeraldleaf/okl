@@ -154,7 +154,7 @@ def worktrees_with_recent_work(base: str | None, window: int = 3600, repo_dir: s
         return []
     found = []
     for path in (line[len("worktree "):] for line in listing.splitlines() if line.startswith("worktree ")):
-        if not Path(path).is_dir() or os.path.realpath(path) == here:
+        if not _is_dir(Path(path)) or os.path.realpath(path) == here:
             continue
         try:
             last = int(_git(path, "log", "-1", "--format=%ct").strip() or 0)
@@ -164,6 +164,15 @@ def worktrees_with_recent_work(base: str | None, window: int = 3600, repo_dir: s
         if files and (now - last < window or any(_modified_since(Path(path) / f, now - window) for f in files)):
             found.append((path, files))
     return found
+
+
+def _is_dir(path: Path) -> bool:
+    """`path.is_dir()`, False where it cannot be read: on Python 3.11 to 3.13 is_dir() raises for a path
+    in a folder it cannot open, and git still lists a worktree there (lesson is-file-raises-in-unreadable-dir)."""
+    try:
+        return path.is_dir()
+    except OSError:
+        return False
 
 
 def _modified_since(path: Path, since: float) -> bool:

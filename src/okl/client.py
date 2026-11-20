@@ -109,18 +109,22 @@ def _linked_worktree(p: Path) -> tuple[Path, Path] | None:
     names a git directory with no `commondir`, and a main checkout's `.git` is a directory."""
     for d in [p, *p.parents]:
         marker = d / ".git"
-        if marker.is_dir():
-            return None
-        if marker.is_file():
-            try:
-                text = marker.read_text().strip()
-                if not text.startswith("gitdir:"):
-                    return None
-                gitdir = d / text[len("gitdir:"):].strip()      # an absolute path replaces d
-                common = (gitdir / (gitdir / "commondir").read_text().strip()).resolve()
-            except OSError:
+        # Every probe inside the try: is_dir() and is_file() raise for a path in a folder they cannot
+        # open on Python 3.11 to 3.13 (lesson is-file-raises-in-unreadable-dir), and a .git file that
+        # is not UTF-8 raises a ValueError. Unreadable is not a worktree, so okl resolves as before.
+        try:
+            if marker.is_dir():
                 return None
-            return (d, common.parent) if common.name == ".git" else None
+            if not marker.is_file():
+                continue
+            text = marker.read_text().strip()
+            if not text.startswith("gitdir:"):
+                return None
+            gitdir = d / text[len("gitdir:"):].strip()      # an absolute path replaces d
+            common = (gitdir / (gitdir / "commondir").read_text().strip()).resolve()
+        except (OSError, ValueError, RuntimeError):     # RuntimeError: a symlink loop, on 3.11
+            return None
+        return (d, common.parent) if common.name == ".git" else None
     return None
 
 

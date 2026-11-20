@@ -8,7 +8,11 @@
   Stop hook, which looked only there, asked neither for the review nor what was learned. It now also
   asks when another worktree of the repo had a commit in the last hour, and okl's note names each such
   worktree, or one with an uncommitted file edited in that hour, with the command that reviews it there
-  (`cd <worktree> && okl check --change`, the path quoted for a shell). `okl init` installs the steps as
+  (`cd -- <worktree> && okl check --change`, the path quoted for a shell). A project whose Stop hook is an
+  edited copy keeps it, so it does not see other worktrees until `okl init --force`, and `okl init`
+  now says so. A session started inside a worktree beside the checkout still gets no hooks: they look
+  for `.okl/config.json` above it and find none, though okl run there now does (below). `okl init`
+  installs the steps as
   the `okl-review` skill (`.claude/skills/okl-review/SKILL.md`, removed by `--uninstall`, kept once
   edited), the note names it, and okl's Claude Code plugin ships it. The skill runs `okl check
   --change` and follows the steps it prints, so the measured steps stay as they were. okl's file

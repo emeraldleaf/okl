@@ -1625,7 +1625,7 @@ def review_note_worktrees(found: list[tuple[str, list[str]]]) -> str:
              "review it there:"]
     for path, files in found[:WORKTREES_SHOWN]:
         lines.append(f"- {path} ({len(files)} file(s) changed): "
-                     f"{_code(f'cd {shlex.quote(path)} && okl check --change')}")
+                     f"{_code(f'cd -- {shlex.quote(path)} && okl check --change')}")
     if len(found) > WORKTREES_SHOWN:
         lines.append(f"- and {len(found) - WORKTREES_SHOWN} more: `git worktree list` names them")
     return "\n".join(lines)

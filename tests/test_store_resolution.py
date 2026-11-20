@@ -90,6 +90,9 @@ def test_a_linked_worktree_uses_its_main_checkouts_store(tmp_path, monkeypatch):
     sub = tmp_path / "submodule"; sub.mkdir(); (tmp_path / "modules" / "s").mkdir(parents=True)
     (sub / ".git").write_text("gitdir: ../modules/s\n")
     assert _find_config(sub) is None
+    # A .git file okl cannot decode is not a worktree either: okl resolves as it did before, not crash.
+    (sub / ".git").write_bytes(b"gitdir: \xff\xfe\n")
+    assert _find_config(sub) is None
     # The main checkout itself, and a directory outside any repository, resolve as before.
     assert _find_config(main) == (main / ".okl" / "config.json").resolve()
     assert _find_config(tmp_path) is None

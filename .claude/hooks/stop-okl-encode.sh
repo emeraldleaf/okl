@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:c3f0862d833485af2e2eafc946d738f69371a61e3005658936e790d69894ebc0
+# okl-fingerprint: sha256:78402511ff5c41fd2fa57fcfd4dc20cb12b2a82a899578c16b1d4c1ba4858cad
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -148,9 +148,11 @@ if [[ -e "$marker" ]]; then log_review 2>/dev/null; exit 0; fi
 changed=0
 if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
   changed=1
-elif last=$(git log -1 --format=%ct 2>/dev/null); then
+elif last=$(git log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]]; then
+  # A whole number first, base 10: git prints a commit's date as written, and `08` is a bash
+  # arithmetic error (lesson bash-double-brackets).
   now=$(date +%s)
-  [[ $((now - last)) -lt 3600 ]] && changed=1
+  [[ $((now - 10#$last)) -lt 3600 ]] && changed=1
 fi
 # A commit in the last hour in another worktree of this repo counts too. An agent that works in a
 # worktree, entering it in each command, leaves this checkout untouched, so neither question was
@@ -160,8 +162,8 @@ if [[ "$changed" = "0" ]]; then
   now=$(date +%s)
   while IFS= read -r wt; do
     [[ -n "$wt" && -d "$wt" ]] || continue
-    if last=$(git -C "$wt" log -1 --format=%ct 2>/dev/null) && [[ -n "$last" ]] \
-       && [[ $((now - last)) -lt 3600 ]]; then
+    if last=$(git -C "$wt" log -1 --format=%ct 2>/dev/null) && [[ "$last" =~ ^[0-9]{1,12}$ ]] \
+       && [[ $((now - 10#$last)) -lt 3600 ]]; then
       changed=1; break
     fi
   done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')

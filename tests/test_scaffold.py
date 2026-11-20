@@ -1058,6 +1058,16 @@ def test_review_agent_keeps_a_failed_calls_exit_status_and_error_output(tmp_path
     r = run()
     assert r.returncode == 0 and "no review verdict" in r.stdout
     assert "the call for part 1 exited 3" in r.stderr and "credit balance too low" in r.stderr, r.stderr
+    # Error output that is not UTF-8 costs the other part nothing: read as such, it raised, the merge
+    # failed in silence, and part 1's review was thrown away (review of okl #492).
+    fail.write_text(fail.read_text().replace(
+        "print('Error: credit balance too low', file=sys.stderr)",
+        "sys.stderr.buffer.write(b'Error: \\xff\\xfe bytes\\n'); sys.stderr.flush()"))
+    for f in tmp_path.glob("call-*"):
+        f.unlink()
+    r = run()
+    assert r.returncode == 0 and "checked: c1" in r.stdout, r.stdout + r.stderr
+    assert "part 2 of 2: the reviewer gave no review (it exited 3: Error:" in r.stdout
 
 
 def test_review_agent_names_what_it_did_not_review_past_its_parts(tmp_path):
@@ -1108,15 +1118,19 @@ def test_no_workflow_runs_a_pull_requests_code_with_the_base_repos_secrets():
     pull request's code hands both to it (lesson seed:ci-security:gha_pwn_request). okl's own
     workflows and the ones it installs use `pull_request`, which gives a fork none, and the review jobs
     rely on that: on a fork's pull request they soft-pass with no secret to leak. A comment may name
-    either event; a trigger may not."""
+    either event; a trigger may not. The tracked files are read, not the working tree, so a stray
+    or half-edited file answers no differently than main would (CLAUDE.md), and GitHub runs `.yaml`
+    workflows as well as `.yml`."""
     root = Path(__file__).resolve().parents[1]
-    workflows = [*(root / ".github" / "workflows").glob("*.yml"), *(root / "ci").glob("*.yml"),
-                 *(root / "src" / "okl" / "scaffold" / "ci").glob("*.yml")]
+    tracked = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, text=True,
+                             check=True).stdout.split("\0")
+    workflows = [rel for rel in tracked
+                 if re.fullmatch(r"(\.github/workflows|ci|src/okl/scaffold/ci)/[^/]+\.ya?ml", rel)]
     assert len(workflows) >= 6, workflows
-    for wf in workflows:
-        code = "\n".join(line.split("#", 1)[0] for line in wf.read_text().splitlines())
+    for rel in workflows:
+        code = "\n".join(line.split("#", 1)[0] for line in (root / rel).read_text().splitlines())
         found = re.findall(r"\b(pull_request_target|workflow_run)\b", code)
-        assert not found, f"{wf.relative_to(root)} triggers on {found[0]}"
+        assert not found, f"{rel} triggers on {found[0]}"
 
 
 def test_stored_data_never_reaches_a_shell():

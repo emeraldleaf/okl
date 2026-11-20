@@ -246,6 +246,25 @@ def test_init_says_when_the_stop_hook_on_disk_cannot_ask_for_the_review(tmp_path
     assert "--force" not in capsys.readouterr().out
 
 
+def test_init_says_when_the_stop_hook_on_disk_cannot_see_other_worktrees(tmp_path, monkeypatch, capsys):
+    """An edited Stop hook from before the worktree check asks for the review (it runs `okl check --change`)
+    but never sees work committed only in another worktree, and init keeps it: init says so, whether the
+    review is on or off (owned-file-features-check-the-kept-copy). okl's own hook, or none, says nothing."""
+    from okl.cli import install
+    monkeypatch.chdir(tmp_path)
+    install._say_stop_hook_sees_worktrees()
+    assert capsys.readouterr().out == ""                      # no project hook: the plugin's, or none
+    hooks = tmp_path / ".claude" / "hooks"; hooks.mkdir(parents=True)
+    (hooks / "stop-okl-encode.sh").write_text('# git worktree list, in a comment only\nokl check --change --format hook\n')
+    install._say_stop_hook_sees_worktrees()
+    out = capsys.readouterr().out
+    assert "before the Stop hook looked at other worktrees" in out and "okl init --force" in out
+    shipped = Path(install.__file__).resolve().parents[1] / "scaffold" / "hooks" / "stop-okl-encode.sh"
+    shutil.copy(shipped, hooks / "stop-okl-encode.sh")
+    install._say_stop_hook_sees_worktrees()
+    assert capsys.readouterr().out == ""
+
+
 def test_the_hook_note_is_silent_when_nothing_changed(repo, capsys, monkeypatch):
     """Turned on, but with nothing changed since the default branch, the Stop hook gets no note."""
     monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "1")
@@ -519,7 +538,7 @@ def test_the_hook_note_names_a_worktree_with_recent_work_and_quotes_its_path(wor
     assert out.startswith(core.REVIEW_NOTE) and "Other worktrees of this repo had work in the last hour" in out
     line = next(x for x in out.splitlines() if "feature.py" in x or "1 file(s)" in x)
     command = re.search(r"`(cd .* && okl check --change)`", line).group(1)
-    assert shlex.split(command)[1] == str(fresh) and "'" in command, command
+    assert shlex.split(command)[1:3] == ["--", str(fresh)] and "'" in command, command
     assert "stale" not in out and "idle" not in out
     # The command it names runs there: the worktree has no .okl/ of its own, and finds the main checkout's.
     monkeypatch.chdir(fresh)
@@ -549,3 +568,48 @@ def test_the_stop_hook_asks_when_only_another_worktree_has_new_work(worktrees, t
     assert (fresh.parent / "stale").is_dir() and (fresh.parent / "idle").is_dir()
     r = stop("without")
     assert r.returncode == 0 and r.stderr == "", "no recent commit anywhere: nothing is asked, as before"
+
+
+def test_a_worktree_okl_cannot_read_costs_the_note_nothing(worktrees, capsys, monkeypatch):
+    """git lists a worktree under a folder okl cannot open, and on Python 3.11 to 3.13 Path.is_dir() raises
+    there (lesson is-file-raises-in-unreadable-dir): the error lost the note for the checkout's own change,
+    since the Stop hook discards stderr. The unreadable worktree is skipped and the note stands."""
+    if os.geteuid() == 0:
+        pytest.skip("root reads a mode-000 folder")
+    main_dir, fresh = worktrees
+    locked = fresh.parent / "locked"; locked.mkdir()
+    _git(main_dir, "worktree", "add", "-q", "-b", "locked", str(locked / "wt"))
+    (main_dir / "app.py").write_text("print('edited')\n")
+    monkeypatch.chdir(main_dir)
+    monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING", raising=False)
+    locked.chmod(0)
+    try:
+        found = changes.worktrees_with_recent_work(None, repo_dir=str(main_dir))
+        assert main(["check", "--change", "--format", "hook"]) == 0
+    finally:
+        locked.chmod(0o755)
+    assert [os.path.realpath(p) for p, _ in found] == [os.path.realpath(fresh)]
+    assert capsys.readouterr().out.startswith(core.REVIEW_NOTE)
+
+
+def test_the_stop_hook_reads_a_commit_date_bash_cannot_count_as_no_date(worktrees, tmp_path):
+    """git prints a commit's date as written, and `08` is an arithmetic error in bash, which abandoned the
+    whole worktree loop: a worktree listed after it, with a commit made now, never held the stop (lesson
+    bash-double-brackets). A date that is not a whole number is skipped, and the loop goes on."""
+    main_dir, fresh = worktrees
+    tree = _git(main_dir, "rev-parse", "HEAD^{tree}").strip()
+    head = _git(main_dir, "rev-parse", "HEAD").strip()
+    odd = subprocess.run(["git", "-C", str(main_dir), "hash-object", "-t", "commit", "-w", "--literally", "--stdin"],
+                         input=f"tree {tree}\nparent {head}\nauthor t <t@t> 08 +0000\ncommitter t <t@t> 08 +0000\n\nodd\n",
+                         capture_output=True, text=True, check=True).stdout.strip()
+    _git(main_dir, "worktree", "add", "-q", "--detach", str(tmp_path / "aaa-odd"), odd)   # listed before `my wt`
+    assert _git(tmp_path / "aaa-odd", "log", "-1", "--format=%ct").strip() == "08"
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "stop-okl-encode.sh"
+    markers = tmp_path / "markers"; markers.mkdir()
+    env = {"PATH": f"/bin:/usr/bin:{os.environ['PATH']}", "HOME": str(tmp_path), "TMPDIR": str(markers),
+           "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"), "OKL_BIN": f"{sys.executable} -m okl",
+           "CLAUDE_PROJECT_DIR": str(main_dir)}
+    r = subprocess.run(["bash", str(hook)], cwd=main_dir, text=True, capture_output=True, env=env,
+                       input=json.dumps({"session_id": "odd-date", "stop_hook_active": False}))
+    assert r.returncode == 2 and str(fresh) in r.stderr, r.stderr
+    assert "value too great" not in r.stderr
