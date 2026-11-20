@@ -77,9 +77,16 @@ def _find_config(start: Path | None = None) -> Path | None:
     # the command the Stop hook names for work done in one, could never run. Its main checkout's
     # config, and so its store, is the one this repo set up.
     linked = _linked_worktree(p)
-    if linked is not None and (linked[1] / CONFIG_DIR / CONFIG_FILE).exists():
-        return linked[1] / CONFIG_DIR / CONFIG_FILE
-    return None
+    if linked is None:
+        return None
+    # exists() raises for a path in a folder it cannot open, on Python 3.11 to 3.13 (lesson
+    # is-file-raises-in-unreadable-dir): a main checkout okl cannot read names no store, and every
+    # command in its worktrees died on a traceback instead of saying so.
+    try:
+        found = (linked[1] / CONFIG_DIR / CONFIG_FILE).exists()
+    except OSError:
+        return None
+    return linked[1] / CONFIG_DIR / CONFIG_FILE if found else None
 
 
 def project_root(start: Path | None = None) -> Path:

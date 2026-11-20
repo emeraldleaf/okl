@@ -178,18 +178,16 @@ def test_init_in_a_worktree_of_a_set_up_checkout_refuses_rather_than_start_an_em
     guide = (Path(__file__).resolve().parents[1] / "docs" / "GETTING-STARTED.md").read_text()
     assert "| `okl init: this is a git worktree of <checkout>…` (exit 2) |" in guide
     # A main checkout okl cannot read is not one it uses: no traceback (is-file-raises-in-unreadable-dir).
+    import os
+
     from okl.cli import install
-
-    real_is_file = Path.is_file
-
-    def unreadable(self):
-        if self == checkout.resolve() / ".okl" / "config.json":
-            raise PermissionError(13, "Permission denied")
-        return real_is_file(self)
-    with monkeypatch.context() as m:
-        m.setattr(install, "_find_config", lambda start=None: None)    # walking up found none
-        m.setattr(Path, "is_file", unreadable)
-        assert install._worktree_of_a_set_up_checkout() is None
+    if os.geteuid() != 0:                 # root opens anything
+        (checkout / ".okl").chmod(0)
+        try:
+            monkeypatch.chdir(beside)
+            assert install._worktree_of_a_set_up_checkout() is None
+        finally:
+            (checkout / ".okl").chmod(0o755)
     # A worktree of a checkout never set up is set up as before.
     shutil.rmtree(checkout / ".okl")
     monkeypatch.chdir(beside)
