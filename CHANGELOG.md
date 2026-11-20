@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **A session started in a git worktree gets okl's hooks, `okl init` there refuses to start a second
+  store, and `okl drift` works from any folder.** Three gaps left after okl learned to work in a
+  worktree (#492). The hooks looked for `.okl/config.json` by walking up, which a worktree beside the
+  checkout never has, since git ignores `.okl/`: every hook stepped aside as if the repo had never been
+  set up. Each hook, the MCP launcher and git's pre-push hook now take the main checkout's config, and
+  the okl it pins, as okl itself does. `okl init` in a worktree of a set-up checkout wrote a config of
+  the worktree's own beside a new, empty store, which every later command then read instead; it now
+  exits 2 and names the checkout to run it in. `okl drift` run from a subfolder read git from there, so
+  no governed path matched and the gate said nothing was checked; with no `--repo-dir` it reads from the
+  top of the repository, and a `--snapshot` path is named from where it runs.
+
 - **The review after writing runs on a pull request, with any model's CLI** (`ci/lesson-review.sh`).
   Until now it ran only when an agent's Stop hook asked for it, so a change made by hand, by another
   agent, or in a session whose hook never fired went unchecked. The script follows the steps `okl
@@ -32,9 +43,7 @@
   worktree, or one with an uncommitted file edited in that hour, with the command that reviews it there
   (`cd -- <worktree> && okl check --change`, the path quoted for a shell). A project whose Stop hook is an
   edited copy keeps it, so it does not see other worktrees until `okl init --force`, and `okl init`
-  now says so. A session started inside a worktree beside the checkout still gets no hooks: they look
-  for `.okl/config.json` above it and find none, though okl run there now does (below). `okl init`
-  installs the steps as
+  now says so. `okl init` installs the steps as
   the `okl-review` skill (`.claude/skills/okl-review/SKILL.md`, removed by `--uninstall`, kept once
   edited), the note names it, and okl's Claude Code plugin ships it. The skill runs `okl check
   --change` and follows the steps it prints, so the measured steps stay as they were. okl's file

@@ -133,3 +133,48 @@ def test_okl_works_on_the_worktree_it_runs_in_with_the_main_checkouts_store(tmp_
     (beside / ".okl").mkdir(); (beside / ".okl" / "config.json").write_text('{"repo": "r"}')
     monkeypatch.chdir(beside / "pkg")
     assert project_root() == beside.resolve()
+
+
+def test_init_in_a_worktree_of_a_set_up_checkout_refuses_rather_than_start_an_empty_store(
+        tmp_path, monkeypatch, capsys):
+    """Since #492 okl in a git worktree reads its main checkout's store. `okl init` there wrote a config
+    of the worktree's own beside a new, empty store, which every later command read instead, and said
+    nothing. It now refuses (exit 2) and names the checkout to run it in, for a worktree beside the
+    checkout and one nested in it; a worktree of a checkout never set up is set up as before."""
+    import shutil
+
+    import pytest
+
+    from okl.cli import main
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    checkout = tmp_path / "main"; checkout.mkdir()
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", "-b", "main", str(checkout)], check=True)
+    (checkout / "a.py").write_text("a\n"); (checkout / ".gitignore").write_text(".okl/\n.claude/worktrees/\n")
+    subprocess.run([*git, "-C", str(checkout), "add", "-A"], check=True)
+    subprocess.run([*git, "-C", str(checkout), "commit", "-qm", "a"], check=True)
+    (checkout / ".okl").mkdir(); (checkout / ".okl" / "config.json").write_text('{"repo": "r"}')
+    beside, nested = tmp_path / "beside", checkout / ".claude" / "worktrees" / "agent-1"
+
+    def init(*args: str) -> int:
+        try:
+            return main(["init", *args])
+        except SystemExit as e:
+            return e.code if isinstance(e.code, int) else 1
+
+    for i, wt in enumerate((beside, nested)):
+        subprocess.run([*git, "-C", str(checkout), "worktree", "add", "-q", "-b", f"w{i}", str(wt)], check=True)
+        monkeypatch.chdir(wt)
+        for args in (["--repo", "r", "--no-seed"], ["--dry-run"]):
+            capsys.readouterr()
+            assert init(*args) == 2, (wt, args)
+            err = capsys.readouterr().err
+            assert f"git worktree of {checkout.resolve()}" in err, err
+            assert not (wt / ".okl").exists(), "a refused init must not start a store"
+    # A worktree of a checkout never set up is set up as before.
+    shutil.rmtree(checkout / ".okl")
+    monkeypatch.chdir(beside)
+    assert init("--dry-run", "--repo", "r") == 0

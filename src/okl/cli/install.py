@@ -15,7 +15,14 @@ import sys
 from pathlib import Path
 
 from .. import core
-from ..client import Client, _find_config, load_config, review_setting, save_config
+from ..client import (
+    Client,
+    _find_config,
+    _linked_worktree,
+    load_config,
+    review_setting,
+    save_config,
+)
 from .on_edit import HOOK_TIMEOUT, quick_hint
 from .on_edit import KEY as ON_EDIT_KEY
 from .packs import _empty_store_guidance, _seed_first_run
@@ -709,6 +716,40 @@ def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
                   + " — interests set; pass --interests to choose your own")
 
 
+def _worktree_of_a_set_up_checkout() -> Path | None:
+    """The main checkout whose config and store okl already uses here, when this is a linked git
+    worktree with no config of its own between here and its top, and that checkout was set up;
+    else None."""
+    here = Path.cwd().resolve()
+    linked = _linked_worktree(here)
+    if linked is None:
+        return None
+    top, main = linked
+    own = _find_config(here)
+    if own is not None and (own.parent.parent == top or top in own.parent.parent.parents):
+        return None
+    return main if (main / ".okl" / "config.json").is_file() else None
+
+
+def _init_writes_nothing(args: argparse.Namespace) -> int | None:
+    """The exit code of an `okl init` that sets nothing up here, or None to go on: --uninstall, a
+    git worktree of a set-up checkout (refused, 2), and --dry-run."""
+    if getattr(args, "uninstall", False):
+        return _uninstall(getattr(args, "dry_run", False))
+    main_checkout = _worktree_of_a_set_up_checkout()
+    if main_checkout is not None:
+        # Since #492 okl in a worktree reads its main checkout's store; init here wrote a config of
+        # the worktree's own beside a new, empty store, which every later command then read instead.
+        print(f"okl init: this is a git worktree of {main_checkout}, and okl here already uses that "
+              "checkout's store and settings. Run `okl init` there to change them: a store of this "
+              "worktree's own would start empty, and nothing recorded in it would reach the main "
+              "checkout.", file=sys.stderr)
+        return 2
+    if getattr(args, "dry_run", False):
+        return _init_dry_run(args)
+    return None
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
     config, hooks (installed AND registered), CI verifier, MCP registration.
@@ -717,10 +758,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     installs executable hooks and a CI workflow into your repo; you should be able
     to see that list before it happens."""
     import shutil
-    if getattr(args, "uninstall", False):
-        return _uninstall(getattr(args, "dry_run", False))
-    if getattr(args, "dry_run", False):
-        return _init_dry_run(args)
+    stop = _init_writes_nothing(args)
+    if stop is not None:
+        return stop
     repo = _repo_name(args)
     previous = _own_repo_name()
     if previous and previous != repo:

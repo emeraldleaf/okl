@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:239e0272c02f11f38079b21ad578e35d3ea6f3595e7d3c19cb5ff407bb0a2c0b
+# okl-fingerprint: sha256:300ed556265288f62e661b0cdf63c1011e2a57b87b43248f4724464edd9ccc9e
 # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
 #
 # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
@@ -21,15 +21,25 @@ fi
 # Switched off by name: OKL_DISABLED_HOOKS=read (or briefing,encode,read).
 case ",${OKL_DISABLED_HOOKS:-}," in *,read,*) exit 0 ;; esac
 
+# The .okl/config.json okl reads here: the nearest at or above this folder, or else, in a git worktree
+# with none (git ignores .okl/, so a worktree beside the checkout never has one), its main checkout's,
+# as okl itself resolves it since #492. Walking up alone, a session started in such a worktree found
+# no config, and every hook stepped aside as if the repo had never been set up.
+okl_config() {
+  local d="$PWD" common
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
+    d=$(dirname "$d")
+  done
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
+  printf '%s\n' "${common%/.git}/.okl/config.json"
+}
+
 # Not enrolled: step aside, as the other hooks do. The plugin's hooks run in every repo the user
 # opens, and most were never set up with `okl init`.
 if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]]; then
-  enrolled=0; d="$PWD"
-  while [[ "$d" != "/" ]]; do
-    if [[ -f "$d/.okl/config.json" ]]; then enrolled=1; break; fi
-    d=$(dirname "$d")
-  done
-  [[ "$enrolled" = 1 ]] || exit 0
+  okl_config >/dev/null || exit 0
 fi
 
 # python3 reads the payload below. Without it the hook cannot tell which file was read, and
@@ -73,17 +83,13 @@ okl_layer=0
 resolve_okl() {
   local from="${1:-1}"
   if [[ "$from" -le 1 ]] && [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
-  local d="$PWD"
-  while [[ "$from" -le 2 ]] && [[ "$d" != "/" ]]; do
-    if [[ -f "$d/.okl/config.json" ]]; then
-      local bin
-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-            "$d/.okl/config.json" 2>/dev/null || true)
-      if [[ -n "$bin" ]] && try_pinned "$bin"; then okl_layer=2; return 0; fi
-      break
-    fi
-    d=$(dirname "$d")
-  done
+  local cfg
+  if [[ "$from" -le 2 ]] && cfg=$(okl_config); then
+    local bin
+    bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+          "$cfg" 2>/dev/null || true)
+    if [[ -n "$bin" ]] && try_pinned "$bin"; then okl_layer=2; return 0; fi
+  fi
   if [[ "$from" -le 3 ]] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
   if [[ "$from" -le 4 ]] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
   return 1

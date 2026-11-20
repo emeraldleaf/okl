@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:588c0d7926f26ef3043257ba0424cf37a4e861600600b0431a0029d7faccb9bf
+# okl-fingerprint: sha256:134817b098db078ba54b6adf29e37a3f699560cbe5207603508428d4eac72cbb
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
 #
 # Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
@@ -32,15 +32,22 @@ try_pinned() {
 }
 resolve_okl() {
   if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
-  if [[ -f .okl/config.json ]]; then
+  # A git worktree has no .okl/ of its own (git ignores it): there the pin is its main
+  # checkout's, as okl reads that checkout's config and store since #492.
+  local cfg=.okl/config.json common
+  if [[ ! -f "$cfg" ]] && common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+     && [[ "${common##*/}" == ".git" ]]; then
+    cfg="${common%/.git}/.okl/config.json"
+  fi
+  if [[ -f "$cfg" ]]; then
     local bin=""
     if command -v python3 >/dev/null 2>&1; then
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-            .okl/config.json 2>/dev/null || true)
+            "$cfg" 2>/dev/null || true)
     else
       # No python3 on a GUI client's PATH, where the pinned path matters most. okl writes
       # one key per line; a value holding a JSON escape is skipped, never misread.
-      bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' .okl/config.json 2>/dev/null || true)
+      bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' "$cfg" 2>/dev/null || true)
     fi
     if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
   fi

@@ -1435,6 +1435,62 @@ def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
     assert r.returncode == 2, (r.returncode, r.stderr)
 
 
+def test_hooks_in_a_worktree_use_the_main_checkouts_config_and_pinned_okl(tmp_path):
+    """git ignores .okl/, so a worktree beside the checkout has no config, and a session started in one
+    found none by walking up: every hook stepped aside as if the repo had never been set up, though okl
+    itself reads the main checkout's config there since #492. Each hook now finds it the same way, runs
+    the okl it pins, and runs it in the worktree, as does git's pre-push hook. A worktree of a checkout
+    never set up still steps aside."""
+    import json
+    import shutil
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    hooks = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    checkout, wt, markers = tmp_path / "main", tmp_path / "wt", tmp_path / "m"
+    checkout.mkdir(); markers.mkdir()
+    git = ["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", str(checkout)], check=True)
+    (checkout / "a.py").write_text("a = 1\n"); (checkout / ".gitignore").write_text(".okl/\n")
+    subprocess.run([*git, "-C", str(checkout), "add", "-A"], check=True)
+    subprocess.run([*git, "-C", str(checkout), "commit", "-qm", "a"], check=True)
+    subprocess.run([*git, "-C", str(checkout), "worktree", "add", "-q", "-b", "w", str(wt)], check=True)
+    (wt / "a.py").write_text("a = 2\n")      # work in the worktree, for the Stop hook
+    log = tmp_path / "okl-calls.log"
+    fake = tmp_path / "pinned" / "okl"; fake.parent.mkdir()
+    fake.write_text(f'#!/bin/sh\n[ "$1" = --version ] && exit 0\necho "$PWD|$*" >> "{log}"\nexit 0\n')
+    fake.chmod(0o755)
+    (checkout / ".okl").mkdir()
+    (checkout / ".okl" / "config.json").write_text(json.dumps({"repo": "m", "okl_bin": str(fake), "on_edit": {}}))
+    # No okl on PATH and none importable: only the pin in the main checkout's config can be run.
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "TMPDIR": str(markers), "CLAUDE_PROJECT_DIR": str(wt)}
+
+    def run(name: str, payload: dict | None) -> list[str]:
+        before = log.read_text().splitlines() if log.exists() else []
+        script = hooks.parent / "git-hooks" / name if name == "pre-push" else hooks / name
+        subprocess.run(["bash", str(script)], cwd=wt, text=True, capture_output=True, timeout=60,
+                       input=json.dumps(payload) if payload is not None else "", env=env)
+        return (log.read_text().splitlines() if log.exists() else [])[len(before):]
+
+    calls = {
+        "userpromptsubmit-okl-check.sh": run("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"}),
+        "stop-okl-encode.sh": run("stop-okl-encode.sh", {"session_id": "w1", "stop_hook_active": False}),
+        "posttooluse-okl-read.sh": run("posttooluse-okl-read.sh", {"session_id": "w1", "tool_name": "Read",
+                                                                   "tool_input": {"file_path": str(wt / "a.py")}}),
+        "posttooluse-okl-edit.sh": run("posttooluse-okl-edit.sh", {"session_id": "w1", "tool_name": "Edit",
+                                                                   "tool_input": {"file_path": str(wt / "a.py")}}),
+        "okl-mcp.sh": run("okl-mcp.sh", None),
+        "pre-push": run("pre-push", None),     # git's hook, which `okl init --git-hook` installs
+    }
+    for name, lines in calls.items():
+        assert lines, f"{name} stepped aside in a worktree of a set-up checkout"
+        for line in lines:
+            assert os.path.realpath(line.split("|", 1)[0]) == os.path.realpath(wt), (name, line)
+    # A worktree of a checkout never set up: the hooks step aside, and okl is never called.
+    shutil.rmtree(checkout / ".okl")
+    env["PATH"] = f"/usr/bin:/bin:{fake.parent}"
+    assert run("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"}) == []
+
+
 def test_the_mcp_server_starts_without_the_shells_path(tmp_path):
     """#206: .mcp.json named a bare `okl`, so a session launched from an IDE, with
     PATH=/usr/bin:/bin, failed with ENOENT and had no okl tools, while its hooks worked. The

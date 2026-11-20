@@ -459,7 +459,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pm.set_defaults(func=cmd_metric)
 
     pdr = sub.add_parser("drift", help="source-vs-spec drift: rules whose governed code changed after verification")
-    pdr.add_argument("--repo"); pdr.add_argument("--repo-dir", dest="repo_dir", default=".")
+    pdr.add_argument("--repo"); pdr.add_argument("--repo-dir", dest="repo_dir", default=None,
+                                             help="the repository to read (default: the top of the git repository you are in)")
     pdr.add_argument("--gate", action="store_true", help="exit 1 if drift found, 2 if nothing could be checked (for CI and the pre-push hook)")
     pdr.add_argument("--format", choices=["text", "json"], default="text")
     pdr.add_argument("--snapshot", metavar="FILE",
