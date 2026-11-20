@@ -86,12 +86,14 @@ jobs:
       # is likeliest to break and one fresh call checks each (ci/lesson-review.sh). Eleven calls a
       # run, so it is off until you also set the LESSON_REVIEW repository variable to "on". It
       # reports in this job's summary and blocks nothing unless LESSON_REVIEW_BLOCKING is "1".
+      # Both steps need REVIEW_CMD too: without it there is nothing to run, and installing okl and
+      # seeding every pack first would be work for a soft pass.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        if: vars.LESSON_REVIEW == 'on'
+        if: vars.LESSON_REVIEW == 'on' && vars.REVIEW_CMD != ''
         with:
           python-version: "3.13"
       - name: Lesson review (off unless LESSON_REVIEW is on and REVIEW_CMD is set)
-        if: vars.LESSON_REVIEW == 'on'
+        if: vars.LESSON_REVIEW == 'on' && vars.REVIEW_CMD != ''
         env:
           REVIEW_CMD: ${{ vars.REVIEW_CMD }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
