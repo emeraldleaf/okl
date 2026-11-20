@@ -236,7 +236,8 @@ gh variable set LESSON_REVIEW --body on
 ```
 
 It reports and blocks nothing unless `LESSON_REVIEW_BLOCKING` is `1`: how often a check in CI
-raises a false alarm is not measured yet. On a runner it reads okl's bundled packs, or your shared
+raises a false alarm is not measured yet. Set `LESSON_REVIEW_DEADLINE` below your CI step's
+timeout, so a run with slow calls still writes its report. On a runner it reads okl's bundled packs, or your shared
 store when `OKL_SERVICE_URL` is set, since the lessons you record stay in your gitignored `.okl/`.
 Run on your machine, from the checkout or one of its worktrees, it reads your whole store:
 

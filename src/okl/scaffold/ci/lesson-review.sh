@@ -57,6 +57,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 ENV = os.environ
@@ -76,6 +77,14 @@ PICK = number("LESSON_REVIEW_PICK", 10)
 MAX_LINES = number("REVIEW_MAX_LINES", 4000)
 PARALLEL = number("LESSON_REVIEW_PARALLEL", 4)
 TIMEOUT = number("LESSON_REVIEW_TIMEOUT", 900)
+# The whole run's seconds, 0 for none. Each call's own limit does not bound the run: a pick and three
+# rounds of stalled checks outlast a CI step's timeout, the host kills the step, and no report is
+# written at all (lesson remote-timeout-not-a-deadline). Set it below the step's timeout.
+DEADLINE = number("LESSON_REVIEW_DEADLINE", 0)
+STARTED = time.monotonic()
+# The model reads the pull request's text, so it gets none of okl's own credentials or store address:
+# this script runs okl itself (lesson seed:ci-security:ai_step_untrusted_input).
+MODEL_ENV = {k: v for k, v in ENV.items() if not k.startswith("OKL_")}
 
 
 def esc(s):
@@ -121,25 +130,30 @@ def finish(report, code):
 HEAD = "<!-- okl-lesson-review -->\n### Lesson review"
 STORE_NOTE = ENV.get("LESSON_REVIEW_STORE_NOTE", "").strip()
 
+
+def no_review(why):
+    """Nothing was checked. Said in the log, as an annotation, and in the report, since a comment left
+    by an earlier run would otherwise stand as this one's; and where the review blocks, exit 2, never
+    a pass: a gate that inspected nothing has not passed (lesson n_5ddb0776a863)."""
+    warn("no lesson review: " + why)
+    finish("%s\n\nNo review: %s.%s" % (HEAD, cell(why, 800), "\n\n" + cell(STORE_NOTE, 1000) if STORE_NOTE else ""),
+           2 if BLOCKING else 0)
+
 # --- 1. The change and every lesson in scope, from okl --------------------------------------------
 got = run(["okl", "check", "--change=" + BASE, "--format", "json"])
 if got.returncode != 0:
-    warn("okl could not list the change and its lessons, so nothing was reviewed: " + last_line(got.stderr))
-    sys.exit(0)
+    no_review("okl could not list the change and its lessons (%s)" % last_line(got.stderr))
 try:
     change = json.loads(got.stdout)
 except ValueError:
-    warn("okl's answer was not JSON, so nothing was reviewed: " + last_line(got.stdout))
-    sys.exit(0)
+    no_review("okl's answer was not JSON (%s)" % last_line(got.stdout))
 files = change.get("files") or []
 lessons = change.get("lessons") or []
 governing = set(change.get("governing") or [])
 if not files:
-    print("lesson-review: nothing changed since %s — nothing to review." % BASE)
-    sys.exit(0)
+    finish("%s\n\nNothing changed since %s, so there was nothing to review." % (HEAD, cell(BASE, 200)), 0)
 if not lessons:
-    finish("%s\n\nNo lesson in this store applies to this repository, so there was nothing to check the "
-           "change against.%s" % (HEAD, "\n\n" + STORE_NOTE if STORE_NOTE else ""), 0)
+    no_review("no lesson in this store applies to this repository, so there was nothing to check the change against")
 
 # The change as a diff against where it started, committed or not, as okl listed it. Data files are
 # left out, as ci/review-agent.sh leaves them, and a diff past REVIEW_MAX_LINES is cut at a file's
@@ -150,7 +164,7 @@ start = change.get("merge_base") or BASE
 diff = run(["git", "diff", "--no-ext-diff", start, "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
 # A new file not yet added to git is in okl's list but in no `git diff`, so a check run before the
 # commit never saw its code: it is shown as added, whole.
-tracked = set(run(["git", "ls-files", "-z", "--full-name", "--", *files]).stdout.split("\0")) if files else set()
+tracked = set(run(["git", "ls-files", "-z", "--full-name", "--", *[":(literal)" + f for f in files]]).stdout.split("\0"))
 for path in files:
     if path not in tracked and os.path.isfile(path) and not any(
             fnmatch.fnmatch(path, p) or fnmatch.fnmatch(os.path.basename(path), p) for p in exclude):
@@ -166,18 +180,29 @@ repo_note = ""
 if ENV.get("REVIEW_REPO_DIR"):
     repo_note = ("The repository is checked out at %s: read any file there you need, the code around the "
                  "change as well as the change. Change nothing." % ENV["REVIEW_REPO_DIR"])
+    # As ci/review-agent.sh says it: a coding agent refuses `cd <dir> && git` and `git -C`.
+    if ENV.get("GIT_DIR"):
+        repo_note += (" git already points at the checkout: run git merge-base and git rev-parse exactly as "
+                      "they are, with no cd and no -C (both are refused).")
 
 
 def call(prompt):
     """One fresh call of REVIEW_CMD, run from an empty folder: a coding agent started in the repo
     would have the repo's own hooks answer in its place (see ci/review-agent.sh). Returns its reply
     and, for a call that failed, why."""
+    limit = TIMEOUT
+    if DEADLINE:
+        left = int(DEADLINE - (time.monotonic() - STARTED))
+        if left <= 0:
+            return "", "the run's deadline (LESSON_REVIEW_DEADLINE, %ds) passed before it started" % DEADLINE
+        limit = min(limit, left)
     with tempfile.TemporaryDirectory() as clean:
         try:
             p = subprocess.run(CMD, input=prompt, capture_output=True, text=True, encoding="utf-8",
-                               errors="replace", cwd=clean, timeout=TIMEOUT)
+                               errors="replace", cwd=clean, timeout=limit, env=MODEL_ENV)
         except subprocess.TimeoutExpired:
-            return "", "it ran past LESSON_REVIEW_TIMEOUT (%ds)" % TIMEOUT
+            return "", "it ran past %ds, %s" % (limit, "the run's deadline (LESSON_REVIEW_DEADLINE)" if limit < TIMEOUT
+                                               else "LESSON_REVIEW_TIMEOUT")
         except OSError as e:
             return "", "it could not start: %s" % e
     if p.returncode != 0:
@@ -244,25 +269,36 @@ Reply with STRICT JSON and nothing else:
 reply, failed = call(pick_prompt)
 picked_reply = last_json(reply, lambda o: isinstance(o.get("picked"), list))
 if picked_reply is None:
-    why = failed or "its reply held no pick (a JSON object with a \"picked\" list)"
-    warn("no lesson review: the call that picks the lessons gave none, since %s" % why)
-    finish("%s\n\nNo review: the call that picks which lessons to check gave no pick, since %s. Re-run "
-           "the job before reading this change as checked against the lessons." % (HEAD, cell(why)), 0)
+    no_review("the call that picks which lessons to check gave no pick, since %s. Re-run the job before reading "
+              "this change as checked against the lessons"
+              % (failed or "its reply held no pick (a JSON object with a \"picked\" list)"))
 in_scope = {e["id"]: e for e in lessons}
-picked, unknown = [], []
-for i in picked_reply["picked"]:
-    i = str(i).strip().strip("[]")
+
+
+def resolve(raw):
+    """A picked id as the store holds it: as written, or else the one id in scope that ends in ':' and
+    it, since a model echoing `seed:pack:key` back often drops the namespace (lesson
+    model-echoed-ids-get-shortened). None when no id, or more than one, fits."""
+    i = str(raw).strip().strip("[]`").strip()
     if i in in_scope:
-        if i not in picked:
-            picked.append(i)
-    elif i:
-        unknown.append(i)
+        return i
+    tails = [k for k in in_scope if k.endswith(":" + i)] if i else []
+    return tails[0] if len(tails) == 1 else None
+
+
+picked, unknown = [], []
+for raw in picked_reply["picked"]:
+    i = resolve(raw)
+    if i is None:
+        if str(raw).strip():
+            unknown.append(str(raw).strip())
+    elif i not in picked:
+        picked.append(i)
 picked = picked[:PICK]
 if not picked:
-    named = ", ".join("`%s`" % cell(u, 80).replace("`", "") for u in unknown[:20]) or "nothing"
-    warn("no lesson review: the pick named no lesson in scope")
-    finish("%s\n\nNo review: the call that picks which lessons to check named no lesson in scope (it "
-           "named %s). Re-run the job before reading this change as checked against the lessons." % (HEAD, named), 0)
+    no_review("the call that picks which lessons to check named no lesson in scope (it named %s). Re-run the job "
+              "before reading this change as checked against the lessons"
+              % (", ".join(cell(u, 80) for u in unknown[:20]) or "nothing"))
 explanation = picked_reply.get("explanation") or []
 if isinstance(explanation, str):
     explanation = [explanation]
@@ -343,6 +379,10 @@ if explanation:
 report = "\n".join(out)
 
 if ON_GITHUB:
+    # A lesson left unchecked is on the pull request too, not only in the report (lesson
+    # model-reply-parse-fails-open-loudly).
+    for r in missed:
+        print("::warning title=%s::%s" % (prop("lesson review: %s not checked" % r["id"]), esc(r["why"])))
     for r in broken:
         where = ""
         if r.get("file"):
@@ -353,5 +393,7 @@ if ON_GITHUB:
             where = "file=%s,line=%d," % (prop(r["file"]), line)
         print("::%s %stitle=%s::%s" % ("error" if BLOCKING else "warning", where,
                                        prop("lesson review: %s" % r["id"]), esc(r.get("finding", ""))))
-finish(report, 1 if BLOCKING and broken else 0)
+# Blocking, a broken lesson fails the run (1), and a run that checked none of its lessons did not
+# run (2), never a pass.
+finish(report, (1 if broken else 2 if not done else 0) if BLOCKING else 0)
 PY

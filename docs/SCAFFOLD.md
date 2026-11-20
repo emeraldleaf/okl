@@ -39,7 +39,8 @@ The kit's scripts read these environment variables, each optional:
 | `LESSON_REVIEW_PICK` | `ci/lesson-review.sh` | how many lessons the picking call picks: 10 unless set |
 | `LESSON_REVIEW_PARALLEL` | `ci/lesson-review.sh` | how many lesson checks run at once: 4 unless set. Each is a call of its own either way |
 | `LESSON_REVIEW_TIMEOUT` | `ci/lesson-review.sh` | the seconds one call may take before its lesson counts as not checked: 900 unless set |
-| `LESSON_REVIEW_BLOCKING` | `ci/lesson-review.sh` | `1` fails the job when a check says the change breaks a lesson. Unset, the review reports and blocks nothing |
+| `LESSON_REVIEW_DEADLINE` | `ci/lesson-review.sh` | the seconds the whole run may take: past it no call starts and a running one is stopped, so the report is still written before a CI step's own timeout. none unless set |
+| `LESSON_REVIEW_BLOCKING` | `ci/lesson-review.sh` | `1` fails the job when a check says the change breaks a lesson (exit 1), and when the run checked no lesson at all (exit 2). Unset, the review reports and blocks nothing |
 | `LESSON_REVIEW_REPORT` | `ci/lesson-review.sh` | a file the report is also written to, for a step that posts it on the pull request |
 | `LESSON_REVIEW_STORE_NOTE` | `ci/lesson-review.sh` | a line the report carries about the lessons it read: the kit's workflow says when they are only okl's bundled packs |
 | `GENERATOR_MODEL`, `JUDGE_MODEL` | `evals/run_evals.py` | the models that answer and grade. The harness refuses to run when both are set and the same |

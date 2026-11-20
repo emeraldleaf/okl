@@ -371,6 +371,9 @@ jobs:
           REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           LESSON_REVIEW_TIMEOUT: "600"
+          # The whole run's limit, under the step's 30 minutes, so the report is written before the
+          # runner would stop the step (a pick and three rounds of checks at 600 s each outlast it).
+          LESSON_REVIEW_DEADLINE: "1500"
           LESSON_REVIEW_STORE_NOTE: "Checked against okl's seed packs only: the lessons recorded on the maintainer's machine are not in CI (#186)."
         run: |
           if [[ "${REVIEW_SEEDED:-}" != 1 ]]; then

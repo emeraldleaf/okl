@@ -10,9 +10,14 @@
   --format json`; then one fresh call per lesson, from an empty folder, gets the lesson's full text,
   the change and the path question. It writes one report, to the job summary, as annotations, and
   for okl's CI as one pull-request comment that each run replaces, posted by a job that runs no model
-  and none of the change's code. A pick that names no lesson, and a check that fails, are said in the
-  report, with the call's exit status and last error line. It blocks nothing unless
-  `LESSON_REVIEW_BLOCKING` is `1`, since its false-alarm rate in CI is not measured. It is off by
+  and none of the change's code. Every run writes a report, so a comment from an earlier push never
+  stands for this one: a pick that names no lesson, and a check that fails or gives no verdict, are
+  said in it and as annotations, with the call's exit status and last error line. A picked id the
+  model shortened (`gha_least_privilege` for `seed:ci-security:gha_least_privilege`) resolves to the
+  one lesson it ends. `LESSON_REVIEW_DEADLINE` bounds the whole run, so the report is written before
+  a CI step's timeout, and the model's environment holds none of okl's own `OKL_*` settings. It
+  blocks nothing unless `LESSON_REVIEW_BLOCKING` is `1` (then a broken lesson exits 1 and a run that
+  checked none exits 2), since its false-alarm rate in CI is not measured. It is off by
   default: `okl scaffold` ships it, and the kit's workflow runs it when `REVIEW_CMD` is set and the
   `LESSON_REVIEW` repository variable is `on`, eleven calls a run. On a runner it reads okl's bundled
   packs (or a shared store, `OKL_SERVICE_URL`), since a repo's recorded lessons stay in its gitignored

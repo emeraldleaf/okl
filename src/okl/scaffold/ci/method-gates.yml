@@ -107,12 +107,12 @@ jobs:
           OKL_TOKEN: ${{ secrets.OKL_TOKEN }}
         run: |
           # .github/okl-version pins the okl release, as okl-verify.yml reads it.
-          if [ -s .github/okl-version ]; then
+          if [[ -s .github/okl-version ]]; then
             pip install "observed-knowledge-ledger==$(tr -d '[:space:]' < .github/okl-version)"
           else
             pip install observed-knowledge-ledger
           fi
-          if [ -z "$OKL_SERVICE_URL" ]; then
+          if [[ -z "$OKL_SERVICE_URL" ]]; then
             export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/lessons.db" OKL_BRIEFING_LOG=0
             export LESSON_REVIEW_STORE_NOTE="Checked against okl's bundled packs only: the lessons this repository recorded stay in its gitignored .okl/."
             okl seed --all > /dev/null
