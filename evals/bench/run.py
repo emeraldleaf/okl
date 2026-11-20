@@ -4,7 +4,7 @@
     PYTHONPATH=src python3 evals/bench/run.py --label fulltext [--hybrid linear] [--rerank] \\
         [--split selection|heldout|all] > evals/results/bench-<date>-<label>.txt
 
-The corpus is the twelve committed seed packs, imported into a fresh store on every run, so the
+The corpus is every committed seed pack, imported into a fresh store on every run, so the
 receipt depends only on committed inputs and the code at its commit. The queries
 (evals/bench/queries.jsonl) carry the lesson each one should brief, its register (ticket,
 paraphrase, bug report) and its split. The selection split is for choosing; the held-out split

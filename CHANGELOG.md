@@ -39,6 +39,28 @@
   with the base repository's secrets on a pull request from anyone; the review jobs rely on
   `pull_request`, which gives a fork's pull request none. A test now fails on either trigger.
 
+- **Two packs for every repo: `test-quality` and `ci-security`** (16 lessons). `test-quality` holds
+  the test anti-patterns that let a test pass whatever the code does (no assertion, an unawaited
+  async assertion, an expected value computed by the code under test, an assertion only inside an
+  exception handler, a transformation test whose input needs no change, timing and order
+  dependence), from the .NET team's `test-anti-patterns` skill. `ci-security` holds the GitHub
+  Actions paths an outsider can trigger (`pull_request_target` running fork code, `${{ }}` with PR
+  text inside `run:`, comment commands with no author check, permissions, pinning) and AI agent
+  steps that read PR text or CI logs, from Sentry's `gha-security-review` and Trail of Bits'
+  `agentic-actions-auditor` skills. Each lesson restates its source in its own words and cites it;
+  `seed/THIRD_PARTY_NOTICES.md` lists the sources and licenses. Both packs are tagged `method` or
+  `security`, which every repo's interests include, so `okl init` imports them into a new store;
+  in a store that already holds lessons, `okl seed test-quality ci-security` adds them.
+
+- **The architecture review reads the change's CI results and reviews the whole diff** (#490). It
+  reported nothing to fix on four PRs where the same reviewer, run locally, found must-fixes. It now
+  takes the output of the jobs that ran without secrets (`REVIEW_CI_RESULTS_FILE`); reviews a diff
+  past `REVIEW_MAX_LINES` in parts split at file boundaries, merged into one verdict, naming any
+  part past `REVIEW_MAX_PARTS` as not reviewed, instead of cutting it at 4,000 lines; leaves
+  lockfiles and other data (`REVIEW_EXCLUDE`) out of the diff while listing them; and counts as
+  must-fix a CI failure the change caused, a demonstrable defect, a test that would pass on broken
+  code and a published claim its evidence does not support.
+
 ## 0.19.0
 
 - **Each check lists every path the lesson covers before it answers** (REPORT §4bl). §4bk found the

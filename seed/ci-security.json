@@ -1,0 +1,219 @@
+{
+  "_comment": "CI security: GitHub Actions workflows an outsider can trigger, and AI agent steps inside them. From Sentry's gha-security-review skill (github.com/getsentry/skills, Apache-2.0) for the threat model, the eight vulnerability classes and the safe patterns, and Trail of Bits' agentic-actions-auditor (github.com/trailofbits/skills, CC-BY-SA-4.0) for AI steps; written in my own words with each source cited, not copied, because CC-BY-SA would make a copied pack ShareAlike. Researched 2026-11-18. The two sources agree; where Sentry narrows a rule (first-party actions/* on version tags are outside its pinning policy), the lesson says so. Workflow-specific but not stack-specific, so applies_to is unset. Nothing here claims verification: a citation is not a check. Verify each against your own repo with `okl verify`.",
+  "nodes": [
+    {
+      "key": "gha_threat_model",
+      "aliases": [
+        "external attacker",
+        "who can trigger this workflow",
+        "write access threat model"
+      ],
+      "triggers": [
+        "Reviewing a GitHub Actions workflow for security",
+        "Auditing CI for supply chain or injection risks",
+        "Deciding whether a workflow finding is exploitable",
+        "Security review of .github/workflows",
+        "Writing up CI security findings"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Threat Model and Confidence",
+      "title": "Judge an Actions finding by what an outsider without write access can trigger",
+      "body": "The attacker who matters is someone without write access: they can open a pull request from a fork, open an issue and post a comment, and nothing else. Anything only a writer can start (workflow_dispatch inputs, push to a protected branch, schedule, a reusable workflow whose callers are all internal) is outside that model, because a writer could do worse by editing the workflow. Report a finding as confirmed only when the whole path is traced: entry point, payload, how it executes, what it gains. A path with a missing link needs verification, and a theoretical one is not reported.",
+      "symptom": "a CI security review reports issues only a repository writer could exploit, or reports a path without tracing how an outsider reaches it",
+      "fix": "start from the triggers an outsider can fire (pull_request, pull_request_target, issues, issue_comment); trace entry point, payload, execution and impact before calling a finding confirmed"
+    },
+    {
+      "key": "gha_pwn_request",
+      "aliases": [
+        "pull_request_target checkout",
+        "pwn request",
+        "privileged workflow runs fork code"
+      ],
+      "triggers": [
+        "Using pull_request_target so fork PRs can access secrets",
+        "Workflow needs to comment on pull requests from forks",
+        "Checking out the PR head ref in a pull_request_target workflow",
+        "Running tests on fork pull requests with secrets",
+        "Labeling or triaging PRs from forks with a workflow",
+        "workflow_run job that downloads artifacts from a PR build"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Check 1, Pwn Request; trailofbits/skills agentic-actions-auditor (CC-BY-SA-4.0): vector D",
+      "title": "pull_request_target that checks out and runs the PR's code gives a fork the base repository's secrets",
+      "body": "pull_request_target runs in the base repository's context, with its secrets and a token that can write, and any outsider triggers it by opening a pull request. On its own it runs only the base branch's code. Check out the PR head (`ref: ${{ github.event.pull_request.head.sha }}`) and then run anything from that checkout (an install script, a build, the tests, a local `./.github/actions/` action) and the fork's code runs with those secrets. Use pull_request instead: a fork's run gets a read-only token and no secrets. When a privileged step is needed, split it: an unprivileged pull_request job builds and uploads an artifact, and a privileged workflow_run job reads that artifact as data, never as code.",
+      "symptom": "a pull_request_target workflow checks out the PR head and then runs code or local actions from it",
+      "fix": "use pull_request; if fork PRs need a privileged step, split into an unprivileged build and a privileged workflow_run job that treats the artifact as data"
+    },
+    {
+      "key": "gha_expression_injection",
+      "aliases": [
+        "script injection",
+        "${{ }} in run",
+        "untrusted input in shell",
+        "github.head_ref injection"
+      ],
+      "triggers": [
+        "Using the PR title or branch name in a workflow run step",
+        "Echoing the issue body or comment text in a GitHub Actions script",
+        "Passing github.event data to a shell command in CI",
+        "Writing a workflow step that posts the PR title somewhere",
+        "Using github.head_ref in a run block",
+        "Building a commit message or tag from PR metadata in CI"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Check 2, Expression Injection, and Safe Patterns",
+      "title": "${{ }} with PR or issue text inside run: is shell injection; pass it through env:",
+      "body": "Actions expands `${{ }}` into the script text before the shell runs it, so a PR title, branch name, issue body or comment containing `\"; curl ... | sh #` becomes code. In a workflow an outsider can trigger, that is code execution with whatever the job holds. Move the value into the step's `env:` and use `\"$VAR\"` in the script: the shell then sees data. Expressions in `if:`, `with:` and `env:` are evaluated by Actions, not the shell, and numeric ids, SHAs and repository names are not attacker text, so those are safe. Linters such as actionlint and zizmor flag the unsafe form.",
+      "symptom": "a run: block contains ${{ github.event.pull_request.title }}, github.head_ref, an issue or comment body, or other text an outsider sets",
+      "fix": "map each such value to the step's env: and reference it quoted (\"$TITLE\"); run actionlint or zizmor in CI to catch new ones"
+    },
+    {
+      "key": "gha_comment_commands",
+      "aliases": [
+        "slash command workflow",
+        "issue_comment trigger",
+        "author_association check"
+      ],
+      "triggers": [
+        "Adding a /deploy or /test comment command to pull requests",
+        "Workflow triggered by issue_comment",
+        "Letting maintainers run CI by commenting on a PR",
+        "ChatOps command in GitHub Actions",
+        "Bot that responds to comments on issues"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Check 3, Unauthorized Command Execution",
+      "title": "A comment-triggered command that never checks who commented runs for any GitHub user",
+      "body": "An issue_comment workflow that acts on `/deploy` or `/run-tests` runs for anyone who can comment, which on a public repository is everyone. It runs in the base repository's context with its secrets. Check `github.event.comment.author_association` against OWNER, MEMBER or COLLABORATOR before doing anything, and never put the comment body into a run: block (see gha_expression_injection).",
+      "symptom": "an issue_comment workflow acts on a command without checking the commenter's author_association",
+      "fix": "gate the job on author_association in (OWNER, MEMBER, COLLABORATOR); pass any comment text through env:, never into run: directly"
+    },
+    {
+      "key": "gha_least_privilege",
+      "aliases": [
+        "workflow permissions",
+        "GITHUB_TOKEN scope",
+        "secrets in job env",
+        "long-lived PAT in CI"
+      ],
+      "triggers": [
+        "Creating a new GitHub Actions workflow",
+        "Adding a secret to a CI job",
+        "Workflow needs to push commits or create releases",
+        "Setting permissions for GITHUB_TOKEN",
+        "Using a personal access token in CI",
+        "Deploying from GitHub Actions to a cloud provider"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Check 4, Credential Escalation, and Check 7, Permissions and Secrets",
+      "title": "Set permissions: in every workflow, and give each secret to the one step that needs it",
+      "body": "Without a permissions: block the job's token gets the repository default, which is often write. A secret placed in workflow- or job-level env: is readable by every step and every third-party action in the job, not just the step that uses it. Start each workflow at `permissions: contents: read` and widen per job. Put each secret in the env: of the single step that needs it. Prefer the built-in token or OIDC to a long-lived personal access token, whose blast radius is everything its owner can reach.",
+      "symptom": "a workflow has no permissions: block, or a secret sits in workflow- or job-level env:, or a broad PAT is used where GITHUB_TOKEN or OIDC would do",
+      "fix": "permissions: contents: read at the top, widened per job; secrets only in the env: of the step that uses them; OIDC or GITHUB_TOKEN over PATs"
+    },
+    {
+      "key": "gha_pin_third_party",
+      "aliases": [
+        "pin actions to SHA",
+        "unpinned action",
+        "action tag moved",
+        "tj-actions"
+      ],
+      "triggers": [
+        "Adding a third-party GitHub Action to a workflow",
+        "Upgrading actions in CI",
+        "Using uses: someorg/action@v1 in a job that publishes a release",
+        "Hardening a workflow against supply chain attacks",
+        "Dependabot updates for GitHub Actions"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security",
+      "found_by": "getsentry/skills gha-security-review (Apache-2.0): Check 6, Supply Chain, and Safe Patterns",
+      "title": "Pin third-party actions to a full commit SHA when the job holds secrets or can write",
+      "body": "A tag like `@v2` is a pointer its owner, or whoever compromises the owner, can move; the next run then executes different code with the job's secrets. A 40-character commit SHA cannot move. Pin third-party actions and reusable workflows to a SHA with the version in a comment, and let Dependabot propose the bumps. Sentry's policy limits this to jobs with secrets, a write token, OIDC, or release, deploy, publish or signing power, and leaves first-party actions/* and github/* on version tags out of scope; pinning those too is stricter and harmless.",
+      "symptom": "a job with secrets or write power uses a third-party action by a movable tag or branch",
+      "fix": "pin to the full commit SHA with '# vX.Y.Z' beside it; enable Dependabot for github-actions to keep the pins current"
+    },
+    {
+      "key": "ai_step_untrusted_input",
+      "aliases": [
+        "prompt injection in CI",
+        "AI agent in GitHub Actions",
+        "env var intermediary",
+        "CI log injection",
+        "claude-code-action security"
+      ],
+      "triggers": [
+        "Adding an AI code review step to CI",
+        "Running Claude, Codex or Gemini in a GitHub Actions workflow",
+        "Passing the PR title and body to an AI reviewer",
+        "Feeding CI test output or logs to an AI agent",
+        "AI bot that triages issues or answers comments",
+        "Giving an AI agent in CI access to a secret or token",
+        "Letting the AI reviewer read CLAUDE.md or AGENTS.md from the PR"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security,agent-safety",
+      "found_by": "trailofbits/skills agentic-actions-auditor (CC-BY-SA-4.0): vectors A (env var intermediary), B (direct expression injection), C (CLI data fetch), E (error log injection); getsentry/skills gha-security-review (Apache-2.0): Check 5, Config File Poisoning",
+      "title": "An AI step that reads PR text, comments or the PR's CI logs is a prompt-injection sink: never give it a secret where an outsider can reach it",
+      "body": "Every route by which PR or issue text reaches the model counts: a `${{ }}` in the prompt, a variable set in env: that the prompt then reads, so the prompt itself shows nothing to search for, a `gh pr view` the agent runs, CI logs or build output the PR's own code printed, and instruction files (CLAUDE.md, AGENTS.md) read from the PR checkout. On a trigger an outsider can fire with secrets (pull_request_target, issue_comment, issues), that text can instruct an agent holding a token. Run an AI step that holds a secret only where outsiders get no secrets (pull_request: a fork's run has none), treat every one of those inputs as data, and give the agent read-only tools while a secret is in its environment. okl's own CI review reads PR text and CI logs, runs on pull_request, and soft-passes on fork PRs because they get no token.",
+      "symptom": "an AI agent step whose prompt includes PR, issue or comment text, CI output or PR-supplied instruction files runs with a secret on a trigger outsiders can fire",
+      "fix": "run secret-holding AI steps on pull_request (forks get no secrets), never pull_request_target or issue_comment with secrets; keep the agent's tools read-only while the secret is present"
+    },
+    {
+      "key": "ai_step_tool_limits",
+      "aliases": [
+        "allowed_tools is not a sandbox",
+        "dangerously-skip-permissions in CI",
+        "subshell expansion",
+        "eval AI output",
+        "allowed_non_write_users"
+      ],
+      "triggers": [
+        "Configuring allowed tools for an AI agent in CI",
+        "Running claude -p with Bash in a workflow",
+        "Using --dangerously-skip-permissions or --yolo in GitHub Actions",
+        "Codex action sandbox setting",
+        "Running a command the AI agent produced in a later workflow step",
+        "Letting any user trigger the AI action"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "security,agent-safety",
+      "found_by": "trailofbits/skills agentic-actions-auditor (CC-BY-SA-4.0): Rationalizations to Reject 2 and 4; vectors F (subshell expansion), G (eval of AI output), H (dangerous sandbox configs), I (wildcard allowlists)",
+      "title": "Restricting an AI step's tools is not a sandbox: shell expansion, permission-skipping flags and eval of its output each reopen it",
+      "body": "The shell expands what it is given before the allowed command runs, so permitting a harmless-looking command also permits whatever a nested `$(...)` inside its arguments does, printing the environment included; permitting a file reader permits reading the runner's credential files. Flags that switch protection off (`--dangerously-skip-permissions`, `--yolo`, `Bash(*)`, `danger-full-access`, `safety-strategy: unsafe`) undo the sandbox entirely, and a wildcard user allowlist (`allowed_non_write_users: \"*\"`) lets anyone trigger the agent. The output is input too: a later run: step that evals or interpolates the agent's output executes whatever the prompt talked it into. Allow only fixed read-only command prefixes while a secret is present, name the users who may trigger it, and treat the agent's output as data.",
+      "symptom": "a CI AI step allows general shell commands or runs with protections off, lets any user trigger it, or a later step evaluates its output",
+      "fix": "no general shell and no permission-skipping flags while a secret is present; allow only fixed read-only commands; no wildcard user allowlists; never eval or interpolate the agent's output into run:"
+    }
+  ],
+  "edges": []
+}

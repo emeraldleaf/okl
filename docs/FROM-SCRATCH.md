@@ -685,6 +685,7 @@ An empty store briefs nothing. Fill it in this order ([Seeding](SEEDING.md) has 
    | Python | `python-canon` |
    | .NET | `dotnet-canon`, `dotnet-decisions`, `dotnet-defects`, `dotnet-review-surfaces` |
    | React | `frontend-canon`, `react-defects` |
+   | Any | `test-quality`, `ci-security` |
 
 2. **Rules you already wrote.** Your rules files, ADRs, standards and specs become lessons that
    cite their source line ([Load your rules](LOAD-YOUR-RULES.md)). In Claude Code,

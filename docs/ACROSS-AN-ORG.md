@@ -14,8 +14,8 @@ what arrived is still true.
 
 A pack is a seed file: a JSON list of `org`-scoped lessons, each with its symptom, cause and
 fix, its tags, a `found_by` naming where it was paid for, and, where it governs code, the
-files and the check. The twelve bundled packs in [seed/](../seed/) are the worked example:
-real, dated records from several production codebases. `okl seed <path>` imports one, and
+files and the check. The bundled packs in [seed/](../seed/) are the worked example:
+most hold real, dated records from several production codebases. `okl seed <path>` imports one, and
 running it again on the edited file updates the same rows for records that carry a key, the
 id `okl seed` derives from it; a record without a key gets a fresh id on every import, so every
 pack row carries one. [SEEDING.md](SEEDING.md) lists the two things a re-seed will not do.

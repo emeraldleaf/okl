@@ -1728,3 +1728,103 @@
 {"lesson": "seed:react-defects:rx_useeffect_fetch", "kind": "vocabulary", "text": "data loading in a React hook with fetch and setState", "generator": "claude-opus-5-5"}
 {"lesson": "seed:react-defects:rx_useeffect_fetch", "kind": "vocabulary", "text": "server state versus client state in a React app", "generator": "claude-opus-5-5"}
 {"lesson": "seed:react-defects:rx_useeffect_fetch", "kind": "vocabulary", "text": "client-side caching and request deduplication for a React frontend", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Writing a test that calls the function and checks it doesn't crash", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Adding tests to raise coverage on a module that has none", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Reviewing a test file where several tests have no assert", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "symptom", "text": "A test passes but I'm not sure it checks anything", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Commenting out an assertion that started failing so the test passes", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Generating tests for every public method of a class", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "task", "text": "Smoke test that only runs the code path", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_no_assertion", "kind": "symptom", "text": "Our coverage is high but bugs still ship", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "Writing an async test that checks a promise resolves to a value", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "Testing that an async method throws", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "Converting tests to async/await", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "symptom", "text": "An async test passes even though the code is broken", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "symptom", "text": "RuntimeWarning: coroutine was never awaited in the test run", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "Setting up pytest for async tests", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "Jest test with expect(...).resolves", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_unawaited_async_assert", "kind": "task", "text": "xUnit test calling Assert.ThrowsAsync", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "task", "text": "Writing the expected value for a test by calling the function under test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "task", "text": "A test compares an object's field with itself", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "task", "text": "Test that asserts True", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "task", "text": "Computing the expected result in the test with the same helper the code uses", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "task", "text": "Reviewing a test whose expected value comes from the code under test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assertion_cannot_fail", "kind": "symptom", "text": "A refactor broke the logic but every test still passes", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Testing that a function raises an error", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Writing a test for invalid input that should throw", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "A test wraps the call in try/except and asserts in the handler", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Using pytest.raises(Exception) to check an error", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Test with an empty catch block", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Assert.ThrowsException<Exception> in a .NET test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_assert_in_handler", "kind": "task", "text": "Checking the error message of an exception in a test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "task", "text": "Writing a test for a normalize, trim, lowercase or slugify function", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "task", "text": "Testing a mapper that converts one record shape to another", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "task", "text": "Adding a serialize-then-parse round-trip test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "task", "text": "Testing a sanitizer or escaping function", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "symptom", "text": "A formatting function was replaced by a no-op and tests still passed", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_weak_transformation_oracle", "kind": "task", "text": "Testing path or URL canonicalization", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Writing a test that waits for a background task to finish", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Adding time.sleep to make a test pass", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Testing code that reads the current date or time", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "symptom", "text": "A test fails sometimes in CI but passes locally", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Testing a function that uses random numbers", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Test writes files under /tmp", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "symptom", "text": "A test fails around midnight or on a different time zone", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_flaky_time_random_sleep", "kind": "task", "text": "Retrying flaky tests in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "symptom", "text": "A test passes in the full suite but fails when run alone", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "symptom", "text": "Tests fail when run in a different order or in parallel", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "task", "text": "Using a module-level cache or global in code under test", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "task", "text": "Setting up shared fixtures for a test class", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "task", "text": "Turning on parallel test execution", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_order_dependency", "kind": "task", "text": "A singleton keeps state between tests", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_rank_by_false_confidence", "kind": "task", "text": "Reviewing a test suite for quality problems", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_rank_by_false_confidence", "kind": "task", "text": "Writing up findings from a test audit", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_rank_by_false_confidence", "kind": "task", "text": "Asked to review the tests in a pull request", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_rank_by_false_confidence", "kind": "task", "text": "Grading the tests an agent wrote", "generator": "claude-opus-5-5"}
+{"lesson": "seed:test-quality:tq_rank_by_false_confidence", "kind": "task", "text": "Prioritising which test problems to fix first", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_threat_model", "kind": "task", "text": "Reviewing a GitHub Actions workflow for security", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_threat_model", "kind": "task", "text": "Auditing CI for supply chain or injection risks", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_threat_model", "kind": "task", "text": "Deciding whether a workflow finding is exploitable", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_threat_model", "kind": "task", "text": "Security review of .github/workflows", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_threat_model", "kind": "task", "text": "Writing up CI security findings", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "Using pull_request_target so fork PRs can access secrets", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "Workflow needs to comment on pull requests from forks", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "Checking out the PR head ref in a pull_request_target workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "Running tests on fork pull requests with secrets", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "Labeling or triaging PRs from forks with a workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pwn_request", "kind": "task", "text": "workflow_run job that downloads artifacts from a PR build", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Using the PR title or branch name in a workflow run step", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Echoing the issue body or comment text in a GitHub Actions script", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Passing github.event data to a shell command in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Writing a workflow step that posts the PR title somewhere", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Using github.head_ref in a run block", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_expression_injection", "kind": "task", "text": "Building a commit message or tag from PR metadata in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_comment_commands", "kind": "task", "text": "Adding a /deploy or /test comment command to pull requests", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_comment_commands", "kind": "task", "text": "Workflow triggered by issue_comment", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_comment_commands", "kind": "task", "text": "Letting maintainers run CI by commenting on a PR", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_comment_commands", "kind": "task", "text": "ChatOps command in GitHub Actions", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_comment_commands", "kind": "task", "text": "Bot that responds to comments on issues", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Creating a new GitHub Actions workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Adding a secret to a CI job", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Workflow needs to push commits or create releases", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Setting permissions for GITHUB_TOKEN", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Using a personal access token in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_least_privilege", "kind": "task", "text": "Deploying from GitHub Actions to a cloud provider", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pin_third_party", "kind": "task", "text": "Adding a third-party GitHub Action to a workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pin_third_party", "kind": "task", "text": "Upgrading actions in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pin_third_party", "kind": "task", "text": "Using uses: someorg/action@v1 in a job that publishes a release", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pin_third_party", "kind": "task", "text": "Hardening a workflow against supply chain attacks", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:gha_pin_third_party", "kind": "task", "text": "Dependabot updates for GitHub Actions", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Adding an AI code review step to CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Running Claude, Codex or Gemini in a GitHub Actions workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Passing the PR title and body to an AI reviewer", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Feeding CI test output or logs to an AI agent", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "AI bot that triages issues or answers comments", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Giving an AI agent in CI access to a secret or token", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_untrusted_input", "kind": "task", "text": "Letting the AI reviewer read CLAUDE.md or AGENTS.md from the PR", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Configuring allowed tools for an AI agent in CI", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Running claude -p with Bash in a workflow", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Using --dangerously-skip-permissions or --yolo in GitHub Actions", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Codex action sandbox setting", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Running a command the AI agent produced in a later workflow step", "generator": "claude-opus-5-5"}
+{"lesson": "seed:ci-security:ai_step_tool_limits", "kind": "task", "text": "Letting any user trigger the AI action", "generator": "claude-opus-5-5"}

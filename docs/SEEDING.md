@@ -18,7 +18,10 @@ okl seed --all                        # import every pack (explicit on purpose)
 The packs hold real, dated records from production codebases (a .NET service, a
 geospatial ML pipeline, a Python RAG service, a React app), plus `python-canon`: the .NET
 packs' engineering rules translated to Python from cited sources (PEPs, the mypy, pytest
-and import-linter docs, Google's style guide), with the okl incidents that prompted them. They are org-scoped, so
+and import-linter docs, Google's style guide), with the okl incidents that prompted them. Two packs fit
+every repo: `test-quality` (tests that pass whatever the code does) and `ci-security` (GitHub Actions
+an outsider can trigger, and AI steps in CI), restated from skills the .NET team, Sentry and Trail of
+Bits published ([THIRD_PARTY_NOTICES](../seed/THIRD_PARTY_NOTICES.md)). They are org-scoped, so
 importing packs for stacks you do not use fills every briefing here with noise about
 frameworks you will never touch — which is why `--all` is opt-in rather than default.
 

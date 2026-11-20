@@ -1,0 +1,229 @@
+{
+  "_comment": "Test quality: the anti-patterns that make a test pass whatever the code does, in any language. Adapted from the .NET team's test-anti-patterns skill (github.com/dotnet/skills, plugins/dotnet-test/skills/test-anti-patterns, MIT), which gives each pattern's signs in .NET, pytest and Jest and ranks them by false confidence; Python linter rules named here are ruff's (docs.astral.sh/ruff/rules). Researched 2026-11-18. Only the patterns that give false confidence or make a suite unreliable are kept; naming, magic values and test size are left to the source, and over-mocking to python-canon's py_dont_mock_what_you_dont_own. Language-neutral, so applies_to is unset. Nothing here claims verification: a citation is not a check. Verify each against your own repo with `okl verify`.",
+  "nodes": [
+    {
+      "key": "tq_no_assertion",
+      "aliases": [
+        "test with no assert",
+        "assertion-free test",
+        "coverage touching",
+        "commented-out assertion"
+      ],
+      "triggers": [
+        "Writing a test that calls the function and checks it doesn't crash",
+        "Adding tests to raise coverage on a module that has none",
+        "Reviewing a test file where several tests have no assert",
+        "A test passes but I'm not sure it checks anything",
+        "Commenting out an assertion that started failing so the test passes",
+        "Generating tests for every public method of a class",
+        "Smoke test that only runs the code path",
+        "Our coverage is high but bugs still ship"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'No assertions', 'Coverage touching' and 'Commented-out assertions', ranked critical when the test passes regardless of correctness",
+      "title": "A test that asserts nothing passes whatever the code does",
+      "body": "A test that runs the code and never checks a result proves only that nothing threw. It stays green when the code returns the wrong answer, and it counts toward coverage, so the number rises while the protection doesn't. The same holds for a test whose assertion was commented out, and for a test class that calls every public member in turn and checks at most that the result is not null: that is coverage being collected, not behaviour being tested. A verification on a mock counts as an assertion only when the call is the behaviour under test. To find them: a pytest function with no assert and no pytest.raises, a Jest test with no expect, a .NET test with no Assert.",
+      "symptom": "a test runs the code but checks nothing: no assert or expect, an assertion commented out, or only a not-null check on each member it calls",
+      "fix": "assert the observable outcome the test's name promises; restore or delete commented-out assertions; for a coverage-touching class, write one real test per behaviour instead"
+    },
+    {
+      "key": "tq_unawaited_async_assert",
+      "aliases": [
+        "missing await",
+        "unawaited assertion",
+        "coroutine was never awaited",
+        "floating promise in test"
+      ],
+      "triggers": [
+        "Writing an async test that checks a promise resolves to a value",
+        "Testing that an async method throws",
+        "Converting tests to async/await",
+        "An async test passes even though the code is broken",
+        "RuntimeWarning: coroutine was never awaited in the test run",
+        "Setting up pytest for async tests",
+        "Jest test with expect(...).resolves",
+        "xUnit test calling Assert.ThrowsAsync"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Missing await on async assertions', ranked critical because it passes silently",
+      "title": "An async assertion that is never awaited passes even when it would fail",
+      "body": "`expect(promise).resolves.toBe(x)` without `await` or `return`, an `async Task` test that calls `Assert.ThrowsAsync` without `await`, and an async pytest test whose coroutine is never run all end before the check happens, so the test passes whatever the code does. The runner may print a warning (Python's 'coroutine was never awaited'), which nobody reads in a green run. A strict test runner turns that warning into a failure (see python-canon's py_strict_pytest), and a linter rule for floating promises (typescript-eslint's no-floating-promises) catches the JavaScript form.",
+      "symptom": "an async test passes with the code broken: its assertion's promise or coroutine is never awaited",
+      "fix": "await (or return) every async assertion; run async Python tests through a plugin (pytest-asyncio or anyio) and make warnings errors so a never-awaited coroutine fails the run"
+    },
+    {
+      "key": "tq_assertion_cannot_fail",
+      "aliases": [
+        "self-referential assertion",
+        "always-true assertion",
+        "assert x == x",
+        "tautological test"
+      ],
+      "triggers": [
+        "Writing the expected value for a test by calling the function under test",
+        "A test compares an object's field with itself",
+        "Test that asserts True",
+        "Computing the expected result in the test with the same helper the code uses",
+        "Reviewing a test whose expected value comes from the code under test",
+        "A refactor broke the logic but every test still passes"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Self-referential assertion' and 'Always-true assertions'; ruff PLR0124 (comparison-with-itself)",
+      "title": "An assertion whose expected value comes from the code under test can never fail",
+      "body": "`assert x == x`, `Assert.AreEqual(dto.Name, dto.Name)`, `assert True`, and an expected value computed by the same function or helper the code uses all pass whatever that code does. The last form is the one that slips through review, because it looks like a real comparison. A round trip or an identity contract is legitimate when its input exercises a transformation; the test is self-referential only when nothing independent fixes the expected value. In Python, ruff's PLR0124 catches the literal `x == x`; the computed form needs a reviewer.",
+      "symptom": "a test's expected value is the actual value, a constant true, or computed by the code under test, so breaking that code leaves it green",
+      "fix": "derive the expected value independently: a literal, a hand-worked fixture, or a second implementation; then break the code on purpose and watch the test fail"
+    },
+    {
+      "key": "tq_assert_in_handler",
+      "aliases": [
+        "assert in except",
+        "assert in catch",
+        "try/except in test",
+        "pytest.raises(Exception)",
+        "broad exception assertion"
+      ],
+      "triggers": [
+        "Testing that a function raises an error",
+        "Writing a test for invalid input that should throw",
+        "A test wraps the call in try/except and asserts in the handler",
+        "Using pytest.raises(Exception) to check an error",
+        "Test with an empty catch block",
+        "Assert.ThrowsException<Exception> in a .NET test",
+        "Checking the error message of an exception in a test"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Assert in catch block only', 'Swallowed exceptions' and 'Broad exception assertions'; ruff PT017, PT011 and B017",
+      "title": "A test that asserts only inside an exception handler passes when nothing is thrown",
+      "body": "`try: act()` with the assertion in `except` passes when `act()` returns normally, which is exactly the bug the test exists to catch. A test with an empty handler swallows the failure it should report. And `pytest.raises(Exception)` or `Assert.ThrowsException<Exception>` passes on any error at all, a TypeError from a typo included. Use the framework's raises helper and pin the type and the message. ruff flags all three in Python: PT017 (assert in except), PT011 (pytest.raises too broad) and B017 (raises Exception).",
+      "symptom": "an expected-error test passes when no error is raised, or when the wrong one is",
+      "fix": "use pytest.raises / Assert.ThrowsException / expect(fn).toThrow with the specific type and a match on the message; enable ruff PT017, PT011 and B017 in Python"
+    },
+    {
+      "key": "tq_weak_transformation_oracle",
+      "aliases": [
+        "input already normalized",
+        "no-op passes the test",
+        "round trip shares the defect",
+        "weak oracle"
+      ],
+      "triggers": [
+        "Writing a test for a normalize, trim, lowercase or slugify function",
+        "Testing a mapper that converts one record shape to another",
+        "Adding a serialize-then-parse round-trip test",
+        "Testing a sanitizer or escaping function",
+        "A formatting function was replaced by a no-op and tests still passed",
+        "Testing path or URL canonicalization"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Weak transformation oracle'",
+      "title": "A transformation test whose input is already in the expected form passes on a no-op",
+      "body": "A test for a normaliser that feeds it `'abc'` and expects `'abc'` passes if the function does nothing. The same goes for trimming, casing, escaping and mapping: if the input needs no change, the test cannot tell a working function from a missing one. A round trip (write then read) is useful but not sufficient, because both sides can share the defect and still agree. Pick an input that must change, assert an output derived independently, and keep one assertion on the external format when there is a round trip.",
+      "symptom": "replacing a transformation with a no-op leaves its tests green, because every test input is already in the output form",
+      "fix": "test with inputs that must change and expected values written out by hand; pair any round-trip test with one independent assertion on the format"
+    },
+    {
+      "key": "tq_flaky_time_random_sleep",
+      "aliases": [
+        "flaky test",
+        "sleep in test",
+        "wall clock in test",
+        "unseeded random",
+        "hard-coded /tmp"
+      ],
+      "triggers": [
+        "Writing a test that waits for a background task to finish",
+        "Adding time.sleep to make a test pass",
+        "Testing code that reads the current date or time",
+        "A test fails sometimes in CI but passes locally",
+        "Testing a function that uses random numbers",
+        "Test writes files under /tmp",
+        "A test fails around midnight or on a different time zone",
+        "Retrying flaky tests in CI"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Flakiness indicators'; ruff DTZ rules and S108",
+      "title": "Sleeps, wall-clock reads and unseeded randomness make a test pass or fail by timing",
+      "body": "A fixed sleep waits too long on a fast machine and too short on a loaded CI runner. Code that reads the clock directly (`datetime.now()`, `DateTime.UtcNow`, `Date.now()`) gives a different answer at midnight, at month end and in another time zone. Unseeded randomness and hard-coded paths (`/tmp/...`, `C:\\...`) or network hosts tie the result to the machine. Each one turns into a test that fails one run in fifty, and retrying it in CI hides the failure until it ships. In Python, ruff's DTZ rules flag naive clock reads and S108 flags hard-coded temp paths.",
+      "symptom": "a test fails intermittently, or only in CI, and contains a sleep, a direct clock read, unseeded randomness or a fixed path",
+      "fix": "wait on the condition with a deadline instead of a fixed sleep; inject a clock and a seeded random source; use the runner's temp directory (pytest's tmp_path)"
+    },
+    {
+      "key": "tq_order_dependency",
+      "aliases": [
+        "test pollution",
+        "shared mutable state between tests",
+        "passes in suite fails alone",
+        "test isolation"
+      ],
+      "triggers": [
+        "A test passes in the full suite but fails when run alone",
+        "Tests fail when run in a different order or in parallel",
+        "Using a module-level cache or global in code under test",
+        "Setting up shared fixtures for a test class",
+        "Turning on parallel test execution",
+        "A singleton keeps state between tests"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT): 'Test ordering dependency', ranked critical once one test is shown to need another to run first",
+      "title": "Tests that share mutable state pass in the suite and fail alone, or the reverse",
+      "body": "A module-level global, a static field, a cache or a singleton changed by one test and read by another makes the result depend on order. Setup that does not fully reset state does the same. The suite stays green until someone runs one test alone, reorders them, or turns on parallel runs, and then the failure points at an innocent test. Build fresh state for each test, reset globals in teardown, and run the suite in random order now and then (pytest-randomly does this for pytest) to find the tests that already depend on order.",
+      "symptom": "a test's result changes when it runs alone, in another order, or in parallel",
+      "fix": "give each test fresh state (function-scoped fixtures, reset in teardown), avoid module-level mutable state in code under test, and run the suite in random order to surface existing dependencies"
+    },
+    {
+      "key": "tq_rank_by_false_confidence",
+      "aliases": [
+        "test review severity",
+        "calibrate test findings",
+        "systemic finding"
+      ],
+      "triggers": [
+        "Reviewing a test suite for quality problems",
+        "Writing up findings from a test audit",
+        "Asked to review the tests in a pull request",
+        "Grading the tests an agent wrote",
+        "Prioritising which test problems to fix first"
+      ],
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method",
+      "found_by": "dotnet/skills test-anti-patterns (MIT), step 4 'Calibrate severity honestly'",
+      "title": "Rank test findings by false confidence: a test that cannot fail is critical, a naming nit is low",
+      "body": "A review that lists twenty naming and style notes at the same weight as one test that can never fail buries the finding that matters. Critical or high is for tests that give false confidence or are unreliable: no assertion, an unawaited assertion, an assertion that cannot fail, a proven order dependency. Medium is for maintainability that actively hurts, such as five or more near-identical tests that should be one parametrised test. Naming, magic values and message wording are low. When one pattern runs through a whole suite, report it once with its instances rather than once per test.",
+      "symptom": "a test review's one critical finding sits among many cosmetic ones at the same severity",
+      "fix": "rank by false confidence first; report a systemic pattern once with its instances; keep cosmetic notes low or leave them out"
+    }
+  ],
+  "edges": []
+}
