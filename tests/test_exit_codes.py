@@ -142,3 +142,79 @@ def test_the_crash_hook_turns_an_uncaught_error_into_exit_2(tmp_path):
         'if __name__ == "__main__":\n    import _ran\n    _ran.install()\nraise ValueError("malformed input")\n')
     p = subprocess.run([sys.executable, "ci/boom.py"], cwd=tmp_path, capture_output=True, text=True)
     assert p.returncode == 2 and "could not run" in p.stderr and "ValueError" in p.stderr
+
+
+def test_a_database_that_cannot_be_opened_is_exit_2_and_not_a_traceback(tmp_path, monkeypatch, capsys):
+    """A store okl cannot open ended the command in the driver's traceback and exit 1, which this CLI
+    keeps for findings: with a shared database down, a drift gate would have read the outage as drift
+    (#125). Any command now exits 2 with one line saying the store could not be opened or read."""
+    not_a_db = tmp_path / "store.db"; not_a_db.write_bytes(b"not an SQLite file. " * 60)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{not_a_db}")
+    assert main(["search", "login"]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and "Traceback" not in said.err
+    assert said.err.startswith("OKL: the store could not be opened or read (DatabaseError)") and said.err.count("\n") == 1
+
+
+def test_a_postgres_server_that_cannot_be_reached_is_exit_2(tmp_path, monkeypatch, capsys):
+    """The same for the shared store: a Postgres URL nothing answers on. Which error the driver
+    raises is the machine's to say (refused on macOS, a timeout on CI's Linux runner, where the
+    first version of this test named the kind and failed), so the kind is not asserted."""
+    import socket
+    pytest.importorskip("psycopg")
+    with socket.socket() as s:                 # a port that was free a moment ago, with nothing listening
+        s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OKL_DATABASE_URL", f"postgresql://okl@127.0.0.1:{port}/okl?connect_timeout=2")
+    assert main(["check", "--task", "add a login page"]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and "Traceback" not in said.err
+    assert said.err.startswith("OKL: the store could not be opened or read (") and said.err.count("\n") == 1
+
+
+def test_a_database_error_is_reported_in_one_line():
+    """A driver's message can run to many lines: psycopg lists every address it tried. The first
+    line says what failed, and an error with no message still names its kind."""
+    import sqlite3
+
+    from okl.cli import store_error_line
+    assert store_error_line(sqlite3.OperationalError("connection failed: refused\n- host: a\n- host: b")) \
+        == "OKL: the store could not be opened or read (OperationalError): connection failed: refused"
+    assert store_error_line(sqlite3.DatabaseError("")) == "OKL: the store could not be opened or read (DatabaseError): no message"
+
+
+def test_a_postgres_store_without_its_driver_names_the_extra(tmp_path, monkeypatch, capsys):
+    """With OKL_DATABASE_URL naming Postgres and psycopg not installed, `okl record` ended in a
+    RuntimeError traceback and exit 1 (#125). It exits 2 and names the extra to install."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setitem(sys.modules, "psycopg", None)      # as on a machine without the extra
+    monkeypatch.setenv("OKL_DATABASE_URL", "postgresql://okl@127.0.0.1:1/okl")
+    assert main(["record", "--type", "Rule", "--title", "t", "--scope", "org"]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and "Traceback" not in said.err
+    assert "observed-knowledge-ledger[postgres]" in said.err and said.err.startswith("OKL: ")
+
+
+def test_the_service_will_not_start_on_a_store_nothing_named(tmp_path, monkeypatch):
+    """`okl serve` with no OKL_DATABASE_URL opened ./okl.db in whatever directory it started in: a
+    deployment that lost the variable came up healthy, serving and writing a new, empty file (#125,
+    the service's half of #117). It now resolves its store as every command does, and refuses when
+    nothing names one, before it binds a port."""
+    pytest.importorskip("fastapi"); pytest.importorskip("uvicorn")
+    from okl import service
+    from okl.client import OKLNotConfiguredError
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(OKLNotConfiguredError, match="nothing names a store to serve"):
+        service.create_app()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("OKL_")}
+    env["PYTHONPATH"] = str(REPO / "src")
+    p = subprocess.run([sys.executable, "-m", "okl", "serve", "--host", "127.0.0.1", "--port", "0"],
+                       cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+    assert p.returncode == 2 and p.stdout == "" and "nothing names a store to serve" in p.stderr, p.stderr
+    assert not (tmp_path / "okl.db").exists(), "it must not invent a store"
+    # In a repo set up with okl, it serves that repo's store, as `okl check` reads it.
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "r"}')
+    from fastapi.testclient import TestClient
+    assert TestClient(service.create_app()).get("/health").json()["backend"] == "sqlite"
+    assert (tmp_path / ".okl" / "okl.db").exists() and not (tmp_path / "okl.db").exists()

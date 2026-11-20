@@ -2,8 +2,9 @@
 
 This is the "option 3" piece: one always-on service that owns the database, so
 any repo on any machine reaches the SAME curated knowledge via a URL. Storage is
-selected by OKL_DATABASE_URL (sqlite:///okl.db default, or postgres://... when
-you deploy) — the code here never changes when you promote the backend.
+the store OKL_DATABASE_URL names (postgres://... when you deploy), or else the one of
+the repo it starts in; with neither it refuses to start. The code here never changes
+when you promote the backend.
 
 Run: `okl serve` (or `uvicorn okl.service:app`).
 """
@@ -16,6 +17,7 @@ import threading
 from typing import Any, Literal
 
 from . import core, decide
+from .client import OKLNotConfiguredError, store_url
 from .store import Store
 
 
@@ -177,10 +179,12 @@ class VerifyReq(BaseModel):
 
 
 def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - a declarative route table, see pyproject
-    """Build the HTTP app over `store`, or over the store OKL_DATABASE_URL names.
+    """Build the HTTP app over `store`, or over the one okl resolves here: the store
+    OKL_DATABASE_URL names, else the one of the repo this runs in (`client.store_url`).
 
-    With neither, it uses ./okl.db in the current directory, so a deployment should
-    always set OKL_DATABASE_URL (#125). When OKL_TOKEN is set, every route except /health
+    With none, it raises OKLNotConfiguredError. It used to open ./okl.db in the current
+    directory, so a deployment that lost the variable came up healthy, serving and writing
+    a new, empty file. When OKL_TOKEN is set, every route except /health
     needs it as a bearer token and the API docs routes (/openapi.json, /docs, /redoc)
     are switched off.
     """
@@ -211,7 +215,14 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
                   openapi_url=None if private else "/openapi.json",
                   docs_url=None if private else "/docs",
                   redoc_url=None if private else "/redoc")
-    _store = store or Store()   # Store resolves OKL_DATABASE_URL itself
+    if store is None:
+        url = store_url()
+        if url is None:
+            raise OKLNotConfiguredError(
+                "nothing names a store to serve: set OKL_DATABASE_URL, or start the service in a repo "
+                "set up with `okl init`. It will not start on a new, empty okl.db in this directory.")
+        store = Store(url)
+    _store = store
     # Writes read a lesson, change it and write it back (record's existence check, update,
     # verify). The endpoints run on a thread pool, so two requests could interleave and
     # one change would be lost without an error: measured at 60 in 150 rounds of two

@@ -107,8 +107,10 @@ curl -s localhost:8080/health
 ```
 
 `backend` in that response is worth reading on every deploy. If it says `sqlite` when you
-expected `postgresql`, `OKL_DATABASE_URL` did not reach the process, and the service is
-happily serving an empty file-backed store that will vanish with the container.
+expected `postgresql`, `OKL_DATABASE_URL` did not reach the process, and the service found a
+repo's own store where it started. Where nothing names a store, it refuses to start (exit 2,
+or an error at startup under an ASGI host): it no longer opens a new, empty `okl.db` in the
+current directory, which came up healthy and vanished with the container.
 
 ## 4. Point repos at it
 

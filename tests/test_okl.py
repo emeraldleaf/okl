@@ -17,7 +17,7 @@ from urllib import request as _req
 import pytest
 
 from okl import core
-from okl.store import Node, ReviewRun, Store
+from okl.store import Edge, Node, ReviewRun, Store
 
 
 def check_floor(*args, **kwargs):
@@ -1673,6 +1673,21 @@ def _backend_conformance(store, label):
     # ASSERT (6) — limit is honoured
     assert len(store.search("ownership OR pin OR cache", limit=1)) <= 1
 
+    # ASSERT (6b) — a query with no word in it is a substring match over every matchable field,
+    # its own `%` and `_` literal, and the filters still apply. For `?!?!` SQLite ran an empty
+    # full-text query and found nothing, and Postgres matched title and body only (#125); a `%`
+    # passed through unescaped matched every row on both.
+    core.record(store, type="Defect", title="shouting log line", scope="org",
+                symptom="the last line ends in ?!?! and stops")
+    core.record(store, type="Defect", title="quiet twin", scope="org", fix="strip the ?!?! before parsing")
+    core.record(store, type="Defect", title="progress bar", scope="org", body="it shows 50 %% when half done")
+    assert {n.title for n in store.search("?!?!", limit=10)} == {"shouting log line", "quiet twin"}, \
+        f"{label}: a query with no word in it must match as a substring of symptom and fix too"
+    assert store.search("?!?!", node_types=["Rule"], limit=10) == [], f"{label}: filters apply to it"
+    assert [n.title for n in store.search("%%", limit=10)] == ["progress bar"], \
+        f"{label}: the query's own % must be literal"
+    assert len(store.search("", limit=1000)) == len(store.all_nodes()), f"{label}: an empty query matches all"
+
     # ASSERT (7) — upsert is idempotent AND keeps any derived index consistent with the
     # row. Re-writing a record with a changed symptom must change what finds it.
     # Distinctive single tokens, because search is OR-permissive: asserting the ABSENCE
@@ -1704,6 +1719,12 @@ def _backend_conformance(store, label):
     assert (a, "RECURS_IN", "some-repo") in {(e.src, e.rel, e.dst) for e in both}, \
         f"{label}: edges() dropped an edge whose far end is not a node"
     assert store.edges([]) == [], f"{label}: empty rels must return nothing"
+    # A repeated write of one edge replaces it: one row, with the later write's time. Postgres
+    # kept the first write (ON CONFLICT DO NOTHING) while SQLite replaced it (#125).
+    store.add_edge(Edge(src=a, rel="CATCHES", dst=b, created_at=1_000))
+    store.add_edge(Edge(src=a, rel="CATCHES", dst=b, created_at=2_000))
+    assert [e.created_at for e in store.edges(["CATCHES"]) if (e.src, e.dst) == (a, b)] == [2_000], \
+        f"{label}: writing an edge again must replace it, once, with the later time"
 
     # ASSERT (9) — the exposure log appends and reads back in order (#129). Two identical
     # briefings are two rows: exposure is a count, and a backend that upserted them would
@@ -1787,6 +1808,25 @@ def _backend_conformance(store, label):
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""
     _backend_conformance(store, "sqlite")
+
+
+def test_sqlite_without_fts5_meets_the_same_contract(tmp_path):
+    """An SQLite built without FTS5 searched for the whole query as one phrase, unranked: "ownership
+    unpinned" found nothing where each word had a record, and the best match led only by accident
+    (#125). The fallback now matches any word and ranks by the same field weights, so the one
+    contract body passes with the index switched off."""
+    bare = Store(f"sqlite:///{tmp_path / 'nofts.db'}")
+    bare._impl._has_fts = False
+    try:
+        _backend_conformance(bare, "sqlite without FTS5")
+        # A word in the title outranks the same word in a fix, as the weights say. The ids put the
+        # fix-only record first wherever the two tie, so an unweighted count fails this.
+        bare.add_node(Node(id="a-fix-only", type="Rule", title="unrelated housekeeping", scope="org",
+                           fix="feed the quokka daily"))
+        bare.add_node(Node(id="z-in-title", type="Rule", title="quokka enclosure rules", scope="org"))
+        assert [n.title for n in bare.search("quokka", limit=5)] == ["quokka enclosure rules", "unrelated housekeeping"]
+    finally:
+        bare.close()
 
 
 def test_postgres_backend_conformance():
@@ -2049,11 +2089,13 @@ def test_tags_are_searchable_but_never_outrank_content(store):
     # cannot do this: FTS5 MATCH finds by presence and bm25 weights only ORDER, so setting
     # the tags weight to 0.0 leaves the record findable and both assertions green while the
     # feature is silently off. Verified by setting it to 0.0 and watching them pass.
+    # The weights are written once, in the index's column order, and the ranking is built from them
+    # (they were a literal in the SQL, which this read out of the source, until #125 gave the
+    # search without FTS5 the same weights).
     from okl import store as store_module
-    src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
-    weights = [float(w.replace("{TRIGGERS_WEIGHT}", str(store_module.TRIGGERS_WEIGHT))) for w in
-               src.split("bm25(node_fts, ")[1].split(")")[0].split(", ")]
-    _id_w, title_w, _body_w, symptom_w, fix_w, tags_w, aliases_w, triggers_w = weights
+    assert list(store_module._FTS_WEIGHTS) == [c.split()[0] for c in store_module._FTS_COLS.split(", ")]
+    _id_w, title_w, _body_w, symptom_w, fix_w, tags_w, aliases_w, triggers_w = store_module._FTS_WEIGHTS.values()
+    assert triggers_w == store_module.TRIGGERS_WEIGHT and _id_w == 0
     assert aliases_w == symptom_w, "aliases are indexed with the symptom, at its weight (#258)"
     assert 0 < triggers_w <= title_w, "triggers rank, and never above a title match (#291)"
     assert tags_w > 0, "a zero weight indexes tags and then ignores them when ranking"

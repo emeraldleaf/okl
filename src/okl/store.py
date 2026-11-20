@@ -445,7 +445,8 @@ class Store:
         return old is not None and old.type == "Vocabulary"
 
     def add_edge(self, edge: Edge) -> None:
-        """Validate and write an edge; writing the same edge twice stores it once.
+        """Validate and write an edge; writing the same edge twice stores it once, with the
+        later write's time.
 
         Raises ValueError for an unknown relation. The ends are not checked to exist.
         """
@@ -474,9 +475,9 @@ class Store:
                node_types: Iterable[str] | None = None, limit: int = 25) -> list[Node]:
         """Return up to `limit` nodes matching any word of `query`, best match first.
 
-        `scope` and `node_types` filter exactly; None or empty means no filter. An empty
-        query matches every node, in no particular order. Without SQLite's FTS5 the
-        fallback matches the whole query as one phrase, unranked (#125).
+        `scope` and `node_types` filter exactly; None or empty means no filter. A query
+        with no word in it matches as a substring of any matchable field, unranked: an empty
+        one matches every node, and `!!!` the nodes that contain it.
         """
         return self._impl.search(query, scope, list(node_types) if node_types else None, limit)
 
@@ -490,7 +491,10 @@ class Store:
 
     def edges(self, rels: list[str]) -> list[Edge]:
         """Every edge whose relation is in `rels`. Deliberately dumb: interpretation lives
-        in core, once, so the two backends cannot disagree about what an edge means."""
+        in core, once, so the two backends cannot disagree about what an edge means.
+
+        `rels` names what to return, so an empty list returns nothing. It is not a filter,
+        as `rels` is in `neighbors` and `node_types` in `search`, where empty means all."""
         return self._impl.edges(list(rels))
 
     def all_nodes(self) -> list[Node]:
@@ -583,6 +587,12 @@ class Store:
         self._impl.close()
 
 
+class MissingExtraError(RuntimeError):
+    """A store was named that needs an optional extra which is not installed. Its message names
+    the extra; the CLI's backstop turns it into exit 2, where a bare RuntimeError ended `okl
+    record` with a traceback and exit 1, which reads as "findings" to a hook or a CI job."""
+
+
 def backend_errors() -> tuple[type[Exception], ...]:
     """What a backend raises when its database cannot be opened or read: sqlite3's errors,
     and psycopg's where that optional extra is installed. Neither is an OSError, so a caller
@@ -619,10 +629,19 @@ class _Backend(Protocol):
           (Postgres's websearch_to_tsquery ANDs by default, which silently tightens
           recall relative to SQLite.)
         - `limit` caps the rows returned; `scope` and `node_types` filter exactly.
+        - A query with no word in it (empty, or punctuation only) is a substring match
+          over title, body, symptom, fix, aliases and triggers, unranked, the query's own
+          `%` and `_` literal. SQLite ran an empty full-text query for `!!!` and found
+          nothing, while Postgres matched title and body only.
+        - SQLite built without FTS5 owes the same: any word, best first, by the same
+          field weights. Its fallback matched the whole query as one phrase, unranked.
 
       upsert_node / upsert_edge
         - Idempotent on the primary key: writing the same id twice replaces, never
           duplicates, and leaves any derived index consistent with the row.
+        - A replaced edge carries the later write's `created_at`. Postgres kept the
+          first write's, so an edge linked again today read back as today's in a local
+          store and as months old in a shared one.
 
       edges(rels)
         - Exactly the edges whose relation is in `rels`, each stored edge once.
@@ -692,7 +711,12 @@ TRIGGERS_WEIGHT = 4.0
 # on real prompts (§4ad): with the warm model on, it named 17.5% more lessons a prompt, past the
 # rule's 15%, so it stays a setting, off.
 FTS_TOKENIZE = "unicode61"
-_FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
+# One weight per full-text column, in the index's column order, written here and nowhere else: the
+# FTS5 ranking reads it, and so does the ranking an SQLite without FTS5 does in Python. They were two
+# literals for a moment, which the lesson review of that change caught. The id is not matched.
+_FTS_WEIGHTS = {"id": 0.0, "title": 8.0, "body": 4.0, "symptom": 4.0, "fix": 2.0, "tags": 1.0,
+                "aliases": 4.0, "triggers": TRIGGERS_WEIGHT}
+_FTS_COLS = "id UNINDEXED, " + ", ".join(c for c in _FTS_WEIGHTS if c != "id")
 _TOKENIZE = re.compile(r"""tokenize\s*=\s*(?:'([^']*)'|"([^"]*)"|(\w+)\s*[,)])""", re.I)
 
 
@@ -759,6 +783,30 @@ def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
 # ---------------------------------------------------------------------------
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
+# The fields that say what a record is about, with the weight of a word found there: every full-text
+# column but the id and the tags. A match in these sorts ahead of a tag-only one, and they are what a
+# search with no index to ask reads.
+_MATCHED = tuple((name, weight) for name, weight in _FTS_WEIGHTS.items() if name not in ("id", "tags"))
+
+
+def _words(q: str) -> list[str]:
+    """The words of a query: its runs of letters and digits. None for `!!!` or an empty one."""
+    return [t for t in "".join(ch if ch.isalnum() else " " for ch in q).split() if t]
+
+
+def _like(text: str) -> str:
+    """A LIKE pattern that finds `text` anywhere, with its own `%`, `_` and backslash escaped by a
+    backslash, the ESCAPE character each query names: unescaped, a search for `%` matched every row."""
+    return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+def _weighted_hits(node: Node, words: list[str]) -> float:
+    """How well `node` matches `words` with no full-text index to ask: each word counts once per
+    field it appears in, by that field's weight, whatever its case."""
+    return sum(weight for name, weight in _MATCHED for w in words
+               if w.lower() in (getattr(node, name) or "").lower())
+
+
 class _SQLiteBackend(_Backend):
     def __init__(self, path: str) -> None:
         import sqlite3
@@ -920,51 +968,73 @@ class _SQLiteBackend(_Backend):
             r = self.conn.execute("SELECT * FROM node WHERE id=?", (node_id,)).fetchone()
             return _row_to_node(dict(r)) if r else None
 
+    def _filters(self, scope: str | None, node_types: list[str] | None) -> tuple[str, list[Any]]:
+        """The exact filters as SQL on the node table `n`, with their parameters."""
+        sql, params = "", []
+        if scope:
+            sql += " AND n.scope=?"
+            params.append(scope)
+        if node_types:
+            sql += f" AND n.type IN ({','.join('?' for _ in node_types)})"
+            params += list(node_types)
+        return sql, params
+
+    def _search_unindexed(self, q: str, words: list[str], scope: str | None,
+                          node_types: list[str] | None, limit: int) -> list[Node]:
+        """Search with no full-text index. A query with no word in it is one substring, unranked.
+        Words, on an SQLite built without FTS5, match singly and are ranked here: the rows holding
+        any of them are read and sorted by `_weighted_hits`, ties in id order, since LIKE has no
+        relevance to order by."""
+        needles = words or [q]
+        field_sql = " OR ".join(f"n.{name} LIKE ? ESCAPE '\\'" for name, _ in _MATCHED)
+        where = " OR ".join(f"({field_sql})" for _ in needles)
+        params: list[Any] = [_like(w) for w in needles for _ in _MATCHED]
+        more, more_params = self._filters(scope, node_types)
+        # Only the fixed column names and "?" marks are interpolated; every value is bound.
+        sql = f"SELECT n.* FROM node n WHERE ({where}){more}"  # noqa: S608
+        if not words:
+            rows = self.conn.execute(sql + " LIMIT ?", [*params, *more_params, limit]).fetchall()
+            return [_row_to_node(dict(r)) for r in rows]
+        found = [_row_to_node(dict(r)) for r in self.conn.execute(sql, [*params, *more_params]).fetchall()]
+        found.sort(key=lambda n: (-_weighted_hits(n, words), n.id))
+        return found[:limit]
+
     def search(self, q: str, scope: str | None, node_types: list[str] | None,
                limit: int) -> list[Node]:
+        words = _words(q)
         with self._lock:
-            params: list[Any] = []
-            if self._has_fts and q.strip():
-                sql = ("SELECT n.* FROM node_fts f JOIN node n ON n.id=f.id "
-                       "WHERE node_fts MATCH ?")
-                params.append(_fts_query(q))
-            else:
-                sql = ("SELECT * FROM node n WHERE (title LIKE ? OR body LIKE ? "
-                       "OR symptom LIKE ? OR fix LIKE ? OR aliases LIKE ? OR triggers LIKE ?)")
-                params += [f"%{q}%"] * 6
-            if scope:
-                sql += " AND n.scope=?" if "node_fts" in sql else " AND scope=?"
-                params.append(scope)
-            if node_types:
-                marks = ",".join("?" for _ in node_types)
-                sql += f" AND {'n.' if 'node_fts' in sql else ''}type IN ({marks})"
-                params += list(node_types)
-            # FTS path: order by FTS5 relevance (rank) so the most task-relevant nodes come first,
-            # not insertion order. LIKE fallback has no relevance signal — leave unordered.
-            if "node_fts" in sql:
-                # Explicit column weights rather than bare `rank`, which weights every
-                # column equally: a term in the title should still beat the same term
-                # buried in a fix. One weight per FTS column, id first. The ratios track
-                # the Postgres tsvector weights so the two backends rank alike. They multiply
-                # each column's BM25 term score, which saturates in term frequency, so the
-                # effective per-hit ratios are nearer 1.9 : 1.7 : 1.7 : 1.4 : 1.0 than
-                # 8 : 4 : 4 : 2 : 1 (independent verification, 2026-10-22): the order is
-                # what the weights buy, not the magnitudes. aliases ranks with symptom (#258);
-                # triggers carry TRIGGERS_WEIGHT, measured on the retrieval bench (#291).
-                #
-                # Content matches ALWAYS sort ahead of tag-only matches; bm25 orders within
-                # each tier. The weights alone could not guarantee that: FTS5 normalises by
-                # the length of the whole row, so a record whose TITLE was about the subject
-                # but whose body ran past ~1,500 characters fell below five unrelated records
-                # that merely carried the tag (#1 -> #6). The tag column is tiny and scores
-                # high; no weight ratio survives an arbitrarily long body. Measured on the
-                # real store, tiering keeps every gain tag indexing bought, because the
-                # records tags lifted already matched on content — the tag was reordering
-                # within that tier, which is all it is now allowed to do.
-                # The one interpolated value is this module's float weight, never input.
-                sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"  # noqa: S608
-                        f" bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0, 4.0, {TRIGGERS_WEIGHT})")
-                params.append("{title body symptom fix aliases triggers} : (" + params[0] + ")")
+            if not (self._has_fts and words):
+                return self._search_unindexed(q, words, scope, node_types, limit)
+            sql = ("SELECT n.* FROM node_fts f JOIN node n ON n.id=f.id "
+                   "WHERE node_fts MATCH ?")
+            params: list[Any] = [_fts_query(q)]
+            more, more_params = self._filters(scope, node_types)
+            sql += more
+            params += more_params
+            # Order by FTS5 relevance so the most task-relevant nodes come first, not insertion order.
+            # Explicit column weights rather than bare `rank`, which weights every
+            # column equally: a term in the title should still beat the same term
+            # buried in a fix. One weight per FTS column, id first. The ratios track
+            # the Postgres tsvector weights so the two backends rank alike. They multiply
+            # each column's BM25 term score, which saturates in term frequency, so the
+            # effective per-hit ratios are nearer 1.9 : 1.7 : 1.7 : 1.4 : 1.0 than
+            # 8 : 4 : 4 : 2 : 1 (independent verification, 2026-10-22): the order is
+            # what the weights buy, not the magnitudes. aliases ranks with symptom (#258);
+            # triggers carry TRIGGERS_WEIGHT, measured on the retrieval bench (#291).
+            #
+            # Content matches ALWAYS sort ahead of tag-only matches; bm25 orders within
+            # each tier. The weights alone could not guarantee that: FTS5 normalises by
+            # the length of the whole row, so a record whose TITLE was about the subject
+            # but whose body ran past ~1,500 characters fell below five unrelated records
+            # that merely carried the tag (#1 -> #6). The tag column is tiny and scores
+            # high; no weight ratio survives an arbitrarily long body. Measured on the
+            # real store, tiering keeps every gain tag indexing bought, because the
+            # records tags lifted already matched on content — the tag was reordering
+            # within that tier, which is all it is now allowed to do.
+            # The interpolated values are this module's own weights and column names, never input.
+            sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"  # noqa: S608
+                    f" bm25(node_fts, {', '.join(str(w) for w in _FTS_WEIGHTS.values())})")
+            params.append("{" + " ".join(name for name, _ in _MATCHED) + "} : (" + params[0] + ")")
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -1099,8 +1169,7 @@ class _SQLiteBackend(_Backend):
 
 def _fts_query(q: str) -> str:
     """Turn free text into a safe FTS5 OR-query of quoted terms."""
-    terms = [t for t in "".join(ch if ch.isalnum() else " " for ch in q).split() if t]
-    return " OR ".join(f'"{t}"' for t in terms) or '""'
+    return " OR ".join(f'"{t}"' for t in _words(q)) or '""'
 
 
 # ---------------------------------------------------------------------------
@@ -1133,8 +1202,7 @@ def _pg_ts_query(q: str) -> str:
     """Free text -> an OR websearch query, mirroring _fts_query's permissive-OR semantics
     (websearch_to_tsquery ANDs terms by default, which would silently tighten recall vs
     the SQLite backend)."""
-    terms = [t for t in "".join(ch if ch.isalnum() else " " for ch in q).split() if t]
-    return " OR ".join(terms)
+    return " OR ".join(_words(q))
 
 
 class _PostgresBackend(_Backend):
@@ -1142,8 +1210,9 @@ class _PostgresBackend(_Backend):
         try:
             import psycopg
         except ImportError as e:  # pragma: no cover - only when pg selected
-            raise RuntimeError(
-                "Postgres backend needs 'psycopg' — install 'observed-knowledge-ledger[postgres]'"
+            raise MissingExtraError(
+                "the store is a Postgres database, which needs psycopg: install "
+                "'observed-knowledge-ledger[postgres]'"
             ) from e
         self.psycopg = psycopg
         self.conn = psycopg.connect(url, autocommit=True)
@@ -1218,7 +1287,7 @@ class _PostgresBackend(_Backend):
     def upsert_edge(self, edge: Edge) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO edge(src,rel,dst,created_at) VALUES(%s,%s,%s,%s) "
-                        "ON CONFLICT(src,rel,dst) DO NOTHING",
+                        "ON CONFLICT(src,rel,dst) DO UPDATE SET created_at=EXCLUDED.created_at",
                         (edge.src, edge.rel, edge.dst, edge.created_at))
 
     def _fetch(self, sql: str, params: Sequence[Any]) -> list[dict[str, Any]]:
@@ -1234,8 +1303,8 @@ class _PostgresBackend(_Backend):
 
     def search(self, q: str, scope: str | None, node_types: list[str] | None,
                limit: int) -> list[Node]:
-        # Ranked full-text when there's a query (parity with the SQLite FTS5/BM25 path);
-        # plain ILIKE only as the blank-query fallback. Without ranking, the shared
+        # Ranked full-text when the query has a word in it (parity with the SQLite FTS5/BM25 path);
+        # a substring match over the same fields as SQLite's only when it has none. Without ranking, the shared
         # service would silently degrade retrieval below the local-file baseline.
         tsq = _pg_ts_query(q)
         params: list[Any] = []
@@ -1246,8 +1315,9 @@ class _PostgresBackend(_Backend):
                    "@@ websearch_to_tsquery('english', %s)")
             params.append(tsq)
         else:
-            sql = "SELECT * FROM node WHERE (title ILIKE %s OR body ILIKE %s)"
-            params += [f"%{q}%", f"%{q}%"]
+            fields = " OR ".join(f"{name} ILIKE %s ESCAPE '\\'" for name, _ in _MATCHED)
+            sql = f"SELECT * FROM node WHERE ({fields})"  # noqa: S608 - fixed column names only
+            params += [_like(q)] * len(_MATCHED)
         if scope:
             sql += " AND scope=%s"; params.append(scope)
         if node_types:
