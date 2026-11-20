@@ -299,6 +299,16 @@ okl connect https://okl.internal --token "$OKL_TOKEN"
                      #   that holds a token is readable by its owner only. In CI and on shared
                      #   machines, give the token as OKL_TOKEN instead. `okl init --service <url>`
                      #   writes the same URL, with no token. Running the service: docs/DEPLOY.md.
+okl push --to https://okl.example --token "$TOKEN"
+                     # copy this repo's lessons and edges to a deployed okl service, one way:
+                     #   the copy CI reads, since a runner cannot see the gitignored local store.
+                     #   The local store stays the source of truth. Each lesson arrives whole
+                     #   (id, times, status, proof), only rows that differ are sent, and nothing
+                     #   is deleted. --to and --token are remembered in .okl/config.json as
+                     #   push_url and push_token, so a bare `okl push` repeats it; --dry-run says
+                     #   what would be sent, and sends and remembers nothing. http:// is taken
+                     #   only for a service on this machine. Exit 2 with no target, no local
+                     #   store, or a service that refused, is too old, or cannot be reached.
 okl serve            # run the shared HTTP service (needs the `service` extra); --host (default
                      #   0.0.0.0) and --port (default 8080). With OKL_TOKEN set, every route but
                      #   /health needs it. Without it, off loopback, serve refuses to start (exit

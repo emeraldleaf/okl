@@ -38,8 +38,15 @@ warning that every route is open.
 
 The write routes trust the caller as far as the token does. `POST /verify` records
 whatever evidence string it is sent (nothing is executed server-side), and
-`POST /record` accepts `verified: true` so imports can carry their stamps. On a shared
-deployment without a token, anyone who can reach the port can mark any rule verified.
+`POST /record` accepts `verified: true` so imports can carry their stamps. `POST /sync` writes
+whole rows as `okl push` sends them, stamps and status included, replacing the lesson with the
+same id. On a shared deployment without a token, anyone who can reach the port can mark any rule
+verified, or replace any lesson.
+
+`okl push` sends every lesson in the local store, and its edges, to the service you name: they
+say where your code is weak. It sends nothing else (no logs, no check runs, no embeddings), only
+when you run it, only over `https://` unless the service is on the same machine, and with the
+token you named for that service, never `OKL_TOKEN`.
 
 If you deploy it beyond localhost:
 

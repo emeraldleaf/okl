@@ -28,6 +28,7 @@ from typing import Any
 from . import decide, semantic, warm
 from . import rerank as rerank_stage
 from .store import (
+    EDGE_RELS,
     RETIRED_STATUSES,
     Edge,
     Node,
@@ -1409,6 +1410,48 @@ def same_files(a: str | None, b: str | None) -> bool:
 def link(store: Store, src: str, rel: str, dst: str) -> None:
     """Join two records with a typed edge, validating the relation."""
     store.add_edge(Edge(src=src, rel=rel, dst=dst))
+
+
+# The most rows one import takes. `okl push` sends fewer per request; the cap is the service's
+# guard against a body that holds the whole store, or anything else, in one request.
+IMPORT_MAX_ROWS = 500
+
+
+def import_rows(store: Store, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, int]:
+    """Write whole lessons and edges as another store holds them, replacing each by its id
+    (`okl push`). Not `record`: that makes a new lesson and stamps it now, while a copy must keep
+    each row's id, times, status and proof as its own store has them.
+
+    A declaration of a tag (a Vocabulary row) is written before the lessons that carry the tag,
+    and every row is validated as any write is. A field this okl does not know is left out, so
+    a newer client can push to an older service. Raises ValueError naming the row that is
+    malformed; the rows before it are written, and sending the batch again is harmless."""
+    if len(nodes) > IMPORT_MAX_ROWS or len(edges) > IMPORT_MAX_ROWS:
+        raise ValueError(f"an import takes at most {IMPORT_MAX_ROWS} lessons and {IMPORT_MAX_ROWS} edges at a time")
+    known = set(Node.__dataclass_fields__)
+    for row in sorted(nodes, key=lambda r: r.get("type") != "Vocabulary"):
+        if not isinstance(row.get("id"), str) or not row["id"].strip():
+            raise ValueError("an imported lesson has no id, so it cannot replace the row it copies")
+        try:
+            node = Node(**{k: v for k, v in row.items() if k in known})
+        except TypeError as e:
+            raise ValueError(f"imported lesson {row['id']!r} is not a whole row: {e}") from e
+        try:
+            store.add_node(node)
+        except ValueError as e:
+            raise ValueError(f"imported lesson {row['id']!r}: {e}") from e
+    for row in edges:
+        try:
+            edge = Edge(**{k: row[k] for k in ("src", "rel", "dst", "created_at")})
+        except KeyError as e:
+            raise ValueError(f"an imported edge has no {e.args[0]}: {row!r}") from e
+        store.add_edge(edge)
+    return {"nodes": len(nodes), "edges": len(edges)}
+
+
+def all_edges(store: Store) -> list[dict[str, Any]]:
+    """Every edge in the store, as rows: what `okl push` compares its own against."""
+    return [asdict(e) for e in store.edges(sorted(EDGE_RELS))]
 
 
 def verify(store: Store, node_id: str, evidence: str, commit: str | None = None) -> dict[str, Any]:

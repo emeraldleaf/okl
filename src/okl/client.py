@@ -11,6 +11,7 @@ import http.client
 import json
 import os
 import tempfile
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from urllib import request as _req
@@ -30,6 +31,7 @@ CONFIG_FILE = "config.json"
 CONFIG_KEYS = frozenset({
     "repo", "interests", "okl_bin", "ci", "git_hook", "review_after_writing", "owner", "owned",  # okl init
     "service_url", "token",                                    # okl connect
+    "push_url", "push_token",                                  # okl push
     "standing", "on_edit",                                     # okl standing, okl on-edit
     "decision", "warm", "hybrid", "rerank", "review_log",      # set by hand
 })
@@ -42,6 +44,9 @@ CONFIG_KEYS = frozenset({
 # hook now retries only a quick failure, and tests/test_remote_failures.py keeps its
 # worst case, two stalled addresses included, under that limit.
 _HTTP_TIMEOUT_S = 5
+# Rows per request of a push: each request must finish inside the timeout above, on a service
+# whose database is a network hop away, and stay under core.IMPORT_MAX_ROWS.
+_PUSH_ROWS = 100
 
 
 def store_url(start: Path | None = None) -> str | None:
@@ -163,10 +168,11 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
         gitignore.write_text("# okl: machine-local config, credentials and local store\n*\n")
     path = d / CONFIG_FILE
     text = json.dumps(data, indent=2) + "\n"
-    if not data.get("token"):
+    if not (data.get("token") or data.get("push_token")):
         path.write_text(text)
         return path
-    # A config holding the service token is a credential file, so it is owner-only (#98):
+    # A config holding a service's token (the one this repo reads, or the one `okl push` copies
+    # to) is a credential file, so it is owner-only (#98):
     # written with default permissions, every local user could read it. The token goes
     # into a NEW file that replaces the old one, never into the old one: chmod does not
     # revoke a handle another user already opened on a world-readable config, and the
@@ -311,6 +317,17 @@ class Client:
         self.review_after_writing = review_setting(os.environ.get("OKL_REVIEW_AFTER_WRITING"),
                                                    self.config.get("review_after_writing"), set_up)
         self._store: Store | None = None
+        self._named_target = False   # see for_service
+
+    @classmethod
+    def for_service(cls, url: str, token: str | None = None) -> Client:
+        """A client of the service at `url`, with `token`, whatever the environment names:
+        the target `okl push` copies to. OKL_SERVICE_URL and OKL_TOKEN belong to the service a
+        repo reads, and a push that honoured them would send one service's token to another."""
+        client = cls({"service_url": url, **({"token": token} if token else {})})
+        client.service_url = url
+        client._named_target = True
+        return client
 
     @property
     def review_log(self) -> bool:
@@ -387,7 +404,8 @@ class Client:
         every GET started 401-ing and surfaced as "unreachable" — an outage, for a
         credential problem.
         """
-        token = os.environ.get("OKL_TOKEN") or self.config.get("token")
+        token = self.config.get("token") if self._named_target else \
+            os.environ.get("OKL_TOKEN") or self.config.get("token")
         if token:
             req.add_header("Authorization", f"Bearer {token}")
 
@@ -761,6 +779,38 @@ class Client:
         if self.mode == "remote":
             return self._get("/metric/recurrence")["recurrence_after_arming"]
         return core.recurrence_rows(core.recurrence_report(self._local_store()))
+
+    def push_to(self, target: Client, *, dry_run: bool = False) -> dict[str, int]:
+        """Copy this repo's local lessons and edges to the service `target` names, one way, and
+        say how many were sent and how many were already there unchanged (`okl push`).
+
+        The local store stays the source of truth: nothing is read back into it, and nothing on
+        the service is deleted, since okl has no delete (a retired lesson's status is copied).
+        Only rows that differ from the service's are sent, so a push with nothing new is two
+        reads. With `dry_run` nothing is sent. Raises ValueError where this repo has no local
+        store, and OKLRejectedError where the service is too old to take a push."""
+        if self.mode == "remote":
+            raise ValueError("this repo reads a shared service (OKL_SERVICE_URL or `okl connect`), so it has "
+                             "no local store to push")
+        store = self._local_store()      # before any request: with no store there is nothing to send
+        try:
+            there = {r.get("id"): r for r in target._get("/nodes")["nodes"]}
+            edges_there = {(e["src"], e["rel"], e["dst"], e["created_at"]) for e in target._get("/edges")["edges"]}
+        except OKLRejectedError as e:
+            if e.status != 404:
+                raise
+            raise OKLRejectedError(_TOO_OLD.format(what="takes a push (/edges and /sync)"), status=404) from e
+        mine = [asdict(n) for n in store.all_nodes()]
+        nodes = sorted((row for row in mine if there.get(row["id"]) != row),
+                       key=lambda r: (r["type"] != "Vocabulary", r["id"]))
+        edges = [e for e in core.all_edges(store)
+                 if (e["src"], e["rel"], e["dst"], e["created_at"]) not in edges_there]
+        if not dry_run:
+            for i in range(0, len(nodes), _PUSH_ROWS):
+                target._post("/sync", {"nodes": nodes[i:i + _PUSH_ROWS], "edges": []})
+            for i in range(0, len(edges), _PUSH_ROWS):
+                target._post("/sync", {"nodes": [], "edges": edges[i:i + _PUSH_ROWS]})
+        return {"nodes": len(nodes), "edges": len(edges), "unchanged": len(mine) - len(nodes)}
 
     def all_nodes(self) -> list[Node]:
         """Return every node in the store, unfiltered (local store, or /nodes on a remote service).

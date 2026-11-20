@@ -148,6 +148,33 @@ Note the scope. `--scope org` is what makes a lesson cross repo boundaries; `--s
 keeps it local to the repo that recorded it. Getting this wrong is the most common way a
 shared store disappoints: everything is recorded, nothing propagates.
 
+### Or keep the local store, and push a copy for CI
+
+A repo that is not connected keeps its lessons in `.okl/okl.db`, which git ignores, so a CI
+runner cannot see them: the review on a pull request (`ci/lesson-review.sh`) then reads okl's
+bundled packs alone. `okl push` copies the local store to a service, one way, and CI reads the
+copy:
+
+```bash
+okl push --to https://okl.internal --token "$TOKEN" --dry-run   # what would be sent
+okl push --to https://okl.internal --token "$TOKEN"             # send it, and remember the target
+okl push                                                        # later: only what changed
+```
+
+In CI, give the job `OKL_SERVICE_URL` and `OKL_TOKEN` as secrets; the kit's `method-gates.yml`
+reads them. What to know:
+
+- **The local store stays the source of truth.** Work on the machine needs no network, nothing
+  is read back from the service, and the copy is as current as the last push.
+- **Each lesson arrives whole**, with its id, times, status and proof, and only rows that differ
+  are sent. Nothing is deleted, since okl has no delete: a retired lesson's status is copied.
+- **It copies lessons and edges.** Briefing logs, review logs, check runs and embeddings stay
+  on the machine that made them.
+- **One store pushes to one copy.** A second repo pushing to the same service overwrites any
+  lesson both hold, the bundled packs' included, with its own version.
+- **Plain `http://` is refused** except for a service on the same machine: a push sends every
+  lesson, and the token with them.
+
 ## 5. What failure looks like
 
 The service being unreachable, or refusing your token, must never be reported as "no

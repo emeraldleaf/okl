@@ -31,7 +31,7 @@ def _version() -> str:
 
 try:
     from fastapi import FastAPI, Header, HTTPException
-    from pydantic import BaseModel, ConfigDict
+    from pydantic import BaseModel, ConfigDict, Field
 except ImportError as e:  # pragma: no cover
     raise RuntimeError("The service needs FastAPI: install 'observed-knowledge-ledger[service]'") from e
 
@@ -154,6 +154,15 @@ class RetireReq(BaseModel):
     reason: str
     by: str | None = None
     obsolete: bool = False
+
+
+class SyncReq(BaseModel):
+    """Request body for POST /sync (core.import_rows): whole rows of another store."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+    edges: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CheckRunReq(BaseModel):
@@ -370,6 +379,24 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         from dataclasses import asdict
         rows = [asdict(n) for n in _store.all_nodes()]
         return {"nodes": rows, "count": len(rows)}
+
+    @app.get("/edges")
+    def edges(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        rows = core.all_edges(_store)
+        return {"edges": rows, "count": len(rows)}
+
+    # A copy of another store's rows, as `okl push` sends them: this service is then what CI
+    # reads in place of the gitignored store a runner cannot see. A malformed row is the
+    # caller's error and says which.
+    @app.post("/sync")
+    def sync(req: SyncReq, authorization: str | None = Header(default=None)) -> dict[str, int]:
+        _auth(authorization)
+        try:
+            with _write:
+                return core.import_rows(_store, req.nodes, req.edges)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     return app
 
