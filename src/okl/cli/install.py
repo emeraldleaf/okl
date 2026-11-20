@@ -728,7 +728,12 @@ def _worktree_of_a_set_up_checkout() -> Path | None:
     own = _find_config(here)
     if own is not None and (own.parent.parent == top or top in own.parent.parent.parents):
         return None
-    return main if (main / ".okl" / "config.json").is_file() else None
+    # is_file() raises for a path in a folder it cannot open, on Python 3.11 to 3.13 (lesson
+    # is-file-raises-in-unreadable-dir): a checkout okl cannot read is not one it uses.
+    try:
+        return main if (main / ".okl" / "config.json").is_file() else None
+    except OSError:
+        return None
 
 
 def _init_writes_nothing(args: argparse.Namespace) -> int | None:

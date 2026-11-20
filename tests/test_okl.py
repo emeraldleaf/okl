@@ -2554,6 +2554,16 @@ def test_drift_from_a_subfolder_reads_the_whole_repository(tmp_path, monkeypatch
         assert "1 rule(s) checked" in r.stdout
     # --repo-dir still means the folder it names.
     assert okl("drift", "--gate", "--repo-dir", ".").returncode == 2
+    # The commands reference states this default (lesson doc-claim-governs-doc-and-code).
+    commands = " ".join((Path(__file__).resolve().parents[1] / "docs" / "COMMANDS.md").read_text().replace("#", "").split())
+    assert "--repo-dir names the git checkout whose history it reads (default: the top of the git repository" in commands
+    # With no git to ask, drift is refused (2), never a traceback's exit 1, which a gate reads as drift.
+    from okl.cli import verification
+    monkeypatch.setattr(verification.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("git")))
+    assert verification._git_top(None) == "."
+    monkeypatch.undo()
+    monkeypatch.chdir(tmp_path / "src")
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
 
     (tmp_path / "src" / "a.py").write_text("x = 2\n")
     later = {**os.environ, "GIT_COMMITTER_DATE": f"@{int(time.time()) + 60} +0000",

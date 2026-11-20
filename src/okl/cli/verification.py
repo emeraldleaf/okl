@@ -718,8 +718,13 @@ def _git_top(given: str | None) -> str:
     none of them and drift said nothing was checked. "." outside git, where git answers nothing."""
     if given:
         return given
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                         encoding="utf-8", errors="replace")
+    # No git on PATH is "." too, never a traceback: Python exits 1 on one, which the pre-push hook and
+    # CI read as drift (lesson n_e7988ff536fb).
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace")
+    except OSError:
+        return "."
     return top.stdout.strip() if top.returncode == 0 and top.stdout.strip() else "."
 
 
