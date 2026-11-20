@@ -228,8 +228,8 @@ are briefed into an agent's context before a task and flagged for a re-check whe
 they govern change. Everything measured in [evals/REPORT.md](evals/REPORT.md) measures this.
 
 It is worth being precise about what that store fills up with, because "lessons a
-codebase has learned" invites the picture of a bug database. In the 183-record corpus
-in [seed/](seed/) it is mostly not that: **110 Rules, 20 Decisions and 7 Gates against
+codebase has learned" invites the picture of a bug database. In the 199-record corpus
+in [seed/](seed/) it is mostly not that: **126 Rules, 20 Decisions and 7 Gates against
 36 Defects** — conventions the code follows and trade-offs already settled, not a
 ledger of things that broke. Count it yourself:
 
@@ -368,7 +368,7 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
 The figure is also a transfer result. The eight tasks are fresh code written from a task
 prompt, and the defect classes they invite were learned in other projects: each task names
 its lesson in [evals/tasks.jsonl](evals/tasks.jsonl), and those lessons arrive through six of
-the twelve seed packs. On these bait tasks, a lesson paid for in one project prevented the
+the seed packs. On these bait tasks, a lesson paid for in one project prevented the
 defect in code written for another; whether that holds on real work in another repository is
 not yet measured (#254, #413). In the pooled runs the briefing held each task's lesson with three exceptions,
 whose arms measure the briefing without it: `exit_code_trust`'s ranked below the twelve-record
@@ -550,8 +550,8 @@ Installing okl is not free. It is worth knowing exactly what you are signing up 
 before you wire it into every prompt. Every number below was measured rather than
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
-bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261102-0123.json`](evals/results/briefing-size-20261102-0123.json)); the latency from the 161 seed records bundled before that.
+bundled seed pack, 199 records (`python3 evals/briefing_size.py`, receipt
+[`evals/results/briefing-size-20261119-0548.json`](evals/results/briefing-size-20261119-0548.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -597,8 +597,8 @@ because subagents are exactly where org rules get lost: a focused worker handlin
 subtask has the least context and the most need for "here is the mistake this codebase
 already made."
 
-**Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261102-0123.json)): the action list alone is ~400
+**Measured on every bundled seed pack (199 records), one representative task**
+([receipt](evals/results/briefing-size-20261119-0548.json)): the action list alone is ~400
 tokens at `--limit 3`, ~710 at `--limit 5` and ~1,150 at `--limit 12` (its one-line entries
 follow the limit), against ~1,580 for the full briefing. Cheap enough to call per subtask;
 `--decision calibrated` drops the one-line entries for the smallest list.
