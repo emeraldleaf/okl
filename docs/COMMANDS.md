@@ -305,6 +305,8 @@ okl serve            # run the shared HTTP service (needs the `service` extra); 
                      #   2), since every route would be open; --allow-no-token, or
                      #   OKL_ALLOW_NO_TOKEN=1, starts it anyway, for a proxy in front that
                      #   authenticates. Exit 2 as well when FastAPI or uvicorn is missing.
+                     #   It serves the store OKL_DATABASE_URL names, else the one of the repo it
+                     #   starts in, and exits 2 when nothing names one.
 okl mcp              # serve okl's MCP tools over stdio, for any agent that speaks MCP (needs the
                      #   `mcp` extra): okl_check, okl_search, okl_get, okl_record, okl_update and
                      #   okl_retire, on the same store as the CLI. The agent's MCP config starts

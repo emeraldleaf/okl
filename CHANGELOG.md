@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+- **The two store backends now agree in the places they differed, and a store that cannot be
+  opened is exit 2, not a traceback** (#125). Found while okl's own stores were all SQLite; they
+  matter once a team shares a Postgres one.
+  - **A database okl cannot open or read.** With `OKL_DATABASE_URL` naming a Postgres server that
+    was down, every command ended in the driver's traceback and exit 1, which okl keeps for
+    findings: a drift gate would have read an outage as drift. Every command now exits 2 with one
+    line saying the store could not be opened or read, and the prompt hook blocks with that
+    reason. The same holds for an SQLite file that is locked or is not a database.
+  - **Postgres without its driver.** `okl record` and `okl serve` ended in a traceback and exit 1;
+    they exit 2 and name the `[postgres]` extra.
+  - **`okl serve` with nothing naming a store** opened `./okl.db` wherever it started, so a
+    deployment that lost `OKL_DATABASE_URL` came up healthy, serving and writing a new, empty
+    file. It now resolves its store as every command does (the variable, else the repo it runs
+    in) and refuses to start when nothing names one.
+  - **Writing an edge again** replaces it with the later write's time on both backends; Postgres
+    kept the first write's.
+  - **A query with no word in it** (`!!!`, or an empty one) is a substring match over title,
+    body, symptom, fix, aliases and triggers on both, with the query's own `%` and `_` literal.
+    SQLite ran an empty full-text query and found nothing; Postgres matched title and body only;
+    and a search for `%` matched every row.
+  - **An SQLite built without FTS5** matches any word of the query and ranks by the same field
+    weights. It searched for the whole query as one phrase, unranked.
+  - **`Store.edges([])`** returns nothing, as documented: its list names what to return, where
+    the lists in `neighbors` and `search` are filters and empty means all. The contract test now
+    runs one body against SQLite, SQLite without FTS5 and Postgres.
+
 ## 0.20.0
 
 - **A session started in a git worktree gets okl's hooks, `okl init` there refuses to start a second

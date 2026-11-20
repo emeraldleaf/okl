@@ -27,6 +27,7 @@ from __future__ import annotations
 import sys
 
 from ..client import OKLUnreachableError
+from ..store import MissingExtraError, backend_errors
 from .parser import build_parser
 
 
@@ -40,10 +41,19 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except (ValueError, OKLUnreachableError) as e:
+    except (ValueError, OKLUnreachableError, MissingExtraError) as e:
         # The backstop, so no command can ever answer a rejected or unreachable service
         # with a Python traceback. Commands that can say something more specific catch
         # these themselves and never reach here; this exists so the ones that do not —
         # and the ones added later — still exit non-zero with a line a human can act on.
         print(f"OKL: {e}", file=sys.stderr)
+        return 2
+    except backend_errors() as e:
+        # The database itself: a Postgres server that cannot be reached, an SQLite file that is
+        # locked or not a database. With OKL_DATABASE_URL naming a shared server that was down,
+        # `okl check` ended in psycopg's traceback and exit 1, which this CLI keeps for
+        # "findings": a drift gate would have read an outage as drift. The first line says
+        # what failed; the rest of a driver's message is a list of the addresses it tried.
+        said = str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
+        print(f"OKL: the store could not be opened or read ({type(e).__name__}): {said}", file=sys.stderr)
         return 2
