@@ -468,10 +468,16 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                           "instead of a store — for CI with no store")
     pdr.set_defaults(func=cmd_drift)
 
-    pex = sub.add_parser("export", help="write the committed drift snapshot CI reads (okl-drift.json)")
-    pex.add_argument("--drift", action="store_true", required=True,
-                     help="the drift snapshot (the only export today; named so others can follow)")
-    pex.add_argument("-o", "--output", help="path (default: okl-drift.json at the project root)")
+    pex = sub.add_parser("export", help="write a committed file CI reads: the drift snapshot (okl-drift.json) "
+                                        "or the lessons (okl-lessons.jsonl)")
+    which = pex.add_mutually_exclusive_group(required=True)
+    which.add_argument("--drift", action="store_true", help="the drift snapshot CI's drift gate reads")
+    which.add_argument("--lessons", action="store_true",
+                       help="every lesson, for CI's review to read where it cannot see the store "
+                            "(OKL_DATABASE_URL=lessons:///<path> opens it, read-only)")
+    pex.add_argument("--check", action="store_true",
+                     help="with --lessons: write nothing; exit 1 when the file is not what the store would write")
+    pex.add_argument("-o", "--output", help="path (default: the file's name at the project root)")
     pex.add_argument("--allow-shrink", action="store_true",
                      help="write even when the committed snapshot is for another repo or holds rules "
                           "this store does not (refused otherwise, since they would leave CI's gate)")

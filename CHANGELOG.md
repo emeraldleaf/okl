@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **A repo can commit its lessons for CI to read, with nothing hosted** (`okl export --lessons`).
+  The review on a pull request read okl's bundled packs alone in CI, since a runner cannot see
+  the gitignored store: the lessons a repo recorded were never checked there. `okl export
+  --lessons` writes `okl-lessons.jsonl` at the project root, every lesson on one JSON line in id
+  order, so a changed lesson is a one-line diff. `OKL_DATABASE_URL=lessons:///<path>` opens the
+  file as a store that answers every read (the review's listing, `okl show`, a briefing, a
+  search) and refuses every lesson write with exit 2, since a write would vanish with the
+  process and the file is derived from the store, never the other way. Proof is left out: it
+  changes at each re-verification and the drift snapshot already carries it, and `okl show`
+  says so in place of "not proven yet". Once the file exists, a lesson recorded, updated,
+  retired or seeded refreshes it and says so, at the command line and in the MCP tools' replies;
+  `--check` exits 1 when the file is behind the store. A file that is not an export, or a line
+  that is not a lesson, is refused and named. The lessons become readable by anyone who can
+  read the repo.
+
 - **The two store backends now agree in the places they differed, and a store that cannot be
   opened is exit 2, not a traceback** (#125). Found while okl's own stores were all SQLite; they
   matter once a team shares a Postgres one.

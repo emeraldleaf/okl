@@ -203,6 +203,11 @@ def cmd_seed(args: argparse.Namespace) -> int:
             print(f"  ✓ {n} record(s) from {Path(t).name}")
         total += n
     print(f"✓ {'refreshed' if refresh else 'seeded'} {total} record(s) from {len(targets)} file(s)")
+    # A pack writes its lessons straight to the store, past the client's record: keep the
+    # committed lessons export in step here too, where the repo has one.
+    client.lessons_changed()
+    if client.export_refreshed is not None:
+        print(f"  refreshed {client.export_refreshed.name} — commit it so CI's review sees these lessons")
     if not interests and not refresh:
         print("  Note: no interests declared, so any imported record can surface in any")
         print('  briefing here. `okl init --interests "<subjects>"` narrows that.')

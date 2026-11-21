@@ -49,6 +49,11 @@ If you deploy it beyond localhost:
 - set `OKL_TOKEN` on any shared deployment, so no route but `/health` is open;
 - expect no rate limiting, no audit log of reads, and no per-user access control.
 
+A committed lessons export (`okl export --lessons`, `okl-lessons.jsonl`) puts every lesson in the
+repository, for CI's review to read. Your lessons say where your code is weak: in a public
+repository the file is public. Nothing writes it until you run that command once; after that,
+recording, updating, retiring or seeding a lesson refreshes it.
+
 ### 2. `okl verify --run` executes a shell command by design
 
 The verification command runs whatever you pass to `--run` through a shell, reads the

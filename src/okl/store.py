@@ -21,6 +21,7 @@ import uuid
 import weakref
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 # Node types and edge relations are closed vocabularies (design doc §3.2).
@@ -398,25 +399,97 @@ class ReviewRun:
     checks: tuple[dict[str, Any], ...] = ()
 
 
+# The lessons a repo commits for CI to read (`okl export --lessons`): one JSON object a line, a
+# header first, then every lesson in id order. A runner cannot see the gitignored store, so the
+# review on a pull request read okl's bundled packs alone. A line per lesson, sorted, so a
+# change to one lesson is a one-line diff and two branches that each add a lesson rarely conflict.
+LESSONS_FILE = "okl-lessons.jsonl"
+LESSONS_SCHEME = "lessons:///"
+# What the export leaves out: a lesson's proof. It changes at every re-verification, which would
+# rewrite most lines of the file each time, and the committed drift snapshot already carries it.
+_NOT_EXPORTED = ("verified_at", "verified_by", "verified_commit")
+
+
+def dump_lessons(nodes: Iterable[Node], repo: str) -> str:
+    """The text of a lessons export: derived from the store, sorted, the same for the same lessons."""
+    lines = [json.dumps({"okl_lessons": 1, "repo": repo}, sort_keys=True)]
+    for n in sorted(nodes, key=lambda n: n.id):
+        row = {k: v for k, v in asdict(n).items() if v is not None and k not in _NOT_EXPORTED}
+        lines.append(json.dumps(row, sort_keys=True, ensure_ascii=False))
+    return "\n".join(lines) + "\n"
+
+
+def load_lessons(text: str, name: str = LESSONS_FILE) -> list[Node]:
+    """The lessons in an export's text, a tag's declaration before the lessons that carry it.
+    Raises ValueError naming the line that is not a lesson, or a file that is not an export."""
+    lines = text.splitlines()
+    try:
+        head = json.loads(lines[0]) if lines else None
+    except ValueError:
+        head = None
+    if not isinstance(head, dict) or head.get("okl_lessons") != 1:
+        raise ValueError(f"{name} is not a lessons export: its first line must be the header "
+                         "`okl export --lessons` writes")
+    known, nodes = set(Node.__dataclass_fields__), []
+    for number, line in enumerate(lines[1:], 2):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+            nodes.append(Node(**{k: v for k, v in row.items() if k in known and k not in _NOT_EXPORTED}))
+        except (ValueError, TypeError, AttributeError) as e:
+            raise ValueError(f"{name} line {number} is not a lesson: {e}") from e
+    return sorted(nodes, key=lambda n: n.type != "Vocabulary")
+
+
 class Store:
     """Facade over whichever backend the environment selects."""
 
     def __init__(self, url: str | None = None) -> None:
         url = url or os.environ.get("OKL_DATABASE_URL") or "sqlite:///okl.db"
         self.url = url
+        # A committed export of lessons, read into memory: it answers every read as a store does
+        # and takes no lesson, since a write would vanish with the process and the file is
+        # derived from the author's store, never the other way (lesson n_09ba6adf0fdc).
+        self.read_only = url.startswith(LESSONS_SCHEME)
         if url.startswith("postgres"):
             self._impl: _Backend = _PostgresBackend(url)
         elif url.startswith("sqlite"):
             path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else ":memory:"
             self._impl = _SQLiteBackend(path)
+        elif self.read_only:
+            self._impl = _SQLiteBackend(":memory:")
         else:
             raise ValueError(f"unsupported OKL_DATABASE_URL scheme: {url!r}")
         try:
             self._impl.init_schema()
+            self._declared: set[str] | None = None
+            if self.read_only:
+                self._read_export(url[len(LESSONS_SCHEME):])
         except Exception:
             self._impl.close()   # a store that fails to open leaves no connection behind
             raise
-        self._declared: set[str] | None = None
+
+    def _read_export(self, path: str) -> None:
+        """Fill this store from the lessons export at `path`, each lesson validated as any write is."""
+        try:
+            text = Path(path).read_text(encoding="utf-8")
+        except OSError as e:
+            raise ValueError(f"the lessons export {path} cannot be read: {e}") from e
+        for node in load_lessons(text, Path(path).name):
+            try:
+                node.validate(set() if node.type == "Vocabulary" else self.declared_tags())
+            except ValueError as e:
+                raise ValueError(f"{Path(path).name}: lesson {node.id!r}: {e}") from e
+            if node.type == "Vocabulary":
+                self._declared = None
+            self._impl.upsert_node(node)
+
+    def _refuse_a_write(self, what: str) -> None:
+        if self.read_only:
+            raise ValueError(f"this store is a committed export of lessons ({self.url[len(LESSONS_SCHEME):]}), "
+                             f"which is read-only, so it cannot {what}. Do that in the store the export was "
+                             "written from, then run `okl export --lessons` and commit the file.")
 
     # -- writes -------------------------------------------------------------
     def add_node(self, node: Node) -> str:
@@ -424,6 +497,7 @@ class Store:
 
         Raises ValueError if the node is malformed or uses a tag this store has not declared.
         """
+        self._refuse_a_write("record or change a lesson")
         # Validate against the floor PLUS whatever this store has declared. A
         # Vocabulary node is checked against the floor only, so declaring a tag can
         # never require the tag it is declaring.
@@ -450,6 +524,7 @@ class Store:
 
         Raises ValueError for an unknown relation. The ends are not checked to exist.
         """
+        self._refuse_a_write("link lessons")
         edge.validate()
         self._impl.upsert_edge(edge)
 
@@ -520,6 +595,7 @@ class Store:
     def log_retirement(self, node_id: str, kind: str, reason: str,
                        by: str | None = None) -> None:
         """Append why and how a lesson was retired. Append-only, like the exposure log."""
+        self._refuse_a_write("retire a lesson")
         self._impl.log_retirement(Retirement(at=_now_ms(), node_id=node_id, kind=kind,
                                              reason=reason, by=by))
 
@@ -532,6 +608,7 @@ class Store:
                   expect: str | None = None, commit: str | None = None,
                   seconds: float | None = None) -> None:
         """Append one run of a lesson's check. Append-only: each run is a row."""
+        self._refuse_a_write("keep a check's run")
         self._impl.log_check(CheckRun(at=_now_ms(), node_id=node_id, passed=passed,
                                       command=command, outcome=outcome, expect=expect,
                                       commit=commit, seconds=seconds))

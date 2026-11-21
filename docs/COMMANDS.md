@@ -111,6 +111,15 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   this store does not (another clone's), or to write one for another
                      #   repo, and names them; --allow-shrink writes it anyway. --output (-o)
                      #   writes it to another path (default: okl-drift.json at the project root).
+okl export --lessons # write okl-lessons.jsonl at the project root: every lesson, one JSON line
+                     #   each in id order, without its proof (the drift snapshot carries that).
+                     #   Commit it and CI's review can read your lessons where it cannot see the
+                     #   gitignored store: OKL_DATABASE_URL=lessons:///<path> opens the file as a
+                     #   store that answers every read and refuses every lesson write. Once the
+                     #   file exists, a lesson recorded, updated, retired or seeded refreshes it
+                     #   and says so. --check writes nothing and exits 1 when the file is not
+                     #   what the store would write; -o names another path. The lessons become
+                     #   readable by anyone who can read the repo.
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
                      #   read from Claude Code's settings files (the user's in CLAUDE_CONFIG_DIR

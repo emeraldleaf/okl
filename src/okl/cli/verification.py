@@ -680,12 +680,23 @@ def _write_snapshot(client: Client, path: Path, *, allow_shrink: bool = False) -
 
 
 def cmd_export(args: argparse.Namespace) -> int:
-    """Write the committed drift snapshot CI reads when it has no store (issue #36)."""
+    """Write a committed file CI reads when it has no store: the drift snapshot (issue #36), or
+    with --lessons the lessons its review checks a change against."""
     client = Client()
     if not client.configured:
         print("OKL NOT CONFIGURED — nothing to export. Run `okl init`, `okl connect <url>`, "
               "or set OKL_DATABASE_URL.", file=sys.stderr)
         return 2
+    if getattr(args, "lessons", False):
+        return _export_lessons(client, args)
+    if getattr(args, "check", False):
+        print("okl export: --check goes with --lessons", file=sys.stderr)
+        return 2
+    return _export_drift(client, args)
+
+
+def _export_drift(client: Client, args: argparse.Namespace) -> int:
+    """`okl export --drift`: the snapshot CI's drift gate reads."""
     path = Path(args.output) if args.output else _snapshot_path()
     try:
         n = _write_snapshot(client, path, allow_shrink=getattr(args, "allow_shrink", False))
@@ -709,6 +720,30 @@ def cmd_export(args: argparse.Namespace) -> int:
         return 2
     print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
     _warn_off_branch(client, snapshot=path)
+    return 0
+
+
+def _export_lessons(client: Client, args: argparse.Namespace) -> int:
+    """`okl export --lessons`: write every lesson to the file CI's review reads, or with --check
+    say whether the file is current. Exit 0 written or current, 1 when --check finds it is not,
+    2 when the store cannot be read."""
+    from ..store import LESSONS_FILE, LESSONS_SCHEME
+    path = Path(args.output) if args.output else project_root() / LESSONS_FILE
+    try:
+        if args.check:
+            if client.lessons_export_is_current(path):
+                print(f"{path.name} is current: it holds what this store would write")
+                return 0
+            print(f"{path.name} is not what this store would write: run `okl export --lessons` and commit it, "
+                  "or CI's review reads lessons as they were", file=sys.stderr)
+            return 1
+        path, n = client.write_lessons_export(path)
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — nothing exported.\n{e}", file=sys.stderr)
+        return 2
+    print(f"wrote {path}: {n} lesson(s), without their proof. Commit it: a CI job that sets "
+          f"OKL_DATABASE_URL={LESSONS_SCHEME}<its path> reads these lessons, read-only. From now on a "
+          "lesson recorded, updated or retired here refreshes it.")
     return 0
 
 

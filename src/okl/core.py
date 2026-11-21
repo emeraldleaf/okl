@@ -1300,6 +1300,8 @@ def get(store: Store, node_id: str) -> dict[str, Any] | None:
     if n is None:
         return None
     d = _node_public(n)
+    if store.read_only:
+        d["proof_not_exported"] = True
     d["retirements"] = [asdict(r) for r in store.retirements(node_id)]
     runs = store.checks(node_id)
     d["checks"] = [asdict(r) for r in runs[-CHECKS_SHOWN:]]
