@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- **The review after writing can run at a push, in the background, a branch in full once**
+  (`ci/lesson-review.sh --before-push`, from git's pre-push hook). A session's Stop hook asks for the review once per
+  session, and on okl's own repo a session that opened five pull requests ran it for none of
+  them; CI's review reads the bundled packs alone, since a runner cannot see the store. Before
+  a push it runs on the machine that holds every lesson, publishes nothing and needs nothing
+  hosted. `okl init --review-before-push "<reviewer>"` turns it on: it records the setting and the
+  reviewer (`"review_before_push"` and `"review_cmd"`), installs the pre-push hook, and puts
+  `ci/lesson-review.sh` in the repo when it has none; `--no-review-before-push` turns it off. It runs in the background and the push goes at once: held for the review, every push of a
+  new change waited about five minutes, and a fix pushed three times waited three times. A
+  report with a broken lesson in it is shown at the next push and added to the agent's next
+  briefing, once. A branch is reviewed in full at its first push; a later
+  push checks again only the lessons that review reported broken, a call each, so a branch costs
+  one review and not one a push. A change already reviewed is not reviewed again (the change's
+  diff is remembered in the repository's git directory, shared by its worktrees, and only once
+  its report is out), and a push made while its review runs starts no second one.
+  `--review-holds-push` (`"review_before_push": "hold"`) runs it in the foreground and holds the
+  push once when a lesson is reported broken: pushed again as it is, the same change goes, so a
+  false alarm costs one push and no flag. A review that could not run never
+  holds a push: it says LESSONS NOT REVIEWED and exits 2, "did not run" (no reviewer, no script,
+  no verdict, or a fault in the script itself, which exited 1 and would have read as a hold). It
+  reviews what is pushed, the commits and never the work in progress, and not a push of some
+  other commit than the checked-out one. It stops after 480 seconds unless
+  `LESSON_REVIEW_DEADLINE` says otherwise. `LESSON_REVIEW_ONCE=1` makes a review run by hand
+  count for the push. `OKL_REVIEW_BEFORE_PUSH=0` or `1` decides one push. okl's hook hands the
+  script the okl it resolved, and the script reads it and the reviewer as command lines, so a
+  program in a folder with a space in its name is found. `okl init` says when the setting is on
+  and a hook or a script already there cannot run it. The mode was run for real on its own change
+  before it was pushed, against a store of 341 lessons: its first run reported seven lessons
+  broken in 278 seconds and its second three more, all ten real, each from a lesson recorded in
+  the repo that CI's review cannot see, and all fixed in the same change.
+
 - **The two store backends now agree in the places they differed, and a store that cannot be
   opened is exit 2, not a traceback** (#125). Found while okl's own stores were all SQLite; they
   matter once a team shares a Postgres one.

@@ -27,33 +27,61 @@
 # store made for the job: a repo's own recorded lessons stay in its gitignored .okl/ (#186), and
 # LESSON_REVIEW_STORE_NOTE says so in the report. Run on your machine, in the checkout or a worktree of
 # it, it reads your whole store.
+#
+# `--before-push` is the review where the work is: from git's pre-push hook, on the machine that holds
+# the whole store. A session's Stop hook asks for the review once, and a session that opens five pull
+# requests was asked once; a push is once per change. In this mode:
+#   - it runs in the background and the push goes at once. Held for the review, every push of a new
+#     change waited about five minutes, and a fix pushed three times waited three times; the report is
+#     kept for the next push to show and for okl to hand the agent at its next prompt;
+#   - a branch is reviewed in full once, at its first push. A later push checks again only the lessons
+#     that review reported broken, so a branch costs one review and a few calls a fix, not one review a
+#     push;
+#   - a change already reviewed is not reviewed again;
+#   - LESSON_REVIEW_HOLD=1 runs it in the foreground and holds the push when a lesson is reported
+#     broken, once per change. It never holds a push because the review could not run.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+if [[ "${1:-}" == "--before-push" ]]; then
+  export LESSON_REVIEW_BEFORE_PUSH=1
+  # Bounded, so the push returns: under the ten minutes an agent's tool can give one command.
+  export LESSON_REVIEW_DEADLINE="${LESSON_REVIEW_DEADLINE:-480}"
+fi
 
+# A step that cannot run passes softly, so installing the kit calls nobody's model. Before a push it
+# says so in capitals and exits 2, "did not run": the hook lets through anything but 1, and a quiet
+# skip there would read as a clean review.
+skipped() {
+  if [[ -n "${LESSON_REVIEW_BEFORE_PUSH:-}" ]]; then
+    echo "lesson-review: LESSONS NOT REVIEWED (above). Pushing anyway." >&2
+    exit 2
+  fi
+  exit 0
+}
 if [[ -z "${REVIEW_CMD:-}" ]]; then
   echo "lesson-review: REVIEW_CMD not set — skipping (soft pass)."
   echo "  Set it to any CLI that takes a prompt on stdin to review each change against the lessons,"
   echo "  e.g. REVIEW_CMD=\"claude -p --model sonnet\" or REVIEW_CMD=\"ollama run qwen2.5-coder\"."
-  exit 0
+  skipped
 fi
-# shellcheck disable=SC2086 # REVIEW_CMD is a command line, so its first word is the program
-if ! command -v ${REVIEW_CMD%% *} >/dev/null 2>&1; then
-  echo "lesson-review: '${REVIEW_CMD%% *}' from REVIEW_CMD is not on PATH — skipping (soft pass)." >&2
-  exit 0
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "lesson-review: python3 is not on PATH — skipping (soft pass)." >&2
+  skipped
 fi
-if ! command -v okl >/dev/null 2>&1; then
-  echo "lesson-review: okl is not on PATH — skipping (soft pass): install it in this job to review against the lessons." >&2
-  exit 0
-fi
+# Whether the reviewer and okl can run is asked in Python, which reads each as a command line: cut at
+# the first space here, a program in a folder with a space in its name was "not on PATH" (the same
+# cut that blocked every prompt in #140).
 
 # The rest is Python, read from this heredoc, so model replies and lesson text never pass through a
 # shell: each command runs from an argument list (lesson n_adea7f2c7373).
 exec python3 - <<'PY'
 import fnmatch
+import hashlib
 import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -61,10 +89,36 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 ENV = os.environ
+BEFORE_PUSH = ENV.get("LESSON_REVIEW_BEFORE_PUSH") == "1"
+if BEFORE_PUSH:
+    # Python exits 1 on an error of its own, which a pre-push hook reads as "hold the push". A fault
+    # in this script must not stop work: it is shown, said, and ends as "did not run" (2). Set before
+    # anything else can fail: a reviewer command with an unbalanced quote raised on the line that
+    # reads it, before this was in place, and held the push.
+    def _never_hold(kind, value, trace):
+        import traceback
+        traceback.print_exception(kind, value, trace)
+        print("lesson-review: LESSONS NOT REVIEWED (the review failed, above). Pushing anyway.",
+              file=sys.stderr, flush=True)
+        try:      # a review that died is not one under way: left behind, this kept the next push from starting one
+            os.unlink(globals().get("RUNNING") or "")
+        except OSError:
+            pass
+        os._exit(2)
+    sys.excepthook = _never_hold
 BASE = ENV.get("REVIEW_BASE_REF") or "origin/main"
 CMD = shlex.split(ENV["REVIEW_CMD"])
+# okl as a command line: `okl` on PATH, or what the pre-push hook resolved (OKL_BIN, the repo's pinned
+# okl, PATH, `python3 -m okl`). A GUI git client or an agent runs hooks without the shell's PATH, and
+# asking for a bare `okl` there skipped the review while the same hook's drift gate ran.
+OKL = shlex.split(ENV.get("LESSON_REVIEW_OKL") or "okl")
 ON_GITHUB = ENV.get("GITHUB_ACTIONS") == "true"
 BLOCKING = ENV.get("LESSON_REVIEW_BLOCKING") == "1"
+HOLD = BEFORE_PUSH and ENV.get("LESSON_REVIEW_HOLD") == "1"
+BACKGROUND = BEFORE_PUSH and not HOLD and hasattr(os, "fork")
+# Once per change: a change already reviewed is not reviewed again. Always so before a push; elsewhere
+# on request, so a review run by hand before the push counts for it.
+ONCE = BEFORE_PUSH or ENV.get("LESSON_REVIEW_ONCE") == "1"
 VERDICTS = ("breaks", "holds", "no bearing")
 
 
@@ -75,6 +129,9 @@ def number(name, default):
 
 PICK = number("LESSON_REVIEW_PICK", 10)
 MAX_LINES = number("REVIEW_MAX_LINES", 4000)
+# Four at a time, before a push as in CI. All ten at once ended a real review in 177 seconds where
+# four took about 300, but it is ten model CLIs running together on the machine someone is working
+# on, and the review is in the background there: nobody waits for it.
 PARALLEL = number("LESSON_REVIEW_PARALLEL", 4)
 TIMEOUT = number("LESSON_REVIEW_TIMEOUT", 900)
 # The whole run's seconds, 0 for none. Each call's own limit does not bound the run: a pick and three
@@ -118,12 +175,45 @@ def cell(s, cap=600):
     return s if len(s) <= cap else s[:cap].rsplit(" ", 1)[0] + "…"
 
 
-def finish(report, code):
-    print(report)
+REMEMBER = []     # what to keep once the report is out: (path, facts) for the change and for its branch
+STATE = None      # the folder that holds it, in the repository's git directory
+RUNNING = None    # a file that says a review of this change is under way
+TELL = False      # whether the report has something a person or an agent must be told: a broken lesson, or no review
+
+
+def finish(report, code, after=None):
+    """Print the report, keep it where asked, remember the change where a review was made, say
+    `after` below the report, and end with `code`. The change is remembered last: one whose report
+    never reached anyone must not count as reviewed, or its next push would go unheld and unread.
+    Before a push the report is also kept in the state folder, and, when it has something to tell,
+    where the next push and okl's next briefing look for one nobody has read."""
+    print(report, flush=True)
     out = ENV.get("LESSON_REVIEW_REPORT")
     if out:
         with open(out, "w", encoding="utf-8") as f:
             f.write(report + "\n")
+    if BEFORE_PUSH and STATE:
+        try:
+            os.makedirs(STATE, exist_ok=True)
+            for path in [os.path.join(STATE, "last-report.md")] + ([inbox()] if TELL and inbox() else []):
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(report + "\n")
+        except OSError as e:
+            warn("the report could not be kept for the next push (%s)" % e)
+    for path, facts in REMEMBER:
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(facts, f)
+        except OSError as e:
+            warn("this review could not be remembered (%s), so the same change will be reviewed again" % e)
+    if RUNNING:
+        try:
+            os.unlink(RUNNING)
+        except OSError:
+            pass
+    if after:
+        print("\nlesson-review: " + after, file=sys.stderr, flush=True)
     sys.exit(code)
 
 
@@ -131,16 +221,61 @@ HEAD = "<!-- okl-lesson-review -->\n### Lesson review"
 STORE_NOTE = ENV.get("LESSON_REVIEW_STORE_NOTE", "").strip()
 
 
+def git_common_dir():
+    """The repository's own git directory, absolute, or "". Asked for plainly and made absolute here:
+    `--path-format=absolute` is git 2.31's, and an older git prints an option it does not know back as
+    a line of its answer. On a machine whose first git was 2.30, this script's state went to a folder
+    named after the option, in the work tree, and nothing it remembered was ever found again."""
+    out = run(["git", "rev-parse", "--git-common-dir"]).stdout.strip()
+    return os.path.abspath(out) if out else ""
+
+
+def inbox():
+    """Where a report nobody has read is left, for the next push to print and for okl to add to its
+    next briefing: beside the repo's okl config, which a worktree shares with its main checkout. None
+    where okl is not set up, and then the report is kept in the state folder alone."""
+    top = run(["git", "rev-parse", "--show-toplevel"]).stdout.strip()
+    common = git_common_dir()
+    for folder in (top, common[:-len("/.git")] if common.endswith("/.git") else ""):
+        if folder and os.path.isfile(os.path.join(folder, ".okl", "config.json")):
+            return os.path.join(folder, ".okl", "review-unread.md")
+    return None
+
+
+def read_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            got = json.load(f)
+        return got if isinstance(got, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
 def no_review(why):
     """Nothing was checked. Said in the log, as an annotation, and in the report, since a comment left
     by an earlier run would otherwise stand as this one's; and where the review blocks, exit 2, never
     a pass: a gate that inspected nothing has not passed (lesson n_5ddb0776a863)."""
+    global TELL
+    TELL = BEFORE_PUSH
     warn("no lesson review: " + why)
+    # Before a push, a review that could not run never holds it: an outage of the model must not stop
+    # work. It is said in capitals so it is not read as a clean review, and it exits 2, "did not run",
+    # as everywhere else in okl: the hook holds a push on 1 alone.
     finish("%s\n\nNo review: %s.%s" % (HEAD, cell(why, 800), "\n\n" + cell(STORE_NOTE, 1000) if STORE_NOTE else ""),
-           2 if BLOCKING else 0)
+           2 if BLOCKING or BEFORE_PUSH else 0,
+           "LESSONS NOT REVIEWED (reason above). Pushing anyway." if BEFORE_PUSH else None)
 
 # --- 1. The change and every lesson in scope, from okl --------------------------------------------
-got = run(["okl", "check", "--change=" + BASE, "--format", "json"])
+for what, words in (("REVIEW_CMD", CMD), ("okl", OKL)):
+    if not words or shutil.which(words[0]) is None:
+        named = "'%s' from REVIEW_CMD" % (words[0] if words else "") if what == "REVIEW_CMD" else "okl"
+        print("lesson-review: %s is not on PATH — skipping (soft pass)%s" % (
+            named, "." if what == "REVIEW_CMD" else ": install it in this job to review against the lessons."),
+            file=sys.stderr, flush=True)
+        if BEFORE_PUSH:
+            print("lesson-review: LESSONS NOT REVIEWED (above). Pushing anyway.", file=sys.stderr, flush=True)
+        sys.exit(2 if BEFORE_PUSH else 0)
+got = run([*OKL, "check", "--change=" + BASE, "--format", "json"])
 if got.returncode != 0:
     no_review("okl could not list the change and its lessons (%s)" % last_line(got.stderr))
 try:
@@ -161,14 +296,30 @@ if not lessons:
 exclude = (ENV.get("REVIEW_EXCLUDE") or
            "*.lock **/*.lock package-lock.json **/package-lock.json yarn.lock pnpm-lock.yaml").split()
 start = change.get("merge_base") or BASE
-diff = run(["git", "diff", "--no-ext-diff", start, "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
-# A new file not yet added to git is in okl's list but in no `git diff`, so a check run before the
-# commit never saw its code: it is shown as added, whole.
-tracked = set(run(["git", "ls-files", "-z", "--full-name", "--", *[":(literal)" + f for f in files]]).stdout.split("\0"))
-for path in files:
-    if path not in tracked and os.path.isfile(path) and not any(
-            fnmatch.fnmatch(path, p) or fnmatch.fnmatch(os.path.basename(path), p) for p in exclude):
-        diff += run(["git", "diff", "--no-ext-diff", "--no-index", "--", "/dev/null", path]).stdout
+if BEFORE_PUSH:
+    # A push carries commits. Reviewed with the work in progress, as the review after writing is, an
+    # uncommitted edit or a scratch file decided whether the push was held, and changed what counted
+    # as the same change (lesson n_57cc4b427f05: a verdict on what ships reads what is committed).
+    files = [f for f in run(["git", "diff", "--name-only", "-z", "--no-ext-diff", start, "HEAD", "--"]).stdout.split("\0") if f]
+    if not files:
+        finish("%s\n\nNothing is committed since %s, so there was nothing to review." % (HEAD, cell(BASE, 200)), 0)
+    # Which lessons govern the change was counted by okl with the work in progress. Where that holds a
+    # file the commits do not, a scratch file would move its lessons to the head of what the pick
+    # reads, so none is put first: every lesson is still in the list, in id order. Not asked of okl a
+    # second time for the committed files: that is a briefing no agent reads, and a shared service
+    # would log it as one (lesson eval-scripts-no-exposure, found by this mode's fourth real run).
+    if set(files) != set(change.get("files") or []):
+        governing = set()
+    diff = run(["git", "diff", "--no-ext-diff", start, "HEAD", "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
+else:
+    diff = run(["git", "diff", "--no-ext-diff", start, "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
+    # A new file not yet added to git is in okl's list but in no `git diff`, so a check run before the
+    # commit never saw its code: it is shown as added, whole.
+    tracked = set(run(["git", "ls-files", "-z", "--full-name", "--", *[":(literal)" + f for f in files]]).stdout.split("\0"))
+    for path in files:
+        if path not in tracked and os.path.isfile(path) and not any(
+                fnmatch.fnmatch(path, p) or fnmatch.fnmatch(os.path.basename(path), p) for p in exclude):
+            diff += run(["git", "diff", "--no-ext-diff", "--no-index", "--", "/dev/null", path]).stdout
 lines = diff.splitlines()
 if len(lines) > MAX_LINES:
     later = [m.group(1) for m in (re.match(r"diff --git a/.* b/(.*)", x) for x in lines[MAX_LINES:]) if m]
@@ -176,6 +327,86 @@ if len(lines) > MAX_LINES:
                                  % (len(lines) - MAX_LINES, ", in " + ", ".join(later) if later else "")]
 diff_text = "\n".join(lines) or "(no diff of tracked text files: the change is in new or data files)"
 listed = "\n".join(files)
+
+
+def marker_path():
+    """Where this change's review is remembered: a file in the repository's own git directory, named
+    by the change (where it started and its whole diff, before any cut). Never in the work tree, so it
+    is not committed, and in the common directory, so a worktree and its checkout share it."""
+    global STATE
+    common = git_common_dir()
+    if not common:
+        return None
+    STATE = os.path.join(common, "okl-lesson-review")
+    key = hashlib.sha256((start + "\0" + diff).encode("utf-8", "replace")).hexdigest()[:32]
+    return os.path.join(STATE, key + ".json")
+
+
+MARKER = marker_path() if ONCE else None
+if MARKER and os.path.isfile(MARKER):
+    seen = read_json(MARKER)
+    if isinstance(seen, dict):
+        was = ", ".join("`%s`" % cell(b, 80) for b in (seen.get("broken") or [])[:20])
+        finish("%s\n\nThis change was reviewed %s: %s broken, %s held, %s with no bearing%s. The same change "
+               "is reviewed once, so it was not reviewed again." % (
+                   HEAD, cell(seen.get("at", "earlier"), 40), seen.get("breaks", 0), seen.get("holds", 0),
+                   seen.get("no bearing", 0), " (reported broken: %s)" % was if was else ""), 0)
+# A branch is reviewed in full at its first push. A later push of it checks again the lessons that
+# review reported broken, and no others: the same branch, grown from the same place, on top of the
+# commit that was reviewed. Anything else is a new change: a branch started again, or main itself,
+# whose base moves with each push.
+RECHECK, BRANCH = None, None
+if BEFORE_PUSH and MARKER:
+    name = run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
+    tip = run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    if tip and name and name != "HEAD":
+        BRANCH = os.path.join(STATE, "branch-%s.json" % hashlib.sha256(name.encode("utf-8", "replace")).hexdigest()[:16])
+        was = read_json(BRANCH)
+        if was and was.get("base") == start and isinstance(was.get("head"), str) and was["head"] != tip \
+                and run(["git", "merge-base", "--is-ancestor", was["head"], tip]).returncode == 0:
+            RECHECK = [i for i in was.get("broken") or [] if isinstance(i, str)]
+            if not RECHECK:
+                finish("%s\n\nThis branch was reviewed at its first push (%s) and nothing is left that it reported "
+                       "broken, so this push adds no review. `bash ci/lesson-review.sh` reviews the whole change "
+                       "again." % (HEAD, cell(was.get("at", "earlier"), 40)), 0)
+    # A review of this change that is under way: the file holds its process, and counts only while
+    # that process lives and the run's deadline has not passed, so one that was killed holds nothing up.
+    under_way = MARKER[:-len(".json")] + ".running"
+    try:
+        with open(under_way, encoding="utf-8") as f:
+            os.kill(int(f.read().strip() or 0), 0)
+        if time.time() - os.path.getmtime(under_way) < DEADLINE + 120:
+            finish("%s\n\nA review of this change is already running; its report will be shown when it ends." % HEAD, 0)
+    except (OSError, ValueError):
+        pass
+if BEFORE_PUSH:
+    doing = ("checking again the %d lesson(s) this branch's review reported broken" % len(RECHECK) if RECHECK is not None
+             else "checking this change against %d lesson(s): one call to pick, then one per lesson picked" % len(lessons))
+    if BACKGROUND:
+        # The push goes now, and the review goes on without it: a child of its own session, with
+        # nothing open on the terminal the push came from.
+        sys.stdout.flush()
+        if os.fork() > 0:
+            print("lesson-review: %s, in the background. This push is not held. The report is shown at your next "
+                  "push, and okl gives it to your agent at its next prompt, when a lesson is reported broken; it is "
+                  "kept in %s." % (doing, os.path.join(STATE or "", "last-report.md")), file=sys.stderr, flush=True)
+            os._exit(0)
+        os.setsid()
+        null = os.open(os.devnull, os.O_RDWR)
+        for fd in (0, 1, 2):
+            os.dup2(null, fd)
+    else:
+        print("lesson-review: %s, before the push. It takes a few minutes and stops after %d seconds; a tool that "
+              "limits how long a command may run needs that long for this push. `git push --no-verify` skips it."
+              % (doing, DEADLINE), file=sys.stderr, flush=True)
+    if MARKER:     # written by the process that does the review: in the background, the one that outlives the push
+        RUNNING = MARKER[:-len(".json")] + ".running"
+        try:
+            os.makedirs(STATE, exist_ok=True)
+            with open(RUNNING, "w", encoding="utf-8") as f:
+                f.write(str(os.getpid()))
+        except OSError:
+            RUNNING = None
 repo_note = ""
 if ENV.get("REVIEW_REPO_DIR"):
     repo_note = ("The repository is checked out at %s: read any file there you need, the code around the "
@@ -266,7 +497,10 @@ Reply with STRICT JSON and nothing else:
 {"explanation": ["one sentence per mechanism"], "picked": ["the id in brackets of each lesson you pick, the likeliest first"]}
 """ % (repo_note, title or "(no title given)", body, listed, diff_text, menu, PICK)
 
-reply, failed = call(pick_prompt)
+if RECHECK is None:
+    reply, failed = call(pick_prompt)
+else:    # a later push of a branch already reviewed: the lessons to check are the ones it reported broken
+    reply, failed = json.dumps({"explanation": [], "picked": RECHECK}), None
 picked_reply = last_json(reply, lambda o: isinstance(o.get("picked"), list))
 if picked_reply is None:
     no_review("the call that picks which lessons to check gave no pick, since %s. Re-run the job before reading "
@@ -306,7 +540,7 @@ if isinstance(explanation, str):
 
 # --- 3. One fresh call per picked lesson, with the path question ----------------------------------
 def check(lesson_id):
-    shown = run(["okl", "show", "--", lesson_id])
+    shown = run([*OKL, "show", "--", lesson_id])
     if shown.returncode != 0:
         return {"id": lesson_id, "why": "okl show could not read it: " + last_line(shown.stderr)}
     prompt = """You are checking one change against one lesson its repository recorded: a mistake made once and written down so that it is not made again. You have no other context, and you change nothing.
@@ -351,9 +585,12 @@ done = [r for r in results if "verdict" in r]
 broken = [r for r in done if r["verdict"] == "breaks"]
 count = {v: sum(1 for r in done if r["verdict"] == v) for v in VERDICTS}
 out = [HEAD, "",
-       "%d of the %d lessons picked from %d in scope were checked against this change, each in a fresh call: "
-       "%d broken, %d held, %d with no bearing%s." % (
-           len(done), len(picked), len(lessons), count["breaks"], count["holds"], count["no bearing"],
+       ("%d of the %d lessons this branch's first review reported broken were checked again, each in a fresh call"
+        % (len(done), len(picked)) if RECHECK is not None else
+        "%d of the %d lessons picked from %d in scope were checked against this change, each in a fresh call"
+        % (len(done), len(picked), len(lessons)))
+       + ": %d broken, %d held, %d with no bearing%s." % (
+           count["breaks"], count["holds"], count["no bearing"],
            ", %d not checked" % (len(picked) - len(done)) if len(done) < len(picked) else "")]
 if STORE_NOTE:
     out += ["", cell(STORE_NOTE, 1000)]
@@ -393,6 +630,23 @@ if ON_GITHUB:
             where = "file=%s,line=%d," % (prop(r["file"]), line)
         print("::%s %stitle=%s::%s" % ("error" if BLOCKING else "warning", where,
                                        prop("lesson review: %s" % r["id"]), esc(r.get("finding", ""))))
+if MARKER and done:
+    # Remembered only when a lesson was checked: a run that checked none is tried again next time.
+    when = time.strftime("%Y-%m-%d %H:%MZ", time.gmtime())
+    REMEMBER = [(MARKER, {"at": when, "base": BASE, "broken": [r["id"] for r in broken],
+                          "seconds": int(time.monotonic() - STARTED), "again": RECHECK is not None, **count})]
+    if BRANCH:
+        REMEMBER.append((BRANCH, {"at": when, "base": start, "head": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
+                                  "broken": [r["id"] for r in broken]}))
+if BEFORE_PUSH:
+    TELL = bool(broken) or not done
+    if not done:
+        finish(report, 2, "LESSONS NOT REVIEWED (no lesson got a verdict, above). Pushing anyway.")
+    if broken and HOLD:
+        finish(report, 1, "%d lesson(s) reported broken (above), so this push is held. Fix them and push again; "
+                          "or push again as it is: this change is now reviewed, and the same change is not held "
+                          "twice. `git push --no-verify` skips the review." % len(broken))
+    finish(report, 0)
 # Blocking, a broken lesson fails the run (1), and a run that checked none of its lessons did not
 # run (2), never a pass.
 finish(report, (1 if broken else 2 if not done else 0) if BLOCKING else 0)

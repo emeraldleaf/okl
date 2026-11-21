@@ -245,6 +245,51 @@ Run on your machine, from the checkout or one of its worktrees, it reads your wh
 REVIEW_CMD="claude -p --model sonnet" bash ci/lesson-review.sh
 ```
 
+## Lesson review before a push (off by default)
+
+The same review, where the work is: from git's pre-push hook, on the machine that holds your
+whole store. In Claude Code, a session's Stop hook asks for the review once, however many changes
+the session makes; a push is once per change, whatever wrote it. Turn it on with the command that
+reviews, which reads a prompt on stdin:
+
+```bash
+okl init --review-before-push "claude -p --model sonnet"
+```
+
+init records it (`"review_before_push": true` and `"review_cmd"` in `.okl/config.json`), installs
+the pre-push hook, and puts `ci/lesson-review.sh` in the repo when it has none; it says when a
+hook or a script already there cannot run the review. `okl init --no-review-before-push` turns
+it off. A pre-push hook of another tool runs it with one line, which holds the push on exit 1 alone:
+`REVIEW_CMD="..." bash ci/lesson-review.sh --before-push || [ $? -ne 1 ] || exit 1`.
+
+- **It runs in the background, and the push goes at once.** Held for the review, every push of a
+  new change waited about five minutes. The report is kept (`last-report.md` in the repository's
+  git directory). When it reports a broken lesson it is also shown at your next push, and okl adds
+  it to your agent's next briefing, once.
+- **A branch is reviewed in full once.** Its first push costs one call to pick and one per lesson
+  picked, ten unless `LESSON_REVIEW_PICK` says otherwise, so about eleven calls, four checks at a
+  time (`LESSON_REVIEW_PARALLEL`). A later push of the same branch checks again only the lessons that review reported broken:
+  a call each, and none once nothing is left broken. `bash ci/lesson-review.sh` reviews the whole
+  change again whenever you ask. New code in a later push is not picked over again; CI's review
+  still reads every push.
+- **It reviews what is pushed:** the commits since the base, never an uncommitted edit or a
+  scratch file. A push of some commit other than the checked-out one is not reviewed.
+- **Once per change.** A change already reviewed is not reviewed again, and a second push while a
+  review of it is running starts nothing. What it remembers is kept in the repository's git
+  directory, shared by its worktrees.
+- **It can hold the push, if you ask.** `okl init --review-before-push "<reviewer>"
+  --review-holds-push` (`"review_before_push": "hold"`) runs it in the foreground: the push waits,
+  and is refused once when a lesson is reported broken. Fix it and push, or push again as it is:
+  the same change is never held twice, so a false alarm costs one push and no flag. It stops after
+  480 seconds (`LESSON_REVIEW_DEADLINE`), so the push returns. How often it raises one is not
+  measured yet.
+- **It never holds a push it could not review.** No reviewer, no script, a model that does not
+  answer, or a fault in the review itself: it says LESSONS NOT REVIEWED, exits 2 ("did not run"),
+  and the push goes. okl's hook hands it the okl it resolved, so it runs from a git client that
+  has no `okl` on its PATH.
+- **One push:** `OKL_REVIEW_BEFORE_PUSH=0 git push` skips it, `=1` runs it in the background and
+  `=hold` in the foreground, whatever the config says, and `git push --no-verify` skips the whole hook.
+
 ## The semantic arm (`--hybrid`), off by default
 
 Measured in REPORT §4q and not made the default. Turning it on costs a 131 MB static model on

@@ -79,7 +79,8 @@ lockfiles are left out of the diff as data and listed. Give it your CI's test re
 
 ## Lesson review (opt-in)
 
-`ci/lesson-review.sh` runs okl's review after writing on a pull request, whoever wrote the change:
+`ci/lesson-review.sh` runs okl's review after writing, whoever wrote the change, on a pull request
+or, with `--before-push` from git's pre-push hook, at a push, in the background, on the machine that holds your store:
 one call says what the change does and picks the ten lessons it is likeliest to break, then one
 fresh call per lesson checks it, asked to list and check every path the lesson's rule covers
 first. Eleven calls a run, so the kit's workflow runs it only when **both** `REVIEW_CMD` and the

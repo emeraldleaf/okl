@@ -1,7 +1,7 @@
 """docs/ARCHITECTURE.md's diagrams stay true to the code.
 
 okl retired its last hand-drawn architecture diagram (93933d7) after a review found it wrong in
-four places that nothing had checked. The four diagrams now are drawn too, so each must name
+four places that nothing had checked. The five diagrams now are drawn too, so each must name
 only commands, flags, MCP tools, hook events, files, folders, functions and briefing marks the
 code still has, and its render must name the same ones as its source.
 """
@@ -17,7 +17,7 @@ CHECK = ROOT / "ci" / "check-diagram-names.py"
 def test_the_drawn_diagrams_name_only_what_the_code_has():
     """Every diagram ARCHITECTURE.md shows passes the name check CI runs on it."""
     diagrams = sorted(str(p) for p in (ROOT / "docs" / "architecture").glob("*.excalidraw"))
-    assert len(diagrams) == 4, diagrams
+    assert len(diagrams) == 5, diagrams
     r = subprocess.run([sys.executable, str(CHECK), *diagrams], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout + r.stderr
 

@@ -26,6 +26,7 @@ from ..client import (
     OKLRejectedError,
     OKLUnreachableError,
     _find_config,
+    take_unread_review,
 )
 from ..store import backend_errors
 from .common import _print_json
@@ -118,6 +119,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         _once_per_session(result, args.session, f"{Path.cwd().resolve()}\0{result.get('repo') or client.repo}")
     if args.format == "hook":
         (_print_file_hook if getattr(args, "path", None) else _print_prompt_hook)(result, args)
+        _print_unread_review(args)
         return 0
     if args.format == "json":
         _print_json(result)
@@ -126,6 +128,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(core.render_actions_only(result, limit=args.limit))
     else:
         print(_briefing_text(result, args))
+        _print_unread_review(args)
     # stdout is what the UserPromptSubmit hook hands the agent; setup advice is for the
     # person, so it goes to stderr and never enters the agent's context. Skipped for json,
     # whose consumers parse the output.
@@ -188,6 +191,19 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     else:
         print(text, end="")
     return 0
+
+
+def _print_unread_review(args: argparse.Namespace) -> None:
+    """Add the last push's review to a task briefing, once, when it reported something: stdout is
+    what the prompt hook hands the agent, and the review ran with nobody waiting for it. Not to a
+    file's briefing, which arrives beside a file the agent read and is about that file."""
+    if getattr(args, "path", None):
+        return
+    report = take_unread_review()
+    if report:
+        print("\n## OKL: the lesson review of your last push reported this\n"
+              "It ran in the background, so the push was not held. Read each lesson it reports broken; fix the "
+              "ones that are right, and say which you leave and why.\n\n" + report)
 
 
 def _review_flags_refused(args: argparse.Namespace) -> str | None:

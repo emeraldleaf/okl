@@ -636,11 +636,14 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
                                          else "okl's CI workflow gates drift here; --git-hook adds the hook too)"))
         return
     hooks, why = _git_hooks_dir()
+    review = _review_before_push_wanted(args, cfg)
     if hooks is None:
         print(f"  (no pre-push hook: {why})")
     else:
-        print(f"  {hooks / 'pre-push'!s:<40}a git pre-push hook running the drift gate "
-              "(never over another tool's hook)")
+        print(f"  {hooks / 'pre-push'!s:<40}a git pre-push hook running the drift gate"
+              + (" and the review before a push" if review else "") + " (never over another tool's hook)")
+    if review:
+        print(f"  {REVIEW_SCRIPT!s:<40}the review the pre-push hook runs, only when the repo has none")
 
 
 def _dry_run_pin(args: argparse.Namespace) -> str:
@@ -695,10 +698,35 @@ def _git_hook_wanted(args: argparse.Namespace, cfg: dict) -> bool:
     flag = getattr(args, "git_hook", None)
     if flag is not None:
         return bool(flag)
+    if _review_before_push_wanted(args, cfg):
+        return True      # the review before a push runs from this hook
     if "git_hook" in cfg:
         return bool(cfg["git_hook"])
     from .. import ownership
     return not _ci_wanted(args, cfg) or _workflow_state() == ownership.UNKNOWN
+
+
+def _record_review_before_push(cfg: dict, args: argparse.Namespace) -> None:
+    """Write what --review-before-push and --no-review-before-push say into `cfg`: the reviewer
+    when one is named, and the setting when either flag is given. Neither flag leaves both alone."""
+    if getattr(args, "review_before_push", None):
+        cfg["review_cmd"] = args.review_before_push
+    if getattr(args, "no_review_before_push", False):
+        cfg["review_before_push"] = False
+    elif getattr(args, "review_before_push", None) or getattr(args, "review_holds_push", False):
+        # "hold" where asked, and kept where an earlier init recorded it; else true, in the background.
+        cfg["review_before_push"] = "hold" if (getattr(args, "review_holds_push", False)
+                                               or cfg.get("review_before_push") == "hold") else True
+
+
+def _review_before_push_wanted(args: argparse.Namespace, cfg: dict) -> bool:
+    """Whether the review before a push is on after this init: --no-review-before-push, else
+    --review-before-push, else what the config records. Asked by the dry run too, which has the
+    flags and a config no flag has reached yet."""
+    if getattr(args, "no_review_before_push", False):
+        return False
+    return bool(getattr(args, "review_before_push", None) or getattr(args, "review_holds_push", False)) \
+        or cfg.get("review_before_push") in (True, "hold")
 
 
 def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
@@ -787,6 +815,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     # Recorded, defaults included, so a later run does not change its answer because the
     # workflow file came or went in between.
     cfg["ci"] = _ci_wanted(args, cfg)
+    _record_review_before_push(cfg, args)
     cfg["git_hook"] = _git_hook_wanted(args, cfg)
     if getattr(args, "review_after_writing", None) is not None:
         cfg["review_after_writing"] = args.review_after_writing
@@ -798,6 +827,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     _say_review_after_writing(cfg)
     _say_stop_hook_sees_worktrees()
     _wire_drift_gates(cfg, force=getattr(args, "force", False))
+    _wire_review_before_push(cfg)       # after the hook is in place: it reads the hook that is there
     _wire_owner_paths(cfg, args)
     if not getattr(args, "no_seed", False):
         _seed_first_run(Client())
@@ -1112,6 +1142,65 @@ def _say_stop_hook_sees_worktrees() -> None:
 
 
 STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")
+REVIEW_SCRIPT = Path("ci/lesson-review.sh")
+# The line that runs the review from another tool's pre-push hook. Only exit 1 holds the push: 2 is a
+# review that did not run.
+_REVIEW_LINE = 'REVIEW_CMD="<your reviewer>" bash ci/lesson-review.sh --before-push || [ $? -ne 1 ] || exit 1'
+
+
+def _wire_review_before_push(cfg: dict) -> None:
+    """Where the repo asks for the review before a push: put the review script in the repo when it
+    has none, then say what is still in the way, and what the review costs. The pre-push hook is
+    installed with the drift gates, since asking for this review asks for the hook. init does these
+    itself: printed as steps to take, they were steps nobody took (lesson n_58119d0a63d9)."""
+    if cfg.get("review_before_push") not in (True, "hold"):
+        return
+    link = _symlinked(REVIEW_SCRIPT)
+    if link is not None:
+        print(f"! kept {REVIEW_SCRIPT}: {link} is a symlink, and okl does not write through links.")
+    elif not REVIEW_SCRIPT.exists():
+        REVIEW_SCRIPT.parent.mkdir(parents=True, exist_ok=True)
+        shipped = Path(__file__).resolve().parents[1] / "scaffold" / "ci" / "lesson-review.sh"
+        REVIEW_SCRIPT.write_text(shipped.read_text(encoding="utf-8"), encoding="utf-8")
+        REVIEW_SCRIPT.chmod(0o755)
+        print(f"✓ installed the review script → {REVIEW_SCRIPT} (commit it: the pre-push hook runs it from the repo)")
+    _say_review_before_push(cfg)
+    how = ("It runs in the foreground: the push waits a few minutes, and a lesson reported broken holds it once"
+           if cfg.get("review_before_push") == "hold" else
+           "It runs in the background, so no push waits: the report is shown at your next push and given to your "
+           "agent at its next prompt (--review-holds-push holds the push for it)")
+    print(f"• review before a push: on, with `{cfg.get('review_cmd') or '(no reviewer named: --review-before-push <command>)'}`. "
+          f"A branch's first push is reviewed in full, about eleven calls; a later push checks again only what "
+          f"that review reported broken. {how}. Turn it off with `okl init --no-review-before-push`, or for one "
+          "push with OKL_REVIEW_BEFORE_PUSH=0")
+
+
+def _say_review_before_push(cfg: dict) -> None:
+    """Say when the repo asks for the review before a push ("review_before_push") and a file it
+    needs cannot give it: no pre-push hook that runs it, or a kept copy of the review script from
+    before `--before-push`. Each leaves the setting on and doing nothing, and nothing else says so
+    until a push goes unreviewed (lesson owned-file-features-check-the-kept-copy)."""
+    if cfg.get("review_before_push") not in (True, "hold"):
+        return
+    hooks, _ = _git_hooks_dir()
+    hook = hooks / "pre-push" if hooks else None
+    try:
+        hook_text = hook.read_text(errors="replace") if hook else ""
+    except OSError:
+        hook_text = ""
+    if "--before-push" not in hook_text:
+        how = ("none is installed, since --no-git-hook was given or git has no hooks directory okl may write to"
+               if not hook_text else
+               f"add this line to {hook}, or let `okl init --force` replace an older okl hook:\n    {_REVIEW_LINE}")
+        print(f"! review before a push: on in .okl/config.json, and no pre-push hook here runs it ({how})")
+    try:
+        script = REVIEW_SCRIPT.read_text(errors="replace")
+    except OSError:
+        print(f"! review before a push: on, and {REVIEW_SCRIPT} is not in this repo: `okl init` puts it there.")
+        return
+    if "--before-push" not in script:
+        print(f"! review before a push: on, and {REVIEW_SCRIPT} here is from before it: it would review with "
+              "nothing remembered, held or timed. `okl scaffold --force` replaces it.")
 
 
 def _workflow_reads_pin() -> bool:

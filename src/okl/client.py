@@ -31,6 +31,7 @@ CONFIG_KEYS = frozenset({
     "repo", "interests", "okl_bin", "ci", "git_hook", "review_after_writing", "owner", "owned",  # okl init
     "service_url", "token",                                    # okl connect
     "standing", "on_edit",                                     # okl standing, okl on-edit
+    "review_before_push", "review_cmd",                        # okl init --review-before-push; the pre-push hook reads them
     "decision", "warm", "hybrid", "rerank", "review_log",      # set by hand
 })
 
@@ -42,6 +43,27 @@ CONFIG_KEYS = frozenset({
 # hook now retries only a quick failure, and tests/test_remote_failures.py keeps its
 # worst case, two stalled addresses included, under that limit.
 _HTTP_TIMEOUT_S = 5
+
+
+REVIEW_UNREAD = "review-unread.md"
+
+
+def take_unread_review() -> str | None:
+    """The report of a review at a push that nobody has read, or None; taking it marks it read.
+
+    The review runs in the background (`ci/lesson-review.sh --before-push`) so a push does not
+    wait for it, and it leaves a report with a broken lesson in it beside the config. The next
+    briefing hands it to the agent, once: a report that only sat in a file was one no agent read."""
+    cfg = _find_config()
+    if cfg is None:
+        return None
+    path = cfg.parent / REVIEW_UNREAD
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+        path.replace(cfg.parent / "review-last.md")
+    except OSError:
+        return None      # none there, or it cannot be marked read: shown every prompt it would be noise
+    return text or None
 
 
 def store_url(start: Path | None = None) -> str | None:

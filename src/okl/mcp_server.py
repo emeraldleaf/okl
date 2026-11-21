@@ -18,6 +18,7 @@ from .client import (
     OKLNotConfiguredError,
     OKLRejectedError,
     OKLUnreachableError,
+    take_unread_review,
 )
 
 
@@ -101,7 +102,12 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                     "parentheses and re-run.")
         if compact:
             return core.render_actions_only(result, limit=limit)
-        return core.render_check_for_agent(result)
+        # A task's briefing also carries the last push's review, once, when it reported a broken
+        # lesson: it ran in the background, and this is how an agent with no hooks gets to read it.
+        report = None if path else take_unread_review()
+        return core.render_check_for_agent(result) + (
+            "\n\n## OKL: the lesson review of your last push reported this\nRead each lesson it reports broken; fix "
+            "the ones that are right, and say which you leave and why.\n\n" + report if report else "")
 
     # Keyword-only: the SDK always calls a tool with named arguments, and fourteen
     # mostly-string parameters are too easy to pass in the wrong order by position.

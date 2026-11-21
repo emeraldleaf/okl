@@ -30,7 +30,7 @@ touches only the current directory, and only these:
 | `.github/okl-version` | **one line, the okl release CI installs**, written beside the workflow so CI runs what your hooks run. `okl init` writes it for an okl installed from PyPI, and moves it when re-run after an upgrade, never backwards; a dev or editable okl leaves it alone. Written only where okl's workflow reads it: an edited workflow from before 0.11.0 is kept and does not, so init says so instead (`--force` replaces the workflow). Without it, CI installs the newest release. Commit it |
 | `.github/CODEOWNERS` (or the CODEOWNERS file GitHub already reads) | **okl's block of owner-approved paths** — only with `--owner @you`: names you code owner of `docs/THESIS.md`, of every place GitHub reads CODEOWNERS from and of any `--owned` path, so a branch rule requiring code-owner review, which you set up, needs your approval for each change. Spliced into an existing file in its own line endings, changing no line of yours; `okl doctor` says whether GitHub enforces it ([docs/AGENT-IDENTITY.md](AGENT-IDENTITY.md)). Commit it |
 | `.claude/settings.json` `permissions.deny` | **in Claude Code, with `--owner`: deny rules** for the usual ways to edit branch protection or rulesets through `gh api` (REST or GraphQL) and to merge past them (`gh pr merge --admin`, the merge API). They advise the agent; the branch rule is what enforces |
-| `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
+| `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and holds it on drift; where `"review_before_push"` is on, it then starts the review before a push, in the background, or with `"hold"` holds the push for it; never written over another tool's hook |
 
 `init` keeps these keys in `.okl/config.json`, so a re-run keeps its answers:
 
@@ -50,7 +50,12 @@ touches only the current directory, and only these:
 Other commands keep their own keys in `.okl/config.json`. `okl connect` writes
 `"service_url"` and, with `--token`, `"token"`; a config holding a token is written readable by
 you alone, and `OKL_SERVICE_URL` and `OKL_TOKEN` win over both keys. `okl standing` keeps
-`"standing"`, and `okl on-edit` keeps `"on_edit"`. The settings you add by hand (`"decision"`,
+`"standing"`, and `okl on-edit` keeps `"on_edit"`. `okl init --review-before-push "<reviewer>"` writes `"review_before_push"` (`true`, or `"hold"` with
+`--review-holds-push`) and `"review_cmd"`, installs the pre-push hook, and puts `ci/lesson-review.sh` in the
+repo when it has none. The review then leaves a report nobody has read as `.okl/review-unread.md`, and the
+last one read as `.okl/review-last.md`
+([COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md#lesson-review-before-a-push-off-by-default)); `okl init --uninstall`
+leaves that script, which is the kit's and yours to keep. The settings you add by hand (`"decision"`,
 `"warm"`, `"hybrid"`, `"rerank"` and `"review_log"`) are in [COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md).
 
 Re-running `init` is safe: it keeps the repo name already configured here (`--repo` renames,

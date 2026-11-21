@@ -383,7 +383,7 @@ Nothing in okl reads a comment. Here is what you can do instead:
   - It does not read code, comments or docstrings, and it misses a reworded claim.
   - It also reads quotes inside HTML comments, including the template's example.
 - In a git repository, both gates read the committed tree, their registries included, so an uncommitted edit neither passes nor fails them and a local run answers as CI will (#352). Outside one, they scan the files on disk.
-- Run them with `bash gates/run-gates.sh`. In CI, either `.github/workflows/method-gates.yml` (from `okl scaffold`) or the workflow from `okl init --ci` runs it when the script is present. The pre-push hook runs only `okl drift --gate`, not these gates.
+- Run them with `bash gates/run-gates.sh`. In CI, either `.github/workflows/method-gates.yml` (from `okl scaffold`) or the workflow from `okl init --ci` runs it when the script is present. The pre-push hook runs `okl drift --gate` and, where you turned it on, the review before a push; it does not run these gates.
 
 ## 12. Keep learning as you build
 

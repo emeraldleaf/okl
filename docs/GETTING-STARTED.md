@@ -536,7 +536,7 @@ okl init --ci --git-hook     # both: the hook warns early, CI is the gate nobody
 okl init --no-git-hook       # neither, if you gate drift some other way
 ```
 
-The hook runs `okl drift --gate` and blocks the push only when lessons have drifted (exit 1).
+The hook runs `okl drift --gate` and holds the push when lessons have drifted (exit 1). Where you turn it on (`okl init --review-before-push "<reviewer>"`), it then reviews the change against your lessons in the background, a branch in full at its first push, and shows the report at your next push; `--review-holds-push` holds the push for it.
 When nothing could be checked (no store yet, or no lesson governs a file) it says so and lets
 the push through. It goes where git runs hooks, so a `core.hooksPath` set by Husky or a similar
 tool is honoured. If a pre-push hook is already there, okl leaves it alone, even with
@@ -571,6 +571,7 @@ a CI gate as well.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with the `okl verify` command `okl record` printed; clearing the lesson's `--files` turns the gate green by dropping the watch the lesson exists for |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
+| `git push` stops with "lesson-review: N lesson(s) reported broken (above), so this push is held" | the review before a push, asked to hold (`okl init --review-before-push "<reviewer>" --review-holds-push`), checked the change against your lessons and one or more look broken | read the report above the line; fix what is right and push, or push again as it is: the same change is not held twice. `OKL_REVIEW_BEFORE_PUSH=0 git push` skips the review once |
 | `git push` stops with "okl pre-push: lessons drifted" | the pre-push hook found drift | `okl reverify`, commit, push again; `git push --no-verify` skips the check once |
 | `okl drift` reports a lesson "stamped …, unverified" | its stamp has no observed check behind it, often from a seed file that marked it verified | prove it with `okl verify <id> --run …`, or drop its `files` if nothing should gate it |
 | A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
