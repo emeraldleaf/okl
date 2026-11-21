@@ -412,6 +412,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         print(f"NOT RECORDED — {e}", file=sys.stderr)
         return 2
     print(node_id)
+    _say_export_refreshed(client, stream=sys.stderr)      # stdout stays the bare id, for scripts
     if not kwargs["triggers"] and args.type != "Vocabulary":
         # The default decision (REPORT §4w) briefs a lesson only when a prompt shares enough of
         # its title, symptom, aliases and triggers; a lesson recorded without triggers is the
@@ -443,6 +444,7 @@ def cmd_update(args: argparse.Namespace) -> int:
     if node is None:
         return 2
     print(f"✓ updated {node['id']} — {node['title']}")
+    _say_export_refreshed(client)
     if node.get("verified_at") is not None:
         print("  proof kept")
     elif before and before.get("verified_at") is not None:
@@ -481,8 +483,9 @@ def _send_update(client: Client, node_id: str, fields: dict[str, Any]) -> dict |
 
 def cmd_retire(args: argparse.Namespace) -> int:
     """Retire one lesson with a reason; exit 2, writing nothing, for anything refused."""
+    client = Client()
     try:
-        node = Client().retire(args.node_id, args.reason, by=args.by, obsolete=args.obsolete)
+        node = client.retire(args.node_id, args.reason, by=args.by, obsolete=args.obsolete)
     except OKLNoAnswerError as e:
         print(f"MAYBE RETIRED — the service may have applied this; running it again is "
               f"safe.\n{e}", file=sys.stderr)
@@ -495,6 +498,7 @@ def cmd_retire(args: argparse.Namespace) -> int:
               "superseded": f"left out of briefings, which point to [{args.by}] instead"}
     print(f"✓ retired {node['id']} — {node['title']}\n  {node['status']}: "
           f"{effect.get(node['status'], node['status'])}")
+    _say_export_refreshed(client)
     if node.get("files"):
         # Drift skips a retired lesson; the committed snapshot CI reads must say so too, or
         # the local gate and CI's disagree (review of okl R2).
@@ -698,6 +702,14 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _say_export_refreshed(client: Client, stream: Any = None) -> None:
+    """Say that a write rewrote the committed lessons export, where it did: a file okl changed
+    in the repo is one to commit, and unsaid it would sit modified until someone wondered why."""
+    if client.export_refreshed is not None:
+        print(f"  refreshed {client.export_refreshed.name} — commit it so CI's review sees this lesson",
+              file=stream or sys.stdout)
+
+
 def _render_lesson(n: dict[str, Any]) -> str:
     """One lesson as `okl show` prints it: the fields it has, then its proof."""
     def day(ms: int | None) -> str:
@@ -716,7 +728,11 @@ def _render_lesson(n: dict[str, Any]) -> str:
     if n.get("triggers"):
         out.append("  triggers:")
         out += [f"    - {t}" for t in n["triggers"].splitlines() if t.strip()]
-    if n.get("verified_at"):
+    if n.get("proof_not_exported"):
+        # Read from a committed export, which leaves proof out: "not proven yet" would tell CI's
+        # reader that a lesson its author has verified has no check behind it.
+        out.append("  proof: not in this export; the store it was written from and okl-drift.json hold it")
+    elif n.get("verified_at"):
         on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
         evidence = n.get("verified_by") or "(no evidence recorded)"
         stale = " (STALE — past its ttl; re-verify)" if n.get("stale") else ""

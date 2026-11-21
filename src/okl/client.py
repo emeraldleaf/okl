@@ -18,7 +18,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 
 from . import core, decide, drift, warm
-from .store import Node, Store
+from .store import LESSONS_FILE, Node, Store, dump_lessons
 
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
@@ -311,6 +311,37 @@ class Client:
         self.review_after_writing = review_setting(os.environ.get("OKL_REVIEW_AFTER_WRITING"),
                                                    self.config.get("review_after_writing"), set_up)
         self._store: Store | None = None
+        # The lessons export a write just refreshed, for the surface that made the write to say
+        # so (`okl record` prints it, the MCP tool returns it): a file okl rewrote is one to commit.
+        self.export_refreshed: Path | None = None
+
+    def write_lessons_export(self, path: Path | None = None) -> tuple[Path, int]:
+        """Write this store's lessons to the export CI reads (`okl export --lessons`), at `path`
+        or as okl-lessons.jsonl at the project root, and return the path and how many it holds."""
+        path = path or project_root() / LESSONS_FILE
+        nodes = self.all_nodes()
+        path.write_text(dump_lessons(nodes, self.repo), encoding="utf-8")
+        return path, len(nodes)
+
+    def lessons_export_is_current(self, path: Path | None = None) -> bool:
+        """Whether the export at `path` (default: the project root's) holds what this store would write."""
+        path = path or project_root() / LESSONS_FILE
+        try:
+            return path.read_text(encoding="utf-8") == dump_lessons(self.all_nodes(), self.repo)
+        except OSError:
+            return False
+
+    def lessons_changed(self) -> None:
+        """After a write to a lesson in a local store: keep the committed export in step, where
+        the repo has one. A repo opts in by exporting once; an export that exists is one CI
+        reads, and a lesson recorded without it would be missing from the next review. Never
+        a reason for the write to fail: the lesson is in the store either way."""
+        try:
+            path = project_root() / LESSONS_FILE
+            if path.is_file():
+                self.export_refreshed = self.write_lessons_export(path)[0]
+        except (OSError, ValueError):
+            self.export_refreshed = None
 
     @property
     def review_log(self) -> bool:
@@ -590,7 +621,9 @@ class Client:
                 if e.status == 400 and "already exists" in str(e):
                     raise core.LessonExistsError(str(e)) from e
                 raise
-        return core.record(self._local_store(), **kwargs)
+        node_id = core.record(self._local_store(), **kwargs)
+        self.lessons_changed()
+        return node_id
 
     def _require_refusing_service(self) -> None:
         """Refuse to record an id against a service that would silently overwrite it.
@@ -624,7 +657,9 @@ class Client:
                     raise OKLRejectedError(_TOO_OLD.format(what="has okl update"),
                                            status=404) from e
                 raise
-        return core.update(self._local_store(), node_id, repo=self.repo, **fields)
+        node = core.update(self._local_store(), node_id, repo=self.repo, **fields)
+        self.lessons_changed()
+        return node
 
     def retire(self, node_id: str, reason: str, by: str | None = None,
                obsolete: bool = False) -> dict:
@@ -639,7 +674,9 @@ class Client:
                     raise OKLRejectedError(_TOO_OLD.format(what="has okl retire"),
                                            status=404) from e
                 raise
-        return core.retire(self._local_store(), node_id, reason, by=by, obsolete=obsolete)
+        node = core.retire(self._local_store(), node_id, reason, by=by, obsolete=obsolete)
+        self.lessons_changed()
+        return node
 
     def log_check(self, node_id: str, *, passed: bool, command: str, outcome: str,
                   expect: str | None = None, commit: str | None = None,

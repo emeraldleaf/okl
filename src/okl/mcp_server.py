@@ -21,6 +21,15 @@ from .client import (
 )
 
 
+def _export_note(client: Client) -> str:
+    """What to add to a write's reply when it rewrote the committed lessons export: the agent
+    is the one who can commit the file, and nothing else would tell it the file changed."""
+    if client.export_refreshed is None:
+        return ""
+    return (f". It refreshed {client.export_refreshed.name}: commit that file so CI's review "
+            "sees this lesson")
+
+
 # Any: the server's class is picked at runtime from whichever SDK major is installed.
 def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool definitions, see pyproject
     """Construct the MCP server, tolerating both major versions of the SDK.
@@ -161,8 +170,8 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             # which reads like an outage and teaches the agent nothing.
             return f"NOT RECORDED — {e}"
         if files:
-            return f"recorded {node_id} ({type}, {scope}): {core.unproven_watch(node_id)}"
-        return f"recorded {node_id} ({type}, {scope})"
+            return f"recorded {node_id} ({type}, {scope}): {core.unproven_watch(node_id)}{_export_note(client)}"
+        return f"recorded {node_id} ({type}, {scope}){_export_note(client)}"
 
     @mcp.tool()
     def okl_search(query: str, scope: str | None = None, limit: int = 15) -> str:
@@ -224,7 +233,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             proof = f"not proven yet: {core.unproven_watch(node['id'])}"
         else:
             proof = "not proven yet"
-        return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}"
+        return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}{_export_note(client)}"
 
     @mcp.tool()
     def okl_retire(*, id: str, reason: str, by: str | None = None,
@@ -250,7 +259,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             # still judge the retired lesson: a false red, never a false green.
             note = (". It governs files: run `okl export --drift` and commit okl-drift.json "
                     "so CI's drift gate stops judging it")
-        return f"retired {node['id']} ({node['status']}){note}"
+        return f"retired {node['id']} ({node['status']}){note}{_export_note(client)}"
 
     @mcp.tool()
     def okl_get(id: str) -> str:
