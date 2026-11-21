@@ -1078,6 +1078,8 @@ OPEN_QUESTIONS = {
     # (file, words of the sentence around the phrase): the question it waits on.
     ("docs/COSTS-AND-KNOBS.md", "how often a check in CI raises a false alarm is not measured yet"):
         "lesson-review-ci-false-alarms",
+    ("docs/COSTS-AND-KNOBS.md", "How often it raises one is not measured yet"):
+        "lesson-review-before-push-false-alarms",
     ("docs/ACROSS-AN-ORG.md", "Reporting the rate per pack rather than per store is still open in #252"):
         "per-pack-rate",
     ("docs/overview/okl-anatomy.html", "a working session is not yet measured"):

@@ -3,7 +3,9 @@
 A stand-in reviewer records each prompt it is given and the folder it ran in, and answers as the
 test tells it: a pick, then a verdict per lesson, or a failure."""
 import json
+import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -36,7 +38,7 @@ for lid, verdict in json.loads(os.environ.get("VERDICTS", "{}")).items():
             sys.stderr.write("Error: rate limited\n")
             sys.exit(3)
         if verdict == "SLEEP":
-            time.sleep(60)
+            time.sleep(float(os.environ.get("SLEEP_SECONDS", "60")))
         quoted = 'Asked to reply as {"verdict": "breaks or holds or no bearing"}; {not json} either.'
         if verdict == "QUOTE_ONLY":
             print(quoted)
@@ -97,8 +99,8 @@ def setup(tmp_path):
                        ("l-gamma", "GAMMA-TITLE: exit codes are public API")):
         record(lid, title)
 
-    def run(**extra: str) -> subprocess.CompletedProcess:
-        return subprocess.run(["bash", str(repo / "ci" / "lesson-review.sh")], cwd=repo,
+    def run(*args: str, **extra: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["bash", str(repo / "ci" / "lesson-review.sh"), *args], cwd=repo,
                               env={**env, **extra}, capture_output=True, text=True)
 
     def prompts() -> list[tuple[str, str]]:
@@ -108,7 +110,8 @@ def setup(tmp_path):
             out.append((cwd, prompt))
         return out
 
-    return {"repo": repo, "run": run, "prompts": prompts, "tmp": tmp_path, "record": record, "calls": calls}
+    return {"repo": repo, "run": run, "prompts": prompts, "tmp": tmp_path, "record": record, "calls": calls,
+            "env": env}
 
 
 def test_the_lesson_review_ships_with_the_kit_and_soft_passes_until_it_is_configured(tmp_path):
@@ -312,10 +315,15 @@ def test_the_documented_defaults_and_the_ci_deadline_match_the_script():
                                            (ROOT / "docs" / "SCAFFOLD.md").read_text(), re.M)}
     for name in ("LESSON_REVIEW_PICK", "LESSON_REVIEW_PARALLEL", "LESSON_REVIEW_TIMEOUT", "REVIEW_MAX_LINES"):
         assert f"{default[name]:,} unless set" in rows[name], (name, rows.get(name))
+    before_push = int(re.search(r'LESSON_REVIEW_DEADLINE="\$\{LESSON_REVIEW_DEADLINE:-(\d+)\}"', script)[1])
     assert default["LESSON_REVIEW_DEADLINE"] == 0 and "none unless set" in rows["LESSON_REVIEW_DEADLINE"]
+    assert f"{before_push} with `--before-push`" in rows["LESSON_REVIEW_DEADLINE"], rows["LESSON_REVIEW_DEADLINE"]
     pick, calls, parallel = (words[default["LESSON_REVIEW_PICK"]], words[default["LESSON_REVIEW_PICK"] + 1],
                              words[default["LESSON_REVIEW_PARALLEL"]])
     costs = flat("docs/COSTS-AND-KNOBS.md")
+    section = costs.split("## Lesson review before a push")[1].split("## ")[0]
+    assert f"stops after {before_push} seconds" in section and f"{pick} unless `LESSON_REVIEW_PICK`" in section
+    assert f"about {calls} calls" in section
     assert f"picks the {pick} lessons" in costs and f"{calls} model calls a run, {parallel} at a time" in costs
     manifest = flat("src/okl/scaffold/MANIFEST.md")
     assert f"picks the {pick} lessons" in manifest and f"{calls.capitalize()} calls a run" in manifest
@@ -325,3 +333,589 @@ def test_the_documented_defaults_and_the_ci_deadline_match_the_script():
     minutes = int(re.search(r"timeout-minutes: (\d+)", step)[1])
     deadline = int(re.search(r'LESSON_REVIEW_DEADLINE: "(\d+)"', step)[1])
     assert deadline <= minutes * 60 - 120, "the run's deadline must leave the step time to write the report"
+
+
+# --- before a push ---------------------------------------------------------------------------------
+BREAKS = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "breaks", "l-beta": "holds"}'}
+CLEAN = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "holds", "l-beta": "no bearing"}'}
+HOLD = {"LESSON_REVIEW_HOLD": "1"}      # in the foreground, holding the push: what "review_before_push": "hold" asks for
+
+
+def _state(setup) -> Path:
+    return setup["repo"] / ".git" / "okl-lesson-review"
+
+
+def _forget(setup) -> None:
+    """Drop what the review remembers, so the next push is a branch's first again."""
+    shutil.rmtree(_state(setup), ignore_errors=True)
+
+
+def _commit(setup, line: str) -> None:
+    path = setup["repo"] / "a.py"
+    path.write_text(path.read_text() + line + "\n")
+    _git(setup["repo"], "commit", "-qam", f"add {line}")
+
+
+def _wait(what, seconds: float = 30.0):
+    """The first truthy answer of `what()`, asked until `seconds` pass: a review in the background
+    ends on its own time."""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        got = what()
+        if got:
+            return got
+        time.sleep(0.1)
+    raise AssertionError("the background review did not finish in time")
+
+
+def _okl_set_up(setup) -> Path:
+    """Give the repo an okl config, as `okl init` does, ignored by git: where a report nobody has
+    read is left."""
+    folder = setup["repo"] / ".okl"
+    folder.mkdir(exist_ok=True)
+    (folder / "config.json").write_text(json.dumps({"repo": "repo"}))
+    (folder / ".gitignore").write_text("*\n")
+    return folder
+
+
+def test_before_a_push_a_broken_lesson_holds_the_change_once(setup):
+    """The review where the work is. A session's Stop hook asks for it once, and a session that opened
+    five pull requests ran it for none; a push is once per change. `--before-push` reviews the change,
+    exits 1 when a lesson is reported broken, and remembers the change: pushed again as it is, it is
+    not reviewed or held a second time, so a false alarm costs one push and no flag."""
+    held = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert held.returncode == 1, held.stdout + held.stderr
+    assert "**breaks**" in held.stdout and "1 lesson(s) reported broken (above), so this push is held" in held.stderr
+    assert "push again as it is" in held.stderr and "--no-verify" in held.stderr
+    assert "stops after 480 seconds" in held.stderr, "bounded by default, so the push returns"
+    calls = len(setup["prompts"]())
+    assert calls == 3, "one pick and one call per picked lesson"
+    again = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert again.returncode == 0 and len(setup["prompts"]()) == calls, again.stdout + again.stderr
+    assert "This change was reviewed" in again.stdout and "1 broken" in again.stdout and "`l-alpha`" in again.stdout
+    assert "reviewed once" in again.stdout
+    # What it remembers is in the repository's own git directory, never the work tree: the change, and its branch.
+    assert _git(setup["repo"], "status", "--porcelain") == ""
+    assert sorted(f.name[:7] for f in _state(setup).glob("*.json") if f.name.startswith("branch-")) == ["branch-"]
+    assert len([f for f in _state(setup).glob("*.json") if not f.name.startswith("branch-")]) == 1
+    assert not list(_state(setup).glob("*.running")), "nothing is left saying a review is under way"
+
+
+def test_a_branch_is_reviewed_in_full_once_and_then_only_what_was_broken(setup):
+    """A full review on every push was eleven calls a push, and a branch pushed five times paid for
+    five. The first push of a branch is reviewed in full. A later push of it checks again only the
+    lessons that review reported broken, with no call to pick: one call while a lesson is still
+    broken, none once nothing is. Another branch starts again with a full review."""
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1
+    assert len(setup["prompts"]()) == 3, "the first push: one pick and one call per picked lesson"
+    # The same change in a worktree of the repo is the same change: what was remembered is shared.
+    wt = setup["tmp"] / "wt"
+    _git(setup["repo"], "worktree", "add", "-q", "--detach", str(wt))
+    r = subprocess.run(["bash", str(wt / "ci" / "lesson-review.sh"), "--before-push"], cwd=wt,
+                       env={**setup["env"], **HOLD, **BREAKS}, capture_output=True, text=True)
+    assert r.returncode == 0 and "This change was reviewed" in r.stdout and len(setup["prompts"]()) == 3, r.stdout + r.stderr
+    _commit(setup, "z = 3")
+    earlier = {prompt for _, prompt in setup["prompts"]()}
+    still = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert still.returncode == 1 and len(setup["prompts"]()) == 4, still.stdout + still.stderr
+    assert "THE LESSONS, ONE LINE EACH" not in _new_prompts(setup, earlier), "no pick on a later push"
+    assert "[l-alpha]" in _new_prompts(setup, earlier) and "[l-beta]" not in _new_prompts(setup, earlier)
+    assert "1 of the 1 lessons this branch's first review reported broken were checked again" in still.stdout
+    _commit(setup, "fixed = True")
+    fixed = setup["run"]("--before-push", **HOLD, **CLEAN)
+    assert fixed.returncode == 0 and len(setup["prompts"]()) == 5 and "0 broken, 1 held" in fixed.stdout, fixed.stdout
+    _commit(setup, "later = 1")
+    nothing = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert nothing.returncode == 0 and len(setup["prompts"]()) == 5, "nothing left broken: no call at all"
+    assert "nothing is left that it reported broken, so this push adds no review" in nothing.stdout
+    # Another branch is another piece of work: its first push is reviewed in full.
+    _git(setup["repo"], "checkout", "-q", "-b", "another-branch")
+    _commit(setup, "other = 2")
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1 and len(setup["prompts"]()) == 8
+
+
+def test_before_a_push_the_review_runs_in_the_background_and_holds_nothing(setup):
+    """Held for the review, every push of a new change waited about five minutes. By default the
+    push goes at once and the review goes on without it. A report with a broken lesson in it is
+    left where it will be read: okl adds it to the agent's next briefing, once, since a report that
+    only sat in a file was one no agent read. A clean review leaves nothing to read."""
+    inbox = _okl_set_up(setup) / "review-unread.md"
+    started = time.monotonic()
+    r = setup["run"]("--before-push", **BREAKS)
+    assert r.returncode == 0 and "in the background. This push is not held" in r.stderr, r.stdout + r.stderr
+    assert time.monotonic() - started < 10, "the push does not wait for the review"
+    report = _wait(lambda: (_state(setup) / "last-report.md").is_file() and (_state(setup) / "last-report.md").read_text())
+    assert "**breaks**" in report and "l-alpha" in report
+    _wait(lambda: inbox.is_file() and not list(_state(setup).glob("*.running")))
+    assert len(setup["prompts"]()) == 3
+    again = setup["run"]("--before-push", **BREAKS)
+    assert again.returncode == 0 and "This change was reviewed" in again.stdout and len(setup["prompts"]()) == 3
+
+    def briefing(*args: str) -> str:
+        return subprocess.run([sys.executable, "-m", "okl", "check", *args, "--format", "hook"], cwd=setup["repo"],
+                              env=setup["env"], capture_output=True, text=True, check=True).stdout
+
+    assert "lesson review of your last push" not in briefing("--path", "a.py"), "a file's briefing is about the file"
+    assert inbox.is_file()
+    first = briefing("--task", "add a retry to the fetch call")
+    assert "the lesson review of your last push reported this" in first and "l-alpha" in first and "**breaks**" in first
+    assert "lesson review of your last push" not in briefing("--task", "add a retry to the fetch call"), "once"
+    assert not inbox.exists() and (inbox.parent / "review-last.md").is_file()
+    # An agent with no hooks asks over MCP, and is handed it the same way: by the function both use.
+    from okl.client import take_unread_review
+    inbox.write_text("a report nobody has read\n")
+    old_dir = Path.cwd()
+    os.chdir(setup["repo"])
+    try:
+        assert take_unread_review() == "a report nobody has read" and take_unread_review() is None
+    finally:
+        os.chdir(old_dir)
+    # A clean review has nothing a person or an agent must be told.
+    _forget(setup)
+    _commit(setup, "clean = 1")
+    assert setup["run"]("--before-push", **CLEAN).returncode == 0
+    _wait(lambda: any(not f.name.startswith("branch-") for f in _state(setup).glob("*.json"))
+          and not list(_state(setup).glob("*.running")))
+    assert not inbox.exists()
+
+
+def test_a_second_push_does_not_start_a_second_review_of_the_same_change(setup):
+    """In the background a push returns before its review ends, so the next push can come while it
+    runs. It is told so, and starts nothing."""
+    slow = {"PICKED": '["l-alpha"]', "VERDICTS": '{"l-alpha": "SLEEP"}', "SLEEP_SECONDS": "3"}
+    assert setup["run"]("--before-push", **slow).returncode == 0
+    second = setup["run"]("--before-push", **slow)
+    assert second.returncode == 0 and "already running" in second.stdout, second.stdout + second.stderr
+    _wait(lambda: not list(_state(setup).glob("*.running")) and (_state(setup) / "last-report.md").is_file())
+    assert len(setup["prompts"]()) == 2, "one pick and one check: the second push called nobody"
+    # A review that was killed is not one under way: the file it left names a process that is gone,
+    # and the next push reviews. Counted by the file's age alone, it held every push off for minutes.
+    import signal
+    _forget(setup)
+    _commit(setup, "killed = 1")
+    assert setup["run"]("--before-push", **slow).returncode == 0
+    (marker,) = _wait(lambda: list(_state(setup).glob("*.running")))
+    pid = int(_wait(lambda: marker.read_text().strip()))
+    os.kill(pid, signal.SIGKILL)
+    _wait(lambda: subprocess.run(["kill", "-0", str(pid)], capture_output=True).returncode != 0)
+    assert marker.exists(), "killed outright, it removed nothing"
+    after = setup["run"]("--before-push", **HOLD, **CLEAN)
+    assert after.returncode == 0 and "already running" not in after.stdout and "0 broken" in after.stdout, after.stdout
+
+
+def test_before_a_push_a_review_that_could_not_run_never_holds_it(setup, tmp_path):
+    """An outage of the model must not stop work. No pick, no verdict, no reviewer, or a fault in the
+    script itself ends as "did not run" (exit 2, as everywhere in okl), which the hook lets through;
+    it says LESSONS NOT REVIEWED so it is not read as clean, and remembers nothing, so the next push
+    tries again. Python exits 1 on its own error, which a hook would read as a hold."""
+    no_pick = setup["run"]("--before-push", **HOLD, PICK_REPLY="I would rather not say.", PICKED="[]")
+    assert no_pick.returncode == 2 and "LESSONS NOT REVIEWED" in no_pick.stderr, no_pick.stdout + no_pick.stderr
+    failed = setup["run"]("--before-push", **HOLD, PICKED='["l-alpha"]', VERDICTS='{"l-alpha": "FAIL"}')
+    assert failed.returncode == 2 and "LESSONS NOT REVIEWED" in failed.stderr, failed.stdout + failed.stderr
+    assert not list(_state(setup).glob("*.json")), "nothing checked, nothing remembered"
+    nowhere = str(tmp_path / "no-such-folder" / "report.md")
+    fault = setup["run"]("--before-push", **HOLD, LESSON_REVIEW_REPORT=nowhere, **BREAKS)
+    assert fault.returncode == 2 and "Traceback" in fault.stderr and "LESSONS NOT REVIEWED" in fault.stderr
+    # A reviewer command that is not a command line fails on the line that reads it, the script's first.
+    quote = setup["run"]("--before-push", **HOLD, REVIEW_CMD="python3 'unbalanced", **BREAKS)
+    assert quote.returncode == 2 and "LESSONS NOT REVIEWED" in quote.stderr, quote.stdout + quote.stderr
+    unset = setup["run"]("--before-push", **HOLD, REVIEW_CMD="", **BREAKS)
+    assert unset.returncode == 2 and "LESSONS NOT REVIEWED" in unset.stderr and "REVIEW_CMD not set" in unset.stdout
+    # The same fault outside a push is the error it is.
+    assert setup["run"](LESSON_REVIEW_REPORT=nowhere, **CLEAN).returncode == 1
+    # A change whose report was never kept is not remembered as reviewed: it is reviewed, and held, next time.
+    assert not list(_state(setup).glob("*.json"))
+    assert not list(_state(setup).glob("*.running")), "a review that died is not one under way"
+    before = len(setup["prompts"]())
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1 and len(setup["prompts"]()) > before
+
+
+def test_a_review_run_by_hand_counts_for_the_push_and_is_otherwise_unchanged(setup):
+    """Without the flag nothing is remembered: CI reviews every push it is given, as before. Asked to
+    remember (LESSON_REVIEW_ONCE=1), a review run by hand before the push counts for it, which is how
+    an agent whose tool gives a command two minutes gets the review done outside the push."""
+    assert setup["run"](**BREAKS).returncode == 0 and setup["run"](**BREAKS).returncode == 0
+    assert len(setup["prompts"]()) == 6, "no memory without the flag"
+    by_hand = setup["run"](LESSON_REVIEW_ONCE="1", **BREAKS)
+    assert by_hand.returncode == 0 and "**breaks**" in by_hand.stdout, "it reports, and holds nothing"
+    pushed = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert pushed.returncode == 0 and "This change was reviewed" in pushed.stdout and len(setup["prompts"]()) == 9
+    (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nw = 4\n")
+    _git(setup["repo"], "commit", "-qam", "another change")
+    timed = setup["run"]("--before-push", **HOLD, LESSON_REVIEW_DEADLINE="60", **CLEAN)
+    assert timed.returncode == 0 and "stops after 60 seconds" in timed.stderr, timed.stdout + timed.stderr
+
+
+def _path_without_okl(tmp: Path) -> str:
+    """A PATH with python3 and the system's tools and no `okl`, whatever this machine's holds: pip puts
+    okl beside python, so python's own folder cannot be on it."""
+    bare = tmp / "bare-bin"
+    bare.mkdir(exist_ok=True)
+    (bare / "python3").write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} "$@"\n')
+    (bare / "python3").chmod(0o755)
+    path = f"{bare}:/usr/bin:/bin"
+    assert shutil.which("okl", path=path) is None and shutil.which("git", path=path), "needs git and no okl"
+    return path
+
+
+def _new_prompts(setup, before: set) -> str:
+    """The text of the prompts made since `before` (a set of earlier ones): they are kept in files
+    with random names, so their order says nothing about when they were made."""
+    return "\n".join(prompt for _, prompt in setup["prompts"]() if prompt not in before)
+
+
+def test_before_a_push_only_what_is_committed_is_reviewed(setup):
+    """A push carries commits. The review after writing reads the work in progress, and read that way
+    before a push an uncommitted edit or a scratch file decided whether the push was held and what
+    counted as the same change (found by the first real run of this mode, against the lesson that a
+    verdict on what ships reads what is committed)."""
+    repo = setup["repo"]
+    assert setup["run"]("--before-push", **HOLD, **CLEAN).returncode == 0
+    calls = len(setup["prompts"]())
+    (repo / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nNOT_COMMITTED = True\n")
+    (repo / "scratch.py").write_text("SCRATCH_FILE = 1\n")
+    again = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert again.returncode == 0 and "This change was reviewed" in again.stdout and len(setup["prompts"]()) == calls
+    _git(repo, "commit", "-qam", "commit the edit, not the scratch file")
+    _forget(setup)
+    earlier = {prompt for _, prompt in setup["prompts"]()}
+    held = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert held.returncode == 1, held.stdout + held.stderr
+    seen = _new_prompts(setup, earlier)
+    assert "NOT_COMMITTED" in seen and "SCRATCH_FILE" not in seen and "scratch.py" not in seen
+    # Outside a push, the same script still reads the work in progress, as the review after writing does.
+    earlier = {prompt for _, prompt in setup["prompts"]()}
+    assert setup["run"](**CLEAN).returncode == 0
+    assert "SCRATCH_FILE" in _new_prompts(setup, earlier)
+    # A lesson that governs the scratch file is not put at the head of what the pick reads either: which
+    # lessons govern the change is asked of the committed files (found by the mode's third real run).
+    setup["record"]("l-scratch", "SCRATCH-TITLE: governs a scratch file")
+    subprocess.run([sys.executable, "-m", "okl", "update", "l-scratch", "--files", "scratch.py"], cwd=repo,
+                   env=setup["env"], check=True, capture_output=True, text=True)
+    (repo / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nNOT_COMMITTED = True\nmore = 1\n")
+    _git(repo, "commit", "-qam", "one more commit")
+    _forget(setup)
+    earlier = {prompt for _, prompt in setup["prompts"]()}
+    setup["run"]("--before-push", **HOLD, **CLEAN)
+    pick = next(p for p in _new_prompts(setup, earlier).split("--- END OF THE LESSON ---") if "THE LESSONS, ONE LINE EACH" in p)
+    listed = pick.split("THE LESSONS, ONE LINE EACH")[1]
+    assert listed.index("[l-alpha]") < listed.index("[l-scratch]"), "id order: the scratch file moved nothing forward"
+    earlier = {prompt for _, prompt in setup["prompts"]()}
+    setup["run"](**CLEAN)
+    listed = next(p for _, p in setup["prompts"]() if p not in earlier and "THE LESSONS, ONE LINE EACH" in p)
+    listed = listed.split("THE LESSONS, ONE LINE EACH")[1]
+    assert listed.index("[l-scratch]") < listed.index("[l-alpha]"), "outside a push the work in progress counts, as before"
+    # Nothing committed since the base: nothing to review, and no model is called.
+    before = len(setup["prompts"]())
+    nothing = setup["run"]("--before-push", **HOLD, REVIEW_BASE_REF="HEAD", **BREAKS)
+    assert nothing.returncode == 0 and "Nothing is committed since" in nothing.stdout and len(setup["prompts"]()) == before
+
+
+def test_the_reviewer_and_okl_are_read_as_command_lines(setup, tmp_path):
+    """A hook runs without the shell's PATH: a GUI git client, an IDE, an agent. The script asked for
+    a bare `okl`, so there the review was skipped while the same hook's drift gate, which resolves
+    okl in layers, ran (found by the first real run, against the lesson on resolving a CLI from a
+    hook). okl is taken as the command line the hook resolved, and a reviewer in a folder with a
+    space in its name is no longer "not on PATH", the cut at the first space that #140 was."""
+    no_okl = {"PATH": _path_without_okl(tmp_path)}
+    skipped = setup["run"]("--before-push", **HOLD, **no_okl, **BREAKS)
+    assert skipped.returncode == 2 and "okl is not on PATH" in skipped.stderr and "LESSONS NOT REVIEWED" in skipped.stderr
+    assert setup["run"](**no_okl, **BREAKS).returncode == 0, "outside a push it passes softly, as before"
+    assert setup["prompts"]() == []
+    resolved = setup["run"]("--before-push", **HOLD, LESSON_REVIEW_OKL=f"{shlex.quote(sys.executable)} -m okl", **no_okl, **BREAKS)
+    assert resolved.returncode == 1 and len(setup["prompts"]()) == 3, resolved.stdout + resolved.stderr
+    spaced = tmp_path / "my tools"; spaced.mkdir()
+    reviewer = spaced / "reviewer"
+    reviewer.write_text(f"#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(str(setup['tmp'] / 'fake_reviewer.py'))}\n")
+    reviewer.chmod(0o755)
+    (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nq = 9\n")
+    _git(setup["repo"], "commit", "-qam", "another change")
+    _forget(setup)
+    r = setup["run"]("--before-push", **HOLD, REVIEW_CMD=shlex.quote(str(reviewer)), **BREAKS)
+    assert r.returncode == 1 and len(setup["prompts"]()) == 6, r.stdout + r.stderr
+
+
+def _older_git(tmp: Path) -> str:
+    """A PATH whose git answers as git 2.30 does: it prints an option it does not know, here
+    --path-format, back as a line of its answer, then answers the rest."""
+    folder = tmp / "older-git"
+    folder.mkdir(exist_ok=True)
+    (folder / "git").write_text(
+        "#!/bin/sh\n"
+        'for a in "$@"; do case "$a" in --path-format=*) echo "$a";; esac; done\n'
+        'n=$#; i=0\n'
+        'while [ $i -lt $n ]; do a=$1; shift; i=$((i+1)); case "$a" in --path-format=*) ;; *) set -- "$@" "$a";; esac; done\n'
+        f'exec {shlex.quote(shutil.which("git"))} "$@"\n')
+    (folder / "git").chmod(0o755)
+    return f"{folder}:{os.environ['PATH']}"
+
+
+def test_the_review_keeps_its_state_in_the_git_directory_under_an_older_git(setup):
+    """Found by running it for real: the first git on the machine was 2.30, which does not know
+    `--path-format` and prints it back, so three real reviews kept what they remembered in a folder
+    named after the option, in the work tree, and none was ever found again. The suite's git was
+    newer, so it passed. Under a git that answers the old way, the state is in the git directory, a
+    change is remembered, and a worktree's push finds the repo's settings."""
+    path = _older_git(setup["tmp"])
+    probe = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=setup["repo"],
+                           env={**setup["env"], "PATH": path}, capture_output=True, text=True).stdout
+    assert probe.startswith("--path-format=absolute\n"), "the stand-in must answer as the older git does"
+    held = setup["run"]("--before-push", **HOLD, **BREAKS, PATH=f"{setup['tmp'] / 'bin'}:{path}")
+    assert held.returncode == 1, held.stdout + held.stderr
+    assert len([f for f in _state(setup).glob("*.json")]) == 2, "the change and its branch, in .git"
+    assert not [f for f in setup["repo"].iterdir() if f.name.startswith("--path-format")], "nothing in the work tree"
+    again = setup["run"]("--before-push", **HOLD, **BREAKS, PATH=f"{setup['tmp'] / 'bin'}:{path}")
+    assert again.returncode == 0 and "This change was reviewed" in again.stdout
+    # git's hook, in a worktree of the repo: the settings are the main checkout's, found without the option.
+    push, pushed = _hooked(setup)
+    _forget(setup)
+    wt = setup["tmp"] / "pushed-from-a-worktree"
+    _git(setup["repo"], "worktree", "add", "-q", "-b", "in-a-worktree", str(wt))
+    (wt / "a.py").write_text((wt / "a.py").read_text() + "from_worktree = 1\n")
+    _git(wt, "commit", "-qam", "a change made in a worktree")
+    env = {**setup["env"], **BREAKS, "OKL_BIN": f"{sys.executable} -m okl", "PATH": f"{setup['tmp'] / 'bin'}:{path}"}
+    env.pop("REVIEW_CMD")
+    r = subprocess.run(["git", "push", "-q", "origin", "HEAD:refs/heads/from-worktree"], cwd=wt, env=env,
+                       capture_output=True, text=True)
+    assert r.returncode != 0 and "so this push is held" in r.stdout + r.stderr, r.stdout + r.stderr
+
+
+def _hooked(setup, review: bool | str = "hold", cmd: bool = True):
+    """The setup's repo with a remote to push to, okl's pre-push hook where git runs it, and the
+    repo's config asking for the review: "hold" to hold the push for it, True for the default, in
+    the background. Returns a `push` that goes through git."""
+    repo, env = setup["repo"], dict(setup["env"])
+    remote = setup["tmp"] / "remote.git"
+    if not remote.exists():
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True, capture_output=True)
+        _git(repo, "remote", "add", "origin", str(remote))
+        hook = repo / ".git" / "hooks" / "pre-push"
+        shutil.copy(ROOT / "src" / "okl" / "scaffold" / "git-hooks" / "pre-push", hook)
+        hook.chmod(0o755)
+    config = {"repo": "r", "review_before_push": review}
+    if cmd:
+        config["review_cmd"] = env["REVIEW_CMD"]
+    (repo / ".okl").mkdir(exist_ok=True)
+    (repo / ".okl" / "config.json").write_text(json.dumps(config))
+    (repo / ".okl" / ".gitignore").write_text("*\n")
+    env.pop("REVIEW_CMD")          # the hook reads the reviewer from the config
+    env["OKL_BIN"] = f"{sys.executable} -m okl"
+
+    def push(**extra: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "push", "-q",
+                               "origin", "HEAD:main"], cwd=repo, env={**env, **extra}, capture_output=True, text=True)
+
+    def pushed() -> bool:
+        there = subprocess.run(["git", "--git-dir", str(remote), "rev-parse", "-q", "--verify", "refs/heads/main"],
+                               capture_output=True, text=True).stdout.strip()
+        return there == _git(repo, "rev-parse", "HEAD")
+
+    return push, pushed
+
+
+def test_gits_pre_push_hook_runs_the_review_where_the_repo_asks_for_it(setup):
+    """Through git itself, asked to hold ("review_before_push": "hold"): a push whose change breaks a
+    lesson is refused and nothing reaches the remote; pushed again it goes, without a second review.
+    A commit on top checks that lesson again, and goes when it holds. The hook reads the reviewer
+    from the config."""
+    push, pushed = _hooked(setup)
+    held = push(**BREAKS)
+    said = held.stdout + held.stderr
+    assert held.returncode != 0 and "so this push is held" in said and "**breaks**" in said, said
+    assert not pushed() and len(setup["prompts"]()) == 3
+    again = push(**BREAKS)
+    assert again.returncode == 0 and pushed() and len(setup["prompts"]()) == 3, again.stdout + again.stderr
+    (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nz = 3\n")
+    _git(setup["repo"], "commit", "-qam", "more")
+    clean = push(**CLEAN)
+    assert clean.returncode == 0 and pushed() and len(setup["prompts"]()) == 4, clean.stdout + clean.stderr
+    # The hook hands the script the okl it resolved (OKL_BIN here), so the review runs where no `okl` is on PATH.
+    (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nz = 3\nk = 5\n")
+    _git(setup["repo"], "commit", "-qam", "more again")
+    _forget(setup)
+    bare = push(PATH=_path_without_okl(setup["tmp"]), **BREAKS)
+    assert bare.returncode != 0 and not pushed() and len(setup["prompts"]()) == 7, bare.stdout + bare.stderr
+
+
+def test_gits_pre_push_hook_reviews_in_the_background_and_shows_the_report_at_the_next_push(setup):
+    """The default ("review_before_push": true). The push reaches the remote at once, whatever the
+    review will say. The report with the broken lesson is printed at the next push, once, for a
+    person at a terminal; an agent gets it from okl's next briefing when that comes first."""
+    push, pushed = _hooked(setup, review=True)
+    inbox = setup["repo"] / ".okl" / "review-unread.md"
+    first = push(**BREAKS)
+    assert first.returncode == 0 and pushed(), first.stdout + first.stderr
+    assert "in the background. This push is not held" in first.stderr
+    _wait(lambda: inbox.is_file() and not list(_state(setup).glob("*.running")))
+    assert len(setup["prompts"]()) == 3
+    _commit(setup, "next = 1")
+    second = push(**CLEAN)
+    assert second.returncode == 0 and pushed(), second.stdout + second.stderr
+    assert "the lesson review of your last push reported:" in second.stderr and "**breaks**" in second.stderr
+    assert "l-alpha" in second.stderr and not inbox.exists() and (inbox.parent / "review-last.md").is_file()
+    _wait(lambda: not list(_state(setup).glob("*.running")) and len(setup["prompts"]()) == 4)
+    _commit(setup, "third = 1")
+    third = push(**CLEAN)
+    assert third.returncode == 0 and "of your last push reported" not in third.stderr, "shown once"
+
+
+def test_gits_pre_push_hook_reviews_nothing_unless_asked_and_never_blocks_on_setup(setup):
+    """Off by default: it calls a model about eleven times and takes minutes. One push can turn it on
+    or off (OKL_REVIEW_BEFORE_PUSH). Asked for with no reviewer named, or with the script not in the
+    repo, it says LESSONS NOT REVIEWED and the push goes."""
+    push, pushed = _hooked(setup, review=False)
+    assert push(**BREAKS).returncode == 0 and pushed() and setup["prompts"]() == [], "off: no model is called"
+
+    def commit(n: int) -> None:
+        (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\n" + "".join(f"v{i} = {i}\n" for i in range(n)))
+        _git(setup["repo"], "commit", "-qam", f"change {n}")
+
+    commit(1)
+    forced = push(OKL_REVIEW_BEFORE_PUSH="hold", **BREAKS)
+    assert forced.returncode != 0 and not pushed() and len(setup["prompts"]()) == 3, forced.stdout + forced.stderr
+    push, pushed = _hooked(setup)
+    commit(2)
+    assert push(OKL_REVIEW_BEFORE_PUSH="0", **BREAKS).returncode == 0 and pushed() and len(setup["prompts"]()) == 3
+    push, pushed = _hooked(setup, cmd=False)
+    commit(3)
+    unnamed = push(**BREAKS)
+    assert unnamed.returncode == 0 and pushed() and "LESSONS NOT REVIEWED" in unnamed.stderr and "review_cmd" in unnamed.stderr
+    # A copy of the script from before this mode would run a plain review, with nothing remembered,
+    # held or timed: the kit never replaces a copy the repo has. The hook says so and pushes.
+    push, pushed = _hooked(setup)
+    real = (setup["repo"] / "ci" / "lesson-review.sh").read_text()
+    (setup["repo"] / "ci" / "lesson-review.sh").write_text(real.replace("--before-push", "--some-older-flag"))
+    _git(setup["repo"], "commit", "-qam", "an older review script")
+    older = push(**BREAKS)
+    assert older.returncode == 0 and pushed() and "from before the review" in older.stderr and "okl scaffold --force" in older.stderr
+    assert len(setup["prompts"]()) == 3
+    (setup["repo"] / "ci" / "lesson-review.sh").write_text(real)
+    _git(setup["repo"], "commit", "-qam", "the current review script")
+    # A push of some other commit than the checked-out one is not this change: not reviewed, and pushed.
+    side = _git(setup["repo"], "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "another branch's commit")
+    other = subprocess.run(["git", "push", "-q", "origin", f"{side}:refs/heads/side"], cwd=setup["repo"],
+                           env={**setup["env"], **BREAKS, "OKL_BIN": f"{sys.executable} -m okl"}, capture_output=True, text=True)
+    assert other.returncode == 0 and "not of the checked-out commit" in other.stderr and len(setup["prompts"]()) == 3
+    # A git client's PATH with no python3: the setting is still read, and the review, which needs
+    # python3, says it did not run. Read with python3 alone, the setting was silently off there.
+    bare = setup["tmp"] / "no-python"; bare.mkdir()
+    for tool in ("bash", "git", "sed", "grep", "awk", "cat", "dirname"):
+        (bare / tool).symlink_to(shutil.which(tool))
+    config = setup["repo"] / ".okl" / "config.json"
+    config.write_text(json.dumps(json.loads(config.read_text()), indent=2) + "\n")      # a key a line, as okl writes it
+    (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\nno_python = 1\n")
+    _git(setup["repo"], "commit", "-qam", "pushed from a client with no python3")
+    quiet = push(PATH=str(bare), **BREAKS)
+    assert quiet.returncode == 0 and pushed(), quiet.stdout + quiet.stderr
+    assert "python3 is not on PATH" in quiet.stderr and "LESSONS NOT REVIEWED" in quiet.stderr, quiet.stderr
+    # A review script that dies of something else (exit 3 here) is not a held push: only its exit 1 is.
+    push, pushed = _hooked(setup, review=True)
+    (setup["repo"] / "ci" / "lesson-review.sh").write_text("#!/usr/bin/env bash\n# --before-push\nexit 3\n")
+    _git(setup["repo"], "commit", "-qam", "a review script that dies")
+    assert push(**BREAKS).returncode == 0 and pushed()
+    (setup["repo"] / "ci" / "lesson-review.sh").write_text(real)
+    _git(setup["repo"], "commit", "-qam", "the review script again")
+    push, pushed = _hooked(setup)
+    (setup["repo"] / "ci" / "lesson-review.sh").rename(setup["repo"] / "ci" / "moved.sh")
+    _git(setup["repo"], "add", "-A"); _git(setup["repo"], "commit", "-qm", "the script is gone")
+    gone = push(**BREAKS)
+    assert gone.returncode == 0 and pushed() and "LESSONS NOT REVIEWED" in gone.stderr and "okl scaffold" in gone.stderr
+    assert len(setup["prompts"]()) == 3
+
+
+def test_init_says_when_the_review_before_a_push_is_on_and_cannot_run(tmp_path, monkeypatch, capsys):
+    """The setting is two lines in a config; what runs it is a hook and a script, each of which okl
+    keeps when it is another tool's or an older copy. Each case left the setting on and doing nothing
+    until a push went unreviewed (found by the first real run, against the lesson that a feature in an
+    okl-owned file must check the copy that is there). init says which, and nothing when all is well
+    or the setting is off."""
+    from okl.cli import install
+    _git(tmp_path, "init", "-q")
+    monkeypatch.chdir(tmp_path)
+    on = {"review_before_push": True}
+    install._say_review_before_push({"review_before_push": "hold"})
+    assert "no pre-push hook here runs it" in capsys.readouterr().out, "asked to hold, it is on as well"
+    install._say_review_before_push({})
+    install._say_review_before_push({"review_before_push": False})
+    assert capsys.readouterr().out == "", "off: nothing to say"
+    install._say_review_before_push(on)
+    said = capsys.readouterr().out
+    assert "no pre-push hook here runs it (none is installed" in said
+    assert "ci/lesson-review.sh is not in this repo" in said
+    hook = tmp_path / ".git" / "hooks" / "pre-push"
+    hook.parent.mkdir(exist_ok=True)
+    hook.write_text("#!/bin/sh\n# another tool's hook\n")
+    (tmp_path / "ci").mkdir()
+    (tmp_path / "ci" / "lesson-review.sh").write_text("#!/usr/bin/env bash\n# a copy from before the mode\n")
+    install._say_review_before_push(on)
+    said = capsys.readouterr().out
+    assert "add this line" in said and "bash ci/lesson-review.sh --before-push || [ $? -ne 1 ] || exit 1" in said
+    assert "is from before it" in said and "okl scaffold --force" in said
+    shutil.copy(ROOT / "src" / "okl" / "scaffold" / "git-hooks" / "pre-push", hook)
+    shutil.copy(SCRIPT, tmp_path / "ci" / "lesson-review.sh")
+    install._say_review_before_push(on)
+    assert capsys.readouterr().out == "", "okl's hook and the current script: nothing to say"
+    # The line it gives another tool's hook is the one the docs give.
+    costs = " ".join((ROOT / "docs" / "COSTS-AND-KNOBS.md").read_text().split())
+    assert install._REVIEW_LINE.replace('"<your reviewer>"', '"..."') in costs
+
+
+def test_init_wires_the_review_before_a_push_itself(tmp_path, capsys, monkeypatch):
+    """`okl init --review-before-push <reviewer>` is the whole setup: it records the setting and the
+    reviewer, installs the pre-push hook even where an earlier init chose none, and puts the review
+    script in the repo. An init that printed those as steps to take was the lesson it broke on its
+    second real run ("init must wire, not instruct"). The dry run lists both files and writes
+    neither; a script already in the repo is never replaced; --no-review-before-push turns it off and
+    keeps the reviewer."""
+    from okl.cli import main
+    _git(tmp_path, "init", "-q")
+    monkeypatch.chdir(tmp_path)
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]
+    assert main([*base, "--no-git-hook"]) == 0
+    hook, script, config = tmp_path / ".git" / "hooks" / "pre-push", tmp_path / "ci" / "lesson-review.sh", tmp_path / ".okl" / "config.json"
+    assert not hook.exists() and json.loads(config.read_text())["git_hook"] is False
+    capsys.readouterr()
+    assert main([*base, "--review-before-push", "claude -p --model sonnet", "--dry-run"]) == 0
+    listed = capsys.readouterr().out
+    assert "ci/lesson-review.sh" in listed and "and the review before a push" in listed
+    assert not hook.exists() and not script.exists(), "a dry run writes nothing"
+    assert main([*base, "--review-before-push", "claude -p --model sonnet"]) == 0
+    said = capsys.readouterr().out
+    cfg = json.loads(config.read_text())
+    assert (cfg["review_before_push"], cfg["review_cmd"], cfg["git_hook"]) == (True, "claude -p --model sonnet", True)
+    assert "--before-push" in hook.read_text() and script.read_bytes() == SCRIPT.read_bytes()
+    assert script.stat().st_mode & 0o111, "git runs it with bash, and a person runs it by name"
+    assert "installed the review script" in said and "review before a push: on, with `claude -p --model sonnet`" in said
+    assert "in the background, so no push waits" in said and "--review-holds-push" in said
+    assert "! review before a push" not in said, "nothing is left for the person to do"
+    script.write_text(script.read_text() + "# edited here\n")
+    assert main(base) == 0
+    assert script.read_text().endswith("# edited here\n"), "a script already in the repo is kept"
+    assert "installed the review script" not in capsys.readouterr().out
+    assert main([*base, "--review-holds-push"]) == 0
+    assert json.loads(config.read_text())["review_before_push"] == "hold"
+    assert "the push waits a few minutes, and a lesson reported broken holds it once" in capsys.readouterr().out
+    assert main(base) == 0 and json.loads(config.read_text())["review_before_push"] == "hold", "a plain init keeps it"
+    capsys.readouterr()
+    assert main([*base, "--no-review-before-push"]) == 0
+    cfg = json.loads(config.read_text())
+    assert cfg["review_before_push"] is False and cfg["review_cmd"] == "claude -p --model sonnet"
+    assert "review before a push: on" not in capsys.readouterr().out
+
+
+def test_no_doc_says_the_pre_push_hook_holds_a_push_only_for_drift():
+    """The hook holds a push for drift and, where turned on, for a lesson the review reports broken.
+    Three places kept saying "only when lessons have drifted" after the hook changed, and no check
+    tied them to it (found by the mode's second real run). The sentence is gone from every shipped
+    text, and the places that say what the hook does name the review."""
+    shipped = subprocess.run(["git", "ls-files", "*.md", "src/okl/cli/*.py", "src/okl/scaffold"], cwd=ROOT,
+                             capture_output=True, text=True, check=True).stdout.split()
+    assert len(shipped) > 40
+    stale = [f for f in shipped if f != "CHANGELOG.md" and (ROOT / f).is_file() and
+             re.search(r"only when (?:okl ran and found drift|lessons (?:have )?drifted)|blocks only on drift",
+                       " ".join((ROOT / f).read_text(errors="replace").split()), re.I)]
+    assert stale == [], f"these still say drift is the only thing that holds a push: {stale}"
+    for path in ("README.md", "docs/GETTING-STARTED.md", "docs/WHAT-INIT-WRITES.md", "docs/COSTS-AND-KNOBS.md",
+                 "src/okl/scaffold/MANIFEST.md", "src/okl/scaffold/git-hooks/pre-push", "docs/ARCHITECTURE.md"):
+        text = " ".join((ROOT / path).read_text().split())
+        assert re.search(r"review before a push|--review-before-push|--before-push|reviews the push", text), path

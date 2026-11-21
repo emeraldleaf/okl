@@ -100,7 +100,7 @@ lessons that hold on almost any codebase plus the bundled packs for your stack, 
 prompt is already briefed
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty). It wires Claude
 Code when the repo has a `.claude/` directory or `claude` is on your PATH (`--claude` /
-`--no-claude`), installs a pre-push hook that blocks a push only when lessons have drifted
+`--no-claude`), installs a pre-push hook that holds a push when lessons have drifted
 (`--no-git-hook` skips it; `--ci` installs the GitHub workflow instead, `--ci --git-hook` both),
 and remembers both choices. Every path it writes, and what each is for:
 [What `okl init` writes](docs/WHAT-INIT-WRITES.md).
@@ -575,9 +575,14 @@ an interval that includes it, and 0.145 on the 31 bugs whose lesson was written 
 before 0.19.0, which asks each check to list every path the lesson's rule covers first: on single prompts that
 found the break 0.429 of the time against 0.279 ([REPORT §4bl](evals/REPORT.md)), not yet measured in sessions.
 `okl init --no-review-after-writing` turns it off; `OKL_REVIEW_AFTER_WRITING=0` skips it for one session.
-The same review runs on a pull request with any model's CLI, whoever wrote the change: `ci/lesson-review.sh`
-makes one call to pick the ten lessons and one fresh call per lesson, off unless set up
-([COSTS-AND-KNOBS.md](docs/COSTS-AND-KNOBS.md#lesson-review-in-ci-off-by-default)).
+The same review runs with any model's CLI, whoever wrote the change: `ci/lesson-review.sh`
+makes one call to pick the ten lessons and one fresh call per lesson, off unless set up. On a pull request it
+reads the bundled packs, since a runner cannot see your store
+([COSTS-AND-KNOBS.md](docs/COSTS-AND-KNOBS.md#lesson-review-in-ci-off-by-default)). At a push it runs on
+your machine against every lesson you have, in the background, a branch in full once: the push is not held, and
+the report reaches you at the next push and your agent at its next prompt.
+`okl init --review-before-push "<reviewer>"` turns it on, with any command that reads a prompt on stdin
+([COSTS-AND-KNOBS.md](docs/COSTS-AND-KNOBS.md#lesson-review-before-a-push-off-by-default)).
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
