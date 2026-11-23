@@ -28,8 +28,9 @@
   no verdict, or a fault in the script itself, which exited 1 and would have read as a hold). It
   reviews what is pushed, the commits and never the work in progress, and not a push of some
   other commit than the checked-out one. The hook names the commit and branch git is pushing, so a
-  commit made while the hook runs is not the one reviewed, and a review of an older commit that
-  ends last adds to the branch's record and never replaces a newer one. It stops after 480 seconds unless
+  commit made while the hook runs is not the one reviewed. Two reviews of one branch that overlap
+  join their records, whichever ends last, so neither loses a lesson the other reported broken or
+  could not check. It stops after 480 seconds unless
   `LESSON_REVIEW_DEADLINE` says otherwise. `LESSON_REVIEW_ONCE=1` makes a review run by hand
   count for the push. `OKL_REVIEW_BEFORE_PUSH=0` or `1` decides one push. okl's hook hands the
   script the okl it resolved, and the script reads it and the reviewer as command lines, so a

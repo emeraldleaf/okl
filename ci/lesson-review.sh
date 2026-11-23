@@ -150,6 +150,7 @@ TIMEOUT = number("LESSON_REVIEW_TIMEOUT", 900)
 # written at all (lesson remote-timeout-not-a-deadline). Set it below the step's timeout.
 DEADLINE = number("LESSON_REVIEW_DEADLINE", 0)
 STARTED = time.monotonic()
+BEGAN = time.time()     # when this review began, by a clock two reviews share: which of them is the later one
 # The model reads the pull request's text, so it gets none of okl's own credentials or store address:
 # this script runs okl itself (lesson seed:ci-security:ai_step_untrusted_input).
 MODEL_ENV = {k: v for k, v in ENV.items() if not k.startswith("OKL_")}
@@ -281,21 +282,27 @@ def inbox():
 
 
 def keep_branch(path, facts):
-    """Write what a review found about its branch, never over a later commit's review. Two commits of
-    one branch can be under review at once, since a review under way holds off only a second review
-    of the same change. Where the older one ended last and wrote its record, the next push checked
-    the older list, and a lesson only the newer review had reported broken was never checked again.
-    Read and written under one lock: the record of a later commit keeps its head, and gains what
-    this review found."""
+    """Write what a review found about its branch, keeping what another review wrote meanwhile. Two
+    commits of one branch can be under review at once, since a review under way holds off only a
+    second review of the same change. Whichever ended last wrote its record over the other's: a
+    lesson only the other had reported broken, or had left with no verdict, was never checked again.
+
+    Read and written under one lock. A record that is not the one this review read when it began
+    was written by a review that ran alongside it: the two are joined, the lists of both under the
+    head of the one that began later. Which began later is asked of the clock and not of the
+    commits: an amended commit is no ancestor of the one it replaced."""
     with open(path + ".lock", "w", encoding="utf-8") as lock:
         if fcntl:
             fcntl.flock(lock, fcntl.LOCK_EX)
         was = read_json(path)
-        if (was and was.get("base") == facts["base"] and isinstance(was.get("head"), str) and was["head"] != facts["head"]
-                and run(["git", "merge-base", "--is-ancestor", facts["head"], was["head"]]).returncode == 0):
+        if was and was != SEEN and was.get("base") == facts["base"]:
+            def began(record):
+                return record["began"] if isinstance(record.get("began"), (int, float)) else 0
+
             def both(key):
-                return list(dict.fromkeys([i for i in [*(was.get(key) or []), *facts[key]] if isinstance(i, str)]))
-            facts = {**was, "broken": both("broken"), "unfinished": both("unfinished")}
+                return list(dict.fromkeys(i for i in [*(was.get(key) or []), *facts[key]] if isinstance(i, str)))
+            later = was if began(was) > began(facts) else facts
+            facts = {**later, "broken": both("broken"), "unfinished": both("unfinished")}
         with open(path, "w", encoding="utf-8") as f:
             json.dump(facts, f)
 
@@ -431,6 +438,7 @@ if MARKER and os.path.isfile(MARKER):
 # again, or main itself, whose base moves with each push.
 RECHECK, BRANCH = None, None
 LEFT = []               # the lessons the branch's last review left with no verdict
+SEEN = None             # the branch's record as this review read it when it began
 CARRY, CARRIED = [], {} # on a second try at the same commit: what the first try reported broken, and its counts
 if BEFORE_PUSH and MARKER:
     name = ENV.get("LESSON_REVIEW_BRANCH") or run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
@@ -438,7 +446,7 @@ if BEFORE_PUSH and MARKER:
     if tip and name and name != "HEAD":
         WHOSE = "Branch `%s`" % cell(name, 120).replace("`", "")
         BRANCH = os.path.join(STATE, "branch-%s.json" % hashlib.sha256(name.encode("utf-8", "replace")).hexdigest()[:16])
-        was = read_json(BRANCH)
+        was = SEEN = read_json(BRANCH)
         if was and was.get("base") == start and isinstance(was.get("head"), str):
             was_broken = [i for i in was.get("broken") or [] if isinstance(i, str)]
             LEFT = [i for i in was.get("unfinished") or [] if isinstance(i, str)]
@@ -738,7 +746,7 @@ if MARKER and done:
         REMEMBER.append((MARKER, {"at": when, "base": BASE, "broken": now_broken,
                                   "seconds": int(time.monotonic() - STARTED), "again": RECHECK is not None, **total}))
     if BRANCH:
-        REMEMBER.append((BRANCH, {"at": when, "base": start, "head": TIP, "broken": now_broken,
+        REMEMBER.append((BRANCH, {"at": when, "began": BEGAN, "base": start, "head": TIP, "broken": now_broken,
                                   "unfinished": unfinished, "count": total}))
 if BEFORE_PUSH:
     # A lesson with no verdict is told too: in the background nobody saw the report that names it.

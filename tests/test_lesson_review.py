@@ -40,6 +40,10 @@ for lid, verdict in json.loads(os.environ.get("VERDICTS", "{}")).items():
             sys.exit(3)
         if verdict == "SLEEP":
             time.sleep(float(os.environ.get("SLEEP_SECONDS", "60")))
+        if verdict == "WAIT":      # until the test lets it go, by making the file WAIT_FOR names
+            end = time.time() + 60
+            while time.time() < end and not os.path.exists(os.path.join(os.environ["CALLS_DIR"], os.environ["WAIT_FOR"])):
+                time.sleep(0.05)
         quoted = 'Asked to reply as {"verdict": "breaks or holds or no bearing"}; {not json} either.'
         if verdict == "QUOTE_ONLY":
             print(quoted)
@@ -1226,7 +1230,8 @@ def test_the_review_reads_the_commit_git_is_pushing(setup):
 
 def test_gits_pre_push_hook_names_the_commit_and_branch_it_pushes(setup):
     """The hook hands the script the commit it matched and the branch git pushes it from. Pushed as
-    HEAD, git names no branch, and the script reads the checked-out one."""
+    HEAD, git names no branch, and the hook names the one checked out when it read the commit: read
+    by the script later, a branch switched to in between got the record of a commit it does not hold."""
     push, pushed = _hooked(setup)
     repo = setup["repo"]
     (repo / "ci" / "lesson-review.sh").write_text(
@@ -1239,29 +1244,72 @@ def test_gits_pre_push_hook_names_the_commit_and_branch_it_pushes(setup):
     assert (setup["calls"] / "named").read_text() == f"{head} {branch}\n"
     _git(repo, "commit", "-q", "--allow-empty", "-m", "another")
     assert push().returncode == 0
-    assert (setup["calls"] / "named").read_text() == f"{_git(repo, 'rev-parse', 'HEAD')} \n"
+    assert (setup["calls"] / "named").read_text() == f"{_git(repo, 'rev-parse', 'HEAD')} {branch}\n"
 
 
-def test_an_older_review_that_ends_last_does_not_write_over_a_newer_one(setup):
+def _review_in_the_background(setup, **env: str) -> subprocess.Popen:
+    return subprocess.Popen(["bash", str(setup["repo"] / "ci" / "lesson-review.sh"), "--before-push"], cwd=setup["repo"],
+                            env={**setup["env"], **HOLD, **env}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
+@pytest.mark.parametrize("newer_commit", ["on top", "amended"])
+def test_an_older_review_that_ends_last_does_not_write_over_a_newer_one(setup, newer_commit):
     """Two commits of one branch can be under review at once: a review under way holds off only a
     second review of the same change. The older one ended last and wrote its record over the
     newer one's, so the next push checked the older list and never the lesson only the newer
-    review had reported broken. The newer commit's record keeps its head and gains what the older
-    review found."""
-    slow = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "SLEEP", "l-beta": "breaks"}', "SLEEP_SECONDS": "6"}
-    older = subprocess.Popen(["bash", str(setup["repo"] / "ci" / "lesson-review.sh"), "--before-push"], cwd=setup["repo"],
-                             env={**setup["env"], **HOLD, **slow}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    review had reported broken. The record of the review that began later keeps its head and
+    gains what the older one found. Amended, the newer commit is not on top of the older one, so
+    which is newer is not asked of the commits."""
+    older = _review_in_the_background(setup, PICKED='["l-alpha", "l-beta"]', WAIT_FOR="release-older",
+                                      VERDICTS='{"l-alpha": "WAIT", "l-beta": "breaks"}')
     try:
-        _wait(lambda: len(setup["prompts"]()) >= 2)      # its pick is over and its slow check is under way
-        _commit(setup, "newer = 1")
+        _wait(lambda: len(setup["prompts"]()) >= 2)      # its pick is over and its first check waits
+        if newer_commit == "amended":
+            (setup["repo"] / "a.py").write_text("x = 1\ny = 2  # CHANGE-MARKER\namended = 1\n")
+            _git(setup["repo"], "commit", "-qa", "--amend", "-m", "the change, amended")
+        else:
+            _commit(setup, "newer = 1")
         second = _git(setup["repo"], "rev-parse", "HEAD")
         newer = setup["run"]("--before-push", **HOLD, PICKED='["l-gamma"]', VERDICTS='{"l-gamma": "breaks"}')
         assert newer.returncode == 1 and "already running" not in newer.stdout, newer.stdout + newer.stderr
         assert (_branch_record(setup)["head"], _branch_record(setup)["broken"]) == (second, ["l-gamma"])
+        (setup["calls"] / "release-older").write_text("")
         out, err = older.communicate(timeout=60)
     finally:
+        (setup["calls"] / "release-older").write_text("")
         older.kill()
     assert older.returncode == 1, out + err
     record = _branch_record(setup)
     assert record["head"] == second, "the newer commit's review is still the branch's"
     assert sorted(record["broken"]) == ["l-beta", "l-gamma"] and record["unfinished"] == ["l-alpha"], record
+
+
+def test_a_newer_review_that_ends_last_keeps_what_an_older_one_left_unchecked(setup):
+    """The other order. The older review ends first and leaves a lesson with no verdict; the newer
+    one, begun before that, ends after it and wrote its own record over it, so that lesson was
+    never checked again. Its record now holds the lessons of both."""
+    older = _review_in_the_background(setup, PICKED='["l-alpha", "l-beta"]', WAIT_FOR="release-older",
+                                      VERDICTS='{"l-alpha": "WAIT", "l-beta": "breaks"}')
+    newer = None
+    try:
+        _wait(lambda: len(setup["prompts"]()) >= 2)
+        _commit(setup, "newer = 1")
+        second = _git(setup["repo"], "rev-parse", "HEAD")
+        newer = _review_in_the_background(setup, PICKED='["l-beta", "l-gamma"]', WAIT_FOR="release-newer",
+                                          VERDICTS='{"l-beta": "WAIT", "l-gamma": "breaks"}')
+        _wait(lambda: len(setup["prompts"]()) >= 4)      # both have picked, and each waits on its first check
+        (setup["calls"] / "release-older").write_text("")
+        assert older.wait(timeout=60) == 1
+        assert _branch_record(setup)["unfinished"] == ["l-alpha"] and _branch_record(setup)["head"] != second
+        (setup["calls"] / "release-newer").write_text("")
+        assert newer.wait(timeout=60) == 1
+    finally:
+        for name in ("release-older", "release-newer"):
+            (setup["calls"] / name).write_text("")
+        for p in (older, newer):
+            if p is not None:
+                p.kill()
+                p.communicate()
+    record = _branch_record(setup)
+    assert record["head"] == second
+    assert sorted(record["broken"]) == ["l-beta", "l-gamma"] and sorted(record["unfinished"]) == ["l-alpha", "l-beta"], record

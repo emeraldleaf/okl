@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:7cce623f2e867e2c537db9ee40ff2b97e954f9a1c1e3e2abba91a82105358831
+# okl-fingerprint: sha256:a079c42a4760ad699f5bf8a9f97f0376ef7ef64a0fc327e524eeb870f4d95483
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push,
 # and then, where the repo asks for it, the review after writing.
 #
@@ -154,7 +154,7 @@ if [[ "$want" == "1" || "$want" == "hold" ]]; then
     # a plain review: nothing remembered, nothing held, no time limit.
     echo "okl pre-push: LESSONS NOT REVIEWED -- ci/lesson-review.sh in this repo is from before the review" >&2
     echo "  before a push ('okl scaffold --force' replaces it). Pushing anyway." >&2
-  elif head=$(git rev-parse HEAD 2>/dev/null); [[ -n "$pushed" ]] && ! printf '%s\n' "$pushed" | awk '{print $2}' | grep -qx "$head"; then
+  elif head=$(git rev-parse HEAD 2>/dev/null); on=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); [[ -n "$pushed" ]] && ! printf '%s\n' "$pushed" | awk '{print $2}' | grep -qx "$head"; then
     echo "okl pre-push: lessons not reviewed -- this push is not of the checked-out commit, and the review" >&2
     echo "  reads the checked-out one. Pushing." >&2
   else
@@ -165,9 +165,10 @@ if [[ "$want" == "1" || "$want" == "hold" ]]; then
     [[ "$want" != "hold" ]] || hold=1
     # The commit matched above and the branch git is pushing it from, named to the script: read
     # again there, a commit made in between was reviewed and remembered while git pushed this one.
+    # Pushed as HEAD, git names no branch: the one that was checked out when the commit was read.
     branch=$(printf '%s\n' "$pushed" | awk -v h="$head" '$2 == h && $1 ~ /^refs\/heads\// { sub(/^refs\/heads\//, "", $1); print $1; exit }')
     REVIEW_CMD="$reviewer" LESSON_REVIEW_HOLD="$hold" LESSON_REVIEW_OKL="$(printf '%q ' "${OKL[@]}")" \
-      LESSON_REVIEW_TIP="$head" LESSON_REVIEW_BRANCH="$branch" bash ci/lesson-review.sh --before-push
+      LESSON_REVIEW_TIP="$head" LESSON_REVIEW_BRANCH="${branch:-$on}" bash ci/lesson-review.sh --before-push
     [[ $? -ne 1 ]] || exit 1
   fi
 fi
