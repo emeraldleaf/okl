@@ -147,6 +147,8 @@ That is expected; see CONTRIBUTING.
     it reports at the push that precedes the pull request and holds nothing, since a
     docs-only change can wait for the next sweep. Twelve pull requests in a row were opened
     without the review while this rule was only a paragraph here (#500 to #511).
+  - It checks the branch that is checked out, not the refs git is pushing: `git push origin
+    other-branch` from somewhere else is not looked at.
   - The record is on your machine alone, so the check says nothing in CI.
 - **Sweep every few merges.** Changes that went in without a CLI review (docs, figures,
   small fixes) get one batched review on an up-to-date `main`:

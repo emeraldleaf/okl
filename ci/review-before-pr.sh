@@ -13,6 +13,8 @@
 #   bash ci/review-before-pr.sh --check || true
 #
 # It reports and holds nothing: a docs-only change may wait for the next sweep (DEVELOPING.md).
+# It looks at the checked-out branch, not at the refs git is pushing: a push of some other branch
+# is not checked.
 #
 # The record is written only by a run that ended in the CLI's own "Review completed" line: a run
 # that was refused for the allowance, or cut short, records nothing. It is kept in the repository's
