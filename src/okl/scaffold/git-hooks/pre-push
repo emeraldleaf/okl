@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:134817b098db078ba54b6adf29e37a3f699560cbe5207603508428d4eac72cbb
-# git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
+# okl-fingerprint: sha256:81c858f27a9baad7c48922cb5d772859707a63c468f34d2f1eb300b6a93d0f6a
+# git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push,
+# and then, where the repo asks for it, the review after writing.
 #
-# Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
-# changed after its last verification. Anything else lets the push through: a short note when
-# no lesson governs a file yet (a new repo's normal state), a warning on stderr for any other
-# exit 2 (no store) or an okl that cannot run at all.
+# Drift holds a push (exit 1 from okl drift): a lesson whose governed files changed after its last
+# verification. The review holds one only where the repo asked it to ("review_before_push":
+# "hold"): by default it runs in the background and the push goes at once. Anything else lets the
+# push through: a short note when no lesson governs a file yet (a new repo's normal state), a
+# warning on stderr for any other exit 2 (no store), an okl that cannot run at all, or a review
+# that could not run.
 # Blocking on those would stop every push from a clone that has no store yet, and
 # uninstalling okl would leave a hook that refuses pushes.
 #
 # This is an early warning for one clone, not a merge gate: it runs only where it was
 # installed, and `git push --no-verify` skips it. On a team, gate drift in CI as well.
+#
+# Then, where the repo asks for it, the review after writing: the change checked against every
+# lesson in this clone's store, once per change (see the end of this file).
 set -uo pipefail
 
 # Git runs hooks from the top of the working tree, where .okl/config.json lives. The refs
-# being pushed arrive on stdin; drift reads the checked-out history, so they are not read.
+# being pushed arrive on stdin, a line each. Drift reads the checked-out history and does not
+# need them; the review does, since it reviews the checked-out commit and must not answer for
+# another branch's push. Not read from a terminal, where a hook run by hand would wait.
+pushed=""
+[[ -t 0 ]] || pushed=$(cat)
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl), as the Claude
 # Code hooks do: a GUI git client or an IDE runs hooks without the shell's venv/pipx PATH.
@@ -30,16 +40,25 @@ try_pinned() {
     *) try_okl "$1" ;;
   esac
 }
+# The .okl/config.json this clone reads, or nothing. A git worktree has no .okl/ of its own
+# (git ignores it): there it is its main checkout's, as okl reads that checkout's config and
+# store since #492.
+config_path() {
+  local cfg=.okl/config.json common
+  # Asked for plainly and made absolute here: --path-format is git 2.31's, and an older git prints
+  # the option back as a line of its answer, so a worktree's config was never found under it.
+  if [[ ! -f "$cfg" ]] && common=$(git rev-parse --git-common-dir 2>/dev/null) && [[ -n "$common" ]]; then
+    [[ "$common" == /* ]] || common="$PWD/$common"
+    if [[ "${common##*/}" == ".git" ]]; then
+      cfg="${common%/.git}/.okl/config.json"
+    fi
+  fi
+  [[ -f "$cfg" ]] && printf '%s\n' "$cfg"
+}
 resolve_okl() {
   if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
-  # A git worktree has no .okl/ of its own (git ignores it): there the pin is its main
-  # checkout's, as okl reads that checkout's config and store since #492.
-  local cfg=.okl/config.json common
-  if [[ ! -f "$cfg" ]] && common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
-     && [[ "${common##*/}" == ".git" ]]; then
-    cfg="${common%/.git}/.okl/config.json"
-  fi
-  if [[ -f "$cfg" ]]; then
+  local cfg
+  if cfg=$(config_path); then
     local bin=""
     if command -v python3 >/dev/null 2>&1; then
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
@@ -69,18 +88,83 @@ if [[ "$rc" -eq 2 ]] && [[ "$out" == *"no rule governing files"* ]]; then
   printf '%s\n' "$out" | grep -v "no rule governing files" >&2
   echo "okl pre-push: no lesson governs a file here yet, so there is nothing to gate. Give one" >&2
   echo "  --files and a check (okl record ... --files <path>, then okl verify <id> --run ...)." >&2
-  exit 0
+else
+  printf '%s\n' "$out"
+  # Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
+  # Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
+  # SIGPIPE, and under pipefail the drift would read as no match.
+  if [[ "$rc" -eq 1 ]] && [[ "$out" == *"may be stale"* ]]; then
+    echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
+    echo "  then push again. 'git push --no-verify' skips this check." >&2
+    exit 1
+  fi
+  if [[ "$rc" -ne 0 ]]; then
+    echo "okl pre-push: DRIFT NOT CHECKED (okl exit $rc, reason above). Pushing anyway." >&2
+  fi
 fi
-printf '%s\n' "$out"
-# Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
-# Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
-# SIGPIPE, and under pipefail the drift would read as no match.
-if [[ "$rc" -eq 1 ]] && [[ "$out" == *"may be stale"* ]]; then
-  echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
-  echo "  then push again. 'git push --no-verify' skips this check." >&2
-  exit 1
+
+# The review after writing, at the push: the change checked against every lesson in this
+# clone's store, each lesson in a fresh model call (ci/lesson-review.sh --before-push). A
+# session's Stop hook asks for that review once per session, and on okl's own repo a session
+# that opened five pull requests ran it for none of them; a push is once per change. Off unless
+# the repo turns it on ("review_before_push" in .okl/config.json), since it calls a model about
+# eleven times. true runs it in the background, and the push goes at once: held for the review,
+# every push of a new change waited about five minutes. "hold" holds the push while it runs and,
+# once per change, when a lesson is reported broken. OKL_REVIEW_BEFORE_PUSH=0, 1 or hold decides
+# one push.
+want="${OKL_REVIEW_BEFORE_PUSH:-}"
+reviewer="${REVIEW_CMD:-}"
+if config=$(config_path); then
+  # A report of the last review that nobody has read: shown now, once. okl's next briefing shows
+  # it to the agent instead, when that comes first.
+  # Never a link: shown through one a repo had committed, the push would print any file it points
+  # at, and `mv` onto a link to a folder moves the report into that folder, outside the repo.
+  unread="$(dirname "$config")/review-unread.md"
+  last="$(dirname "$config")/review-last.md"
+  if [[ -f "$unread" && ! -L "$unread" && ! -L "$(dirname "$config")" ]]; then
+    echo "okl pre-push: the lesson review of your last push reported:" >&2
+    cat "$unread" >&2
+    { [[ ! -L "$last" ]] && mv -f "$unread" "$last" 2>/dev/null; } || rm -f "$unread"
+  fi
+  # Whether the repo asks for the review, and the reviewer it names: a command that reads a prompt on stdin.
+  if command -v python3 >/dev/null 2>&1; then
+    [[ "$want" == "1" || "$want" == "0" || "$want" == "hold" ]] || want=$(python3 -c 'import json,sys; v = json.load(open(sys.argv[1])).get("review_before_push"); print("hold" if v == "hold" else "1" if v is True else "0")' "$config" 2>/dev/null || true)
+    [[ -n "$reviewer" ]] || reviewer=$(python3 -c 'import json,sys; v = json.load(open(sys.argv[1])).get("review_cmd"); print(v if isinstance(v, str) else "")' "$config" 2>/dev/null || true)
+  else
+    # No python3 on a GUI client's PATH. The review needs it and says so when asked; read with
+    # python3 alone, the setting was silently off there, which is a review that did not run and
+    # did not say so. okl writes one key per line; a value holding a JSON escape is skipped.
+    if [[ "$want" != "1" && "$want" != "0" && "$want" != "hold" ]]; then
+      grep -q '^ *"review_before_push": *true,\{0,1\} *$' "$config" 2>/dev/null && want=1
+      grep -q '^ *"review_before_push": *"hold",\{0,1\} *$' "$config" 2>/dev/null && want=hold
+    fi
+    [[ -n "$reviewer" ]] || reviewer=$(sed -n 's/^ *"review_cmd": *"\([^"\\]*\)",\{0,1\} *$/\1/p' "$config" 2>/dev/null || true)
+  fi
 fi
-if [[ "$rc" -ne 0 ]]; then
-  echo "okl pre-push: DRIFT NOT CHECKED (okl exit $rc, reason above). Pushing anyway." >&2
+if [[ "$want" == "1" || "$want" == "hold" ]]; then
+  if [[ ! -f ci/lesson-review.sh ]]; then
+    echo "okl pre-push: LESSONS NOT REVIEWED -- the review before a push is on, and ci/lesson-review.sh" >&2
+    echo "  is not in this repo ('okl scaffold' ships it). Pushing anyway." >&2
+  elif [[ -z "$reviewer" ]]; then
+    echo "okl pre-push: LESSONS NOT REVIEWED -- the review before a push is on, and no reviewer is named:" >&2
+    echo "  set \"review_cmd\" in .okl/config.json (a command that reads a prompt on stdin), or REVIEW_CMD." >&2
+    echo "  Pushing anyway." >&2
+  elif ! grep -q -- '--before-push' ci/lesson-review.sh; then
+    # The kit never replaces a copy already in the repo, and one from before this mode would run
+    # a plain review: nothing remembered, nothing held, no time limit.
+    echo "okl pre-push: LESSONS NOT REVIEWED -- ci/lesson-review.sh in this repo is from before the review" >&2
+    echo "  before a push ('okl scaffold --force' replaces it). Pushing anyway." >&2
+  elif [[ -n "$pushed" ]] && ! printf '%s\n' "$pushed" | awk '{print $2}' | grep -qx "$(git rev-parse HEAD 2>/dev/null)"; then
+    echo "okl pre-push: lessons not reviewed -- this push is not of the checked-out commit, and the review" >&2
+    echo "  reads the checked-out one. Pushing." >&2
+  else
+    # okl as this hook resolved it, each word quoted: the script reads it as a command line. It
+    # starts the review and returns, unless asked to hold. Exit 1 is the script holding the push;
+    # anything else, 2 for "did not run" included, lets it through.
+    hold=""
+    [[ "$want" != "hold" ]] || hold=1
+    REVIEW_CMD="$reviewer" LESSON_REVIEW_HOLD="$hold" LESSON_REVIEW_OKL="$(printf '%q ' "${OKL[@]}")" bash ci/lesson-review.sh --before-push
+    [[ $? -ne 1 ]] || exit 1
+  fi
 fi
 exit 0

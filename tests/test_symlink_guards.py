@@ -133,6 +133,26 @@ def test_the_pre_push_hook_is_not_written_through_a_link(repo):
     assert target.read_text() == "#!/bin/sh\nexit 0\n"
 
 
+def test_the_review_script_is_not_written_through_a_link(repo):
+    """_wire_review_before_push puts ci/lesson-review.sh in the repo when it has none. A link there,
+    even one that points at nothing yet, is kept and named: written through, okl's script would land
+    wherever the link points, outside the repo."""
+    root, okl, outside, link = repo
+    target = outside("elsewhere.sh", "")
+    target.unlink()
+    link("ci/lesson-review.sh", target)
+
+    # The dry run lists what init would write, and it would not write this: a link to nothing reads
+    # as no file there, and the dry run named the script as one to install.
+    code, listed = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--review-before-push", "reviewer", "--dry-run")
+    assert code == 0 and "the review the pre-push hook runs" not in listed, listed
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--review-before-push", "reviewer")
+
+    assert "! kept ci/lesson-review.sh" in out and "does not write through links" in out, out
+    assert not target.exists()
+
+
 def test_uninstall_keeps_a_linked_hook_script(repo):
     """_uninstall_files keeps a link even to okl's own hook: deleting it is not okl's call."""
     root, okl, outside, link = repo
