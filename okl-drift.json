@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1795245685412,
-      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit e1e11d54c7bd @ 2026-11-21T07:21Z",
-      "verified_commit": "e1e11d54c7bd0a7465d7930df095796fe72822da"
+      "verified_at": 1795474777525,
+      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit 9246681177fb @ 2026-11-23T22:59Z",
+      "verified_commit": "9246681177fbb7758ad6538684ddcba93cf810fb"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1795472303906,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 84e6b816e86c @ 2026-11-23T22:18Z",
-      "verified_commit": "84e6b816e86c636ca6f325dba812d4c7020b6136"
+      "verified_at": 1795474778287,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 9246681177fb @ 2026-11-23T22:59Z",
+      "verified_commit": "9246681177fbb7758ad6538684ddcba93cf810fb"
     },
     {
       "id": "n_9ba48d85ed19",
