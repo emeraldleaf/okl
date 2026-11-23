@@ -56,6 +56,12 @@ skipped() {
     echo "lesson-review: LESSONS NOT REVIEWED (above). Pushing anyway." >&2
     exit 2
   fi
+  # Asked to block, a review that could not run has not passed: with no python3 a blocking job
+  # exited 0 here, green, where the failed `exec python3` it replaced had failed the job.
+  if [[ "${LESSON_REVIEW_BLOCKING:-}" == "1" ]]; then
+    echo "lesson-review: asked to block (LESSON_REVIEW_BLOCKING=1) and the review did not run (above): exit 2." >&2
+    exit 2
+  fi
   exit 0
 }
 if [[ -z "${REVIEW_CMD:-}" ]]; then
@@ -207,7 +213,10 @@ def finish(report, code, after=None):
                 # both end before either is read, and the second erased the first's findings while
                 # the first's change stayed remembered as reviewed.
                 more = os.path.isfile(box) and os.path.getsize(box) > 0
-                with open(box, "a", encoding="utf-8") as f:
+                # Never through a link, asked of the open itself: inbox() refused one, and this holds
+                # if a link is put there in between.
+                fd = os.open(box, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o644)
+                with os.fdopen(fd, "a", encoding="utf-8") as f:
                     f.write(("\n---\n\n" if more else "") + (WHOSE + "\n\n" if WHOSE else "") + report + "\n")
             delivered = True
         except OSError as e:
@@ -252,7 +261,14 @@ def inbox():
     common = git_common_dir()
     for folder in (top, common[:-len("/.git")] if common.endswith("/.git") else ""):
         if folder and os.path.isfile(os.path.join(folder, ".okl", "config.json")):
-            return os.path.join(folder, ".okl", "review-unread.md")
+            box = os.path.join(folder, ".okl", "review-unread.md")
+            # A repo can commit a link there, or make .okl one: written through, a push from a clone
+            # would add this report to a file outside the repo (lesson n_d8166465591e).
+            if os.path.islink(box) or os.path.islink(os.path.dirname(box)):
+                warn("%s is a symlink, or is in one, and okl does not write through links: the report is kept in "
+                     "%s alone" % (box, os.path.join(STATE or "", "last-report.md")))
+                return None
+            return box
     return None
 
 
@@ -288,7 +304,10 @@ for what, words in (("REVIEW_CMD", CMD), ("okl", OKL)):
             file=sys.stderr, flush=True)
         if BEFORE_PUSH:
             print("lesson-review: LESSONS NOT REVIEWED (above). Pushing anyway.", file=sys.stderr, flush=True)
-        sys.exit(2 if BEFORE_PUSH else 0)
+        if BLOCKING and not BEFORE_PUSH:
+            print("lesson-review: asked to block (LESSON_REVIEW_BLOCKING=1) and the review did not run (above): "
+                  "exit 2.", file=sys.stderr, flush=True)
+        sys.exit(2 if BEFORE_PUSH or BLOCKING else 0)
 got = run([*OKL, "check", "--change=" + BASE, "--format", "json"])
 if got.returncode != 0:
     no_review("okl could not list the change and its lessons (%s)" % last_line(got.stderr))

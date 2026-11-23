@@ -59,8 +59,13 @@ def unread_review() -> str | None:
     cfg = _find_config()
     if cfg is None:
         return None
+    unread = cfg.parent / REVIEW_UNREAD
+    # A link is not a report: read through one a repo had committed, any file on the machine would
+    # be handed to the agent as the review's findings.
+    if unread.is_symlink() or cfg.parent.is_symlink():
+        return None
     try:
-        return (cfg.parent / REVIEW_UNREAD).read_text(encoding="utf-8").strip() or None
+        return unread.read_text(encoding="utf-8").strip() or None
     except OSError:
         return None
 

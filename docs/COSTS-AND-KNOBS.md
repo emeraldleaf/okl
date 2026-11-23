@@ -266,7 +266,8 @@ it off. A pre-push hook of another tool runs it with one line, which holds the p
   new change waited about five minutes. The report is kept (`last-report.md` in the repository's
   git directory). When it reports a broken lesson, or could not check one, it is also shown at
   your next push, and okl adds it to your agent's next briefing, once. A report not yet read is
-  never written over: the next one is added under it, each under its branch's name.
+  never written over: the next one is added under it, each under its branch's name. It is never
+  written, read or shown through a symlink: a repo can commit a link where the report goes.
 - **A branch is reviewed in full once.** Its first push costs one call to pick and one per lesson
   picked, ten unless `LESSON_REVIEW_PICK` says otherwise, so about eleven calls, four checks at a
   time (`LESSON_REVIEW_PARALLEL`). A later push of the same branch checks again only the lessons that review reported broken

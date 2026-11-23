@@ -135,6 +135,23 @@ def test_the_lesson_review_ships_with_the_kit_and_soft_passes_until_it_is_config
     r = run({"REVIEW_CMD": "cat"})
     assert r.returncode == 0, r.stdout + r.stderr
     assert "okl is not on PATH" in r.stderr
+    # Asked to block, a review that could not run has not passed: each of these is "did not run" (2).
+    # With no python3 a blocking job exited 0, green (found by this change's own review at a push).
+    for extra in ({}, {"REVIEW_CMD": "definitely-not-installed -p"}, {"REVIEW_CMD": "cat"}):
+        r = run({**extra, "LESSON_REVIEW_BLOCKING": "1"})
+        assert r.returncode == 2 and "the review did not run (above): exit 2" in r.stderr, r.stdout + r.stderr
+    bare = tmp_path / "no-python3"
+    bare.mkdir()
+    (bare / "dirname").symlink_to(shutil.which("dirname"))
+
+    def without_python(*args: str, **extra: str) -> subprocess.CompletedProcess:
+        return subprocess.run([shutil.which("bash"), str(script), *args], capture_output=True, text=True, cwd=str(tmp_path),
+                              env={"PATH": str(bare), "HOME": str(tmp_path), "REVIEW_CMD": "cat", **extra})
+
+    soft, blocking, pushing = without_python(), without_python(LESSON_REVIEW_BLOCKING="1"), without_python("--before-push")
+    assert (soft.returncode, blocking.returncode, pushing.returncode) == (0, 2, 2), soft.stderr + blocking.stderr
+    assert all("python3 is not on PATH" in r.stderr and r.stdout == "" for r in (soft, blocking, pushing))
+    assert "LESSONS NOT REVIEWED" in pushing.stderr and "did not run" in blocking.stderr
 
 
 def test_one_call_picks_and_one_fresh_call_checks_each_picked_lesson(setup):
@@ -1118,3 +1135,68 @@ def test_init_copies_the_review_script_byte_for_byte_and_the_dry_run_lists_it_wh
     capsys.readouterr()
     assert main([*base, "--dry-run"]) == 0
     assert "ci/lesson-review.sh" not in capsys.readouterr().out, "it is there now, and a script in the repo is kept"
+
+
+def test_the_unread_report_is_never_written_read_or_shown_through_a_link(setup):
+    """The unread report is a file in the repo's .okl folder, and a repo can commit a link there.
+    Written through, a push from a clone adds the report to a file outside the repo; read through,
+    okl hands the agent any file on the machine as the review's findings, and the hook prints it
+    (found by this change's own review at a push: the installer refused links, and this did not)."""
+    folder = _okl_set_up(setup)
+    inbox, outside = folder / "review-unread.md", setup["tmp"] / "outside.txt"
+    outside.write_text("OUTSIDE-FILE\n")
+    inbox.symlink_to(outside)
+    held = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert held.returncode == 1 and "okl does not write through links" in held.stderr, held.stdout + held.stderr
+    assert outside.read_text() == "OUTSIDE-FILE\n" and inbox.is_symlink(), "nothing was added to the file it points at"
+    assert "**breaks**" in (_state(setup) / "last-report.md").read_text(), "the report is kept where no link reaches"
+    # A link to nothing is not a place to start a file either.
+    inbox.unlink()
+    inbox.symlink_to(setup["tmp"] / "nowhere.md")
+    _forget(setup)
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1
+    assert not (setup["tmp"] / "nowhere.md").exists()
+    # Nor through a linked .okl folder.
+    inbox.unlink()
+    elsewhere = setup["tmp"] / "elsewhere"
+    folder.rename(elsewhere)
+    folder.symlink_to(elsewhere, target_is_directory=True)
+    _forget(setup)
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1
+    assert not (elsewhere / "review-unread.md").exists()
+    (elsewhere / "review-unread.md").write_text("OUTSIDE-FILE\n")
+
+    def briefing() -> str:
+        return subprocess.run([sys.executable, "-m", "okl", "check", "--task", "add a retry"], cwd=setup["repo"],
+                              env=setup["env"], capture_output=True, text=True, check=True).stdout
+
+    assert "OUTSIDE-FILE" not in briefing(), "a file in a linked .okl is not a report"
+    folder.unlink()
+    elsewhere.rename(folder)
+    (folder / "review-unread.md").unlink()
+    # okl does not hand a linked file to the agent, and git's hook does not print it or move it.
+    inbox.symlink_to(outside)
+    assert "OUTSIDE-FILE" not in briefing() and inbox.is_symlink()
+    push, pushed = _hooked(setup, review=False)
+    went = push()
+    assert went.returncode == 0 and pushed() and "OUTSIDE-FILE" not in went.stdout + went.stderr, went.stderr
+    assert inbox.is_symlink() and outside.read_text() == "OUTSIDE-FILE\n"
+    # A real report is shown, and never moved into a folder that a linked review-last.md points at.
+    inbox.unlink()
+    inbox.write_text("A REAL REPORT\n")
+    into = setup["tmp"] / "into"
+    into.mkdir()
+    (folder / "review-last.md").symlink_to(into, target_is_directory=True)
+    _commit(setup, "more = 1")
+    shown = push()
+    assert shown.returncode == 0 and "A REAL REPORT" in shown.stderr, shown.stdout + shown.stderr
+    assert not inbox.exists() and list(into.iterdir()) == [], "shown once, and nothing left outside the repo"
+    # Nor does the hook show a file in a linked .okl folder.
+    (folder / "review-last.md").unlink()
+    folder.rename(elsewhere)
+    folder.symlink_to(elsewhere, target_is_directory=True)
+    (elsewhere / "review-unread.md").write_text("OUTSIDE-FILE\n")
+    _commit(setup, "last = 1")
+    linked = push()
+    assert linked.returncode == 0 and "OUTSIDE-FILE" not in linked.stdout + linked.stderr, linked.stderr
+    assert (elsewhere / "review-unread.md").read_text() == "OUTSIDE-FILE\n"

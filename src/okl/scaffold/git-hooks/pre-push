@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:ffc8ca45c7af7605b468707416120acad8e22856d6b70095941ae0d2259a9639
+# okl-fingerprint: sha256:81c858f27a9baad7c48922cb5d772859707a63c468f34d2f1eb300b6a93d0f6a
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push,
 # and then, where the repo asks for it, the review after writing.
 #
@@ -117,11 +117,14 @@ reviewer="${REVIEW_CMD:-}"
 if config=$(config_path); then
   # A report of the last review that nobody has read: shown now, once. okl's next briefing shows
   # it to the agent instead, when that comes first.
+  # Never a link: shown through one a repo had committed, the push would print any file it points
+  # at, and `mv` onto a link to a folder moves the report into that folder, outside the repo.
   unread="$(dirname "$config")/review-unread.md"
-  if [[ -f "$unread" ]]; then
+  last="$(dirname "$config")/review-last.md"
+  if [[ -f "$unread" && ! -L "$unread" && ! -L "$(dirname "$config")" ]]; then
     echo "okl pre-push: the lesson review of your last push reported:" >&2
     cat "$unread" >&2
-    mv -f "$unread" "$(dirname "$config")/review-last.md" 2>/dev/null || rm -f "$unread"
+    { [[ ! -L "$last" ]] && mv -f "$unread" "$last" 2>/dev/null; } || rm -f "$unread"
   fi
   # Whether the repo asks for the review, and the reviewer it names: a command that reads a prompt on stdin.
   if command -v python3 >/dev/null 2>&1; then

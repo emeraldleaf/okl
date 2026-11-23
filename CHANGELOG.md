@@ -15,7 +15,10 @@
   briefing, once. A branch is reviewed in full at its first push; a later
   push checks again only the lessons that review reported broken or could not check, a call each,
   so a branch costs one review and not one a push. A lesson whose check failed or timed out is
-  never dropped: the change is not remembered as reviewed until every picked lesson has a verdict. A change already reviewed is not reviewed again (the change's
+  never dropped: the change is not remembered as reviewed until every picked lesson has a verdict.
+  The unread report is never written, read or shown through a symlink. With
+  `LESSON_REVIEW_BLOCKING=1`, a review that could not run (no reviewer, no okl, no python3) now
+  exits 2, "did not run": it exited 0, which a blocking job read as a pass. A change already reviewed is not reviewed again (the change's
   diff is remembered in the repository's git directory, shared by its worktrees, and only once
   its report is out), and a push made while its review runs starts no second one.
   `--review-holds-push` (`"review_before_push": "hold"`) runs it in the foreground and holds the
