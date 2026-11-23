@@ -142,6 +142,11 @@ def test_the_review_script_is_not_written_through_a_link(repo):
     target.unlink()
     link("ci/lesson-review.sh", target)
 
+    # The dry run lists what init would write, and it would not write this: a link to nothing reads
+    # as no file there, and the dry run named the script as one to install.
+    code, listed = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--review-before-push", "reviewer", "--dry-run")
+    assert code == 0 and "the review the pre-push hook runs" not in listed, listed
+
     code, out = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--review-before-push", "reviewer")
 
     assert "! kept ci/lesson-review.sh" in out and "does not write through links" in out, out
