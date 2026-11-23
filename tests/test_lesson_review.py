@@ -457,17 +457,28 @@ def test_before_a_push_the_review_runs_in_the_background_and_holds_nothing(setup
 
     assert "lesson review of your last push" not in briefing("--path", "a.py"), "a file's briefing is about the file"
     assert inbox.is_file()
-    first = briefing("--task", "add a retry to the fetch call")
-    assert "the lesson review of your last push reported this" in first and "l-alpha" in first and "**breaks**" in first
-    assert "lesson review of your last push" not in briefing("--task", "add a retry to the fetch call"), "once"
+    # The hook's output is one JSON object, and the report is in the context it hands the agent.
+    # Printed after the object, it made the output unparseable, and the briefing was lost with it.
+    context = json.loads(briefing("--task", "add a retry to the fetch call"))["hookSpecificOutput"]["additionalContext"]
+    assert "the lesson review of your last push reported this" in context and "l-alpha" in context and "**breaks**" in context
+    again_context = json.loads(briefing("--task", "add a retry to the fetch call"))["hookSpecificOutput"]["additionalContext"]
+    assert "lesson review of your last push" not in again_context, "once"
     assert not inbox.exists() and (inbox.parent / "review-last.md").is_file()
-    # An agent with no hooks asks over MCP, and is handed it the same way: by the function both use.
-    from okl.client import take_unread_review
+    # As plain text, for a person or another agent's hook, it follows the briefing the same way.
+    inbox.write_text("a report nobody has read\n")
+    plain = subprocess.run([sys.executable, "-m", "okl", "check", "--task", "add a retry"], cwd=setup["repo"],
+                           env=setup["env"], capture_output=True, text=True, check=True).stdout
+    assert "the lesson review of your last push reported this" in plain and "a report nobody has read" in plain
+    assert not inbox.exists()
+    # Read without marking, and marked only when told: a briefing that fails to print keeps the report.
+    from okl.client import mark_review_read, unread_review
     inbox.write_text("a report nobody has read\n")
     old_dir = Path.cwd()
     os.chdir(setup["repo"])
     try:
-        assert take_unread_review() == "a report nobody has read" and take_unread_review() is None
+        assert unread_review() == "a report nobody has read" and unread_review() == "a report nobody has read"
+        mark_review_read()
+        assert unread_review() is None
     finally:
         os.chdir(old_dir)
     # A clean review has nothing a person or an agent must be told.

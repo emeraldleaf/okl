@@ -129,9 +129,9 @@ def number(name, default):
 
 PICK = number("LESSON_REVIEW_PICK", 10)
 MAX_LINES = number("REVIEW_MAX_LINES", 4000)
-# Four at a time, before a push as in CI. All ten at once ended a real review in 177 seconds where
-# four took about 300, but it is ten model CLIs running together on the machine someone is working
-# on, and the review is in the background there: nobody waits for it.
+# Four at a time, before a push as in CI. All ten at once ends a review sooner, but it is ten model
+# CLIs running together on the machine someone is working on, and the review is in the background
+# there: nobody waits for it.
 PARALLEL = number("LESSON_REVIEW_PARALLEL", 4)
 TIMEOUT = number("LESSON_REVIEW_TIMEOUT", 900)
 # The whole run's seconds, 0 for none. Each call's own limit does not bound the run: a pick and three

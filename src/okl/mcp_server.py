@@ -13,12 +13,14 @@ from typing import Any
 
 from . import core
 from .client import (
+    REVIEW_NOTE,
     Client,
     OKLNoAnswerError,
     OKLNotConfiguredError,
     OKLRejectedError,
     OKLUnreachableError,
-    take_unread_review,
+    mark_review_read,
+    unread_review,
 )
 
 
@@ -104,10 +106,10 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             return core.render_actions_only(result, limit=limit)
         # A task's briefing also carries the last push's review, once, when it reported a broken
         # lesson: it ran in the background, and this is how an agent with no hooks gets to read it.
-        report = None if path else take_unread_review()
-        return core.render_check_for_agent(result) + (
-            "\n\n## OKL: the lesson review of your last push reported this\nRead each lesson it reports broken; fix "
-            "the ones that are right, and say which you leave and why.\n\n" + report if report else "")
+        report = None if path else unread_review()
+        text = core.render_check_for_agent(result) + (f"\n\n{REVIEW_NOTE}{report}" if report else "")
+        mark_review_read()
+        return text
 
     # Keyword-only: the SDK always calls a tool with named arguments, and fourteen
     # mostly-string parameters are too easy to pass in the wrong order by position.

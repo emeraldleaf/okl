@@ -7,6 +7,7 @@ before you've deployed the shared service and after.
 """
 from __future__ import annotations
 
+import contextlib
 import http.client
 import json
 import os
@@ -48,8 +49,9 @@ _HTTP_TIMEOUT_S = 5
 REVIEW_UNREAD = "review-unread.md"
 
 
-def take_unread_review() -> str | None:
-    """The report of a review at a push that nobody has read, or None; taking it marks it read.
+def unread_review() -> str | None:
+    """The report of a review at a push that nobody has read, or None. It stays unread until
+    `mark_review_read`, which the caller runs once the report is out.
 
     The review runs in the background (`ci/lesson-review.sh --before-push`) so a push does not
     wait for it, and it leaves a report with a broken lesson in it beside the config. The next
@@ -57,13 +59,25 @@ def take_unread_review() -> str | None:
     cfg = _find_config()
     if cfg is None:
         return None
-    path = cfg.parent / REVIEW_UNREAD
     try:
-        text = path.read_text(encoding="utf-8").strip()
-        path.replace(cfg.parent / "review-last.md")
+        return (cfg.parent / REVIEW_UNREAD).read_text(encoding="utf-8").strip() or None
     except OSError:
-        return None      # none there, or it cannot be marked read: shown every prompt it would be noise
-    return text or None
+        return None
+
+
+def mark_review_read() -> None:
+    """Mark the unread report read, after it was delivered: marked first, a briefing that then
+    failed to print took the report with it."""
+    cfg = _find_config()
+    if cfg is None:
+        return
+    with contextlib.suppress(OSError):
+        (cfg.parent / REVIEW_UNREAD).replace(cfg.parent / "review-last.md")
+
+
+REVIEW_NOTE = ("## OKL: the lesson review of your last push reported this\n"
+               "It ran in the background, so the push was not held. Read each lesson it reports broken; fix the "
+               "ones that are right, and say which you leave and why.\n\n")
 
 
 def store_url(start: Path | None = None) -> str | None:

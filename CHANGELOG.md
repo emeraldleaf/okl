@@ -28,10 +28,7 @@
   count for the push. `OKL_REVIEW_BEFORE_PUSH=0` or `1` decides one push. okl's hook hands the
   script the okl it resolved, and the script reads it and the reviewer as command lines, so a
   program in a folder with a space in its name is found. `okl init` says when the setting is on
-  and a hook or a script already there cannot run it. The mode was run for real on its own change
-  before it was pushed, against a store of 341 lessons: its first run reported seven lessons
-  broken in 278 seconds and its second three more, all ten real, each from a lesson recorded in
-  the repo that CI's review cannot see, and all fixed in the same change.
+  and a hook or a script already there cannot run it.
 
 - **The two store backends now agree in the places they differed, and a store that cannot be
   opened is exit 2, not a traceback** (#125). Found while okl's own stores were all SQLite; they

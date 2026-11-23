@@ -20,13 +20,15 @@ from typing import Any
 
 from .. import changes, core
 from ..client import (
+    REVIEW_NOTE,
     Client,
     OKLNoAnswerError,
     OKLNotConfiguredError,
     OKLRejectedError,
     OKLUnreachableError,
     _find_config,
-    take_unread_review,
+    mark_review_read,
+    unread_review,
 )
 from ..store import backend_errors
 from .common import _print_json
@@ -119,7 +121,6 @@ def cmd_check(args: argparse.Namespace) -> int:
         _once_per_session(result, args.session, f"{Path.cwd().resolve()}\0{result.get('repo') or client.repo}")
     if args.format == "hook":
         (_print_file_hook if getattr(args, "path", None) else _print_prompt_hook)(result, args)
-        _print_unread_review(args)
         return 0
     if args.format == "json":
         _print_json(result)
@@ -127,8 +128,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         # compact: the imperative list only, for small-context callers (subagents, CI)
         print(core.render_actions_only(result, limit=args.limit))
     else:
-        print(_briefing_text(result, args))
-        _print_unread_review(args)
+        print(_briefing_text(result, args) + _review_of_the_last_push(args))
+        mark_review_read()
     # stdout is what the UserPromptSubmit hook hands the agent; setup advice is for the
     # person, so it goes to stderr and never enters the agent's context. Skipped for json,
     # whose consumers parse the output.
@@ -193,17 +194,14 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     return 0
 
 
-def _print_unread_review(args: argparse.Namespace) -> None:
-    """Add the last push's review to a task briefing, once, when it reported something: stdout is
-    what the prompt hook hands the agent, and the review ran with nobody waiting for it. Not to a
-    file's briefing, which arrives beside a file the agent read and is about that file."""
+def _review_of_the_last_push(args: argparse.Namespace) -> str:
+    """What a task's briefing adds when the last push's review reported something and nobody has
+    read it: the report, under a line that says what it is. Nothing for a file's briefing, which
+    arrives beside a file the agent read and is about that file. The caller marks it read."""
     if getattr(args, "path", None):
-        return
-    report = take_unread_review()
-    if report:
-        print("\n## OKL: the lesson review of your last push reported this\n"
-              "It ran in the background, so the push was not held. Read each lesson it reports broken; fix the "
-              "ones that are right, and say which you leave and why.\n\n" + report)
+        return ""
+    report = unread_review()
+    return f"\n\n{REVIEW_NOTE}{report}" if report else ""
 
 
 def _review_flags_refused(args: argparse.Namespace) -> str | None:
@@ -275,14 +273,18 @@ def _once_per_session(result: dict[str, Any], session: str, where: str) -> None:
 def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> None:
     """What a Claude Code UserPromptSubmit hook prints: the briefing into the model's context,
     and one line the person can see. OKL_QUIET=1 keeps the line out."""
+    # The last push's review goes inside the context, with the briefing: printed after this object it
+    # made the hook's output two things and no longer JSON, and a host that cannot parse the output
+    # drops the briefing with it (found by CI's review of the change that added it).
     out: dict[str, Any] = {"hookSpecificOutput": {
         "hookEventName": getattr(args, "hook_event", None) or "UserPromptSubmit",
-        "additionalContext": _briefing_text(result, args)}}
+        "additionalContext": _briefing_text(result, args) + _review_of_the_last_push(args)}}
     quiet = os.environ.get("OKL_QUIET") == "1"
     lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
     if lines:
         out["systemMessage"] = " · ".join(lines)
     print(json.dumps(out))
+    mark_review_read()      # once it is out, and not before
 
 
 def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> None:
