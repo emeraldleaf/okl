@@ -13,8 +13,9 @@
   new change waited about five minutes, and a fix pushed three times waited three times. A
   report with a broken lesson in it is shown at the next push and added to the agent's next
   briefing, once. A branch is reviewed in full at its first push; a later
-  push checks again only the lessons that review reported broken, a call each, so a branch costs
-  one review and not one a push. A change already reviewed is not reviewed again (the change's
+  push checks again only the lessons that review reported broken or could not check, a call each,
+  so a branch costs one review and not one a push. A lesson whose check failed or timed out is
+  never dropped: the change is not remembered as reviewed until every picked lesson has a verdict. A change already reviewed is not reviewed again (the change's
   diff is remembered in the repository's git directory, shared by its worktrees, and only once
   its report is out), and a push made while its review runs starts no second one.
   `--review-holds-push` (`"review_before_push": "hold"`) runs it in the foreground and holds the

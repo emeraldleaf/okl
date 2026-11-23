@@ -99,7 +99,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "prompt on stdin, e.g. \"claude -p --model sonnet\". init installs the pre-push hook and "
                          "ci/lesson-review.sh for it. A branch's first push is reviewed in full, about eleven calls "
                          "to the reviewer, in the background, so the push is not held; a later push checks again "
-                         "only the lessons that review reported broken. Default: off")
+                         "only the lessons that review reported broken or could not check. Default: off")
     pi.add_argument("--review-holds-push", dest="review_holds_push", action="store_true",
                     help="with --review-before-push: run the review in the foreground and hold the push, once per "
                          "change, when a lesson is reported broken. It makes each such push wait a few minutes")

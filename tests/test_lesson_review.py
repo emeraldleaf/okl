@@ -975,3 +975,146 @@ def test_an_agent_that_asks_over_mcp_is_handed_the_report_once(tmp_path, monkeyp
     assert "lesson review of your last push" not in by_path
     assert "the lesson review of your last push reported this" in first and "the report nobody has read" in first
     assert "lesson review of your last push" not in second and not inbox.exists()
+
+
+def _markers(setup) -> list[Path]:
+    """The changes remembered as reviewed (the branch records beside them are not changes)."""
+    return [f for f in _state(setup).glob("*.json") if not f.name.startswith("branch-")]
+
+
+def _branch_record(setup) -> dict:
+    (record,) = _state(setup).glob("branch-*.json")
+    return json.loads(record.read_text())
+
+
+def test_a_lesson_left_with_no_verdict_is_checked_at_the_next_push(setup):
+    """A change was remembered as reviewed when one picked lesson got a verdict, and a branch kept
+    only the lessons reported broken: a lesson whose check failed or timed out was never checked
+    again (found by the review before the pull request). A change counts as reviewed only when every
+    lesson picked for it has a verdict, and what got none is left for the next push. Pushed again as
+    it is, the change is checked for what is left alone: what was reported does not hold it twice."""
+    partly = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "breaks", "l-beta": "FAIL"}'}
+    held = setup["run"]("--before-push", **HOLD, **partly)
+    assert held.returncode == 1 and len(setup["prompts"]()) == 3, held.stdout + held.stderr
+    assert "- `l-beta`:" in held.stdout and "The lessons not checked are checked at the next push of this branch" in held.stdout
+    assert "does not hold it twice, and the 1 lesson(s) not checked are checked then" in held.stderr
+    assert _markers(setup) == [], "one lesson has no verdict, so the change is not remembered as reviewed"
+    assert (_branch_record(setup)["broken"], _branch_record(setup)["unfinished"]) == (["l-alpha"], ["l-beta"])
+    # The same push again: one call, for the lesson left, and no pick. l-alpha was reported, and is not asked twice.
+    again = setup["run"]("--before-push", **HOLD, PICKED="[]", VERDICTS='{"l-alpha": "breaks", "l-beta": "holds"}')
+    assert again.returncode == 0 and len(setup["prompts"]()) == 4, again.stdout + again.stderr
+    assert "1 of the 1 lessons this branch's last review reported broken or did not check were checked again" in again.stdout
+    assert "reported broken or did not check" in again.stderr
+    checks = [p.split("--- END OF THE LESSON ---")[0] for _, p in setup["prompts"]() if "--- END OF THE LESSON ---" in p]
+    assert (sum("[l-beta]" in c for c in checks), sum("[l-alpha]" in c for c in checks)) == (2, 1)
+    # Now every picked lesson has a verdict: the change is remembered whole, with what the first try found.
+    assert len(_markers(setup)) == 1 and _branch_record(setup)["broken"] == ["l-alpha"] and not _branch_record(setup)["unfinished"]
+    seen = setup["run"]("--before-push", **HOLD, **partly)
+    assert seen.returncode == 0 and len(setup["prompts"]()) == 4, seen.stdout
+    assert "This change was reviewed" in seen.stdout and "1 broken, 1 held" in seen.stdout and "`l-alpha`" in seen.stdout
+    # On a later push, a lesson checked again that gets no verdict stays on the branch's list.
+    _forget(setup)
+    both = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "breaks", "l-beta": "breaks"}'}
+    assert setup["run"]("--before-push", **HOLD, **both).returncode == 1
+    _commit(setup, "z = 3")
+    calls = len(setup["prompts"]())
+    lost = setup["run"]("--before-push", **HOLD, PICKED="[]", VERDICTS='{"l-alpha": "holds", "l-beta": "FAIL"}')
+    assert lost.returncode == 0 and len(setup["prompts"]()) == calls + 2, lost.stdout + lost.stderr
+    assert (_branch_record(setup)["broken"], _branch_record(setup)["unfinished"]) == ([], ["l-beta"])
+    _commit(setup, "w = 4")
+    found = setup["run"]("--before-push", **HOLD, PICKED="[]", VERDICTS='{"l-beta": "breaks"}')
+    assert found.returncode == 1 and len(setup["prompts"]()) == calls + 3, "l-beta is checked again, and only it"
+    assert "nothing is left" not in found.stdout and "`l-beta`" in found.stdout and "**breaks**" in found.stdout
+    # The limit on one run's checks leaves a lesson for the next push, where it goes first: never out twice.
+    _forget(setup)
+    _commit(setup, "v = 5")
+    assert setup["run"]("--before-push", **HOLD, **both).returncode == 1
+    _commit(setup, "u = 6")
+    one = setup["run"]("--before-push", **HOLD, **both, LESSON_REVIEW_PICK="1")
+    assert "- `l-beta`: over the 1 lessons one run checks" in one.stdout, one.stdout
+    assert (_branch_record(setup)["broken"], _branch_record(setup)["unfinished"]) == (["l-alpha"], ["l-beta"])
+    _commit(setup, "t = 7")
+    two = setup["run"]("--before-push", **HOLD, **both, LESSON_REVIEW_PICK="1")
+    assert "| `l-beta` " in two.stdout and "- `l-alpha`: over the 1 lessons" in two.stdout, two.stdout
+
+
+def test_the_branch_is_remembered_at_the_commit_that_was_reviewed(setup):
+    """The branch's head was read when the review ended. A review runs for minutes in the
+    background, and a commit made meanwhile was remembered as the one reviewed, though no check had
+    seen it. The commit is read once, before the diff, and that one is remembered."""
+    reviewed = _git(setup["repo"], "rev-parse", "HEAD")
+    slow = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "SLEEP", "l-beta": "breaks"}', "SLEEP_SECONDS": "3"}
+    review = subprocess.Popen(["bash", str(setup["repo"] / "ci" / "lesson-review.sh"), "--before-push"], cwd=setup["repo"],
+                              env={**setup["env"], **HOLD, **slow}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        _wait(lambda: len(setup["prompts"]()) >= 2)      # the pick is over and a check is under way
+        _commit(setup, "meanwhile = 1")
+        out, err = review.communicate(timeout=60)
+    finally:
+        review.kill()
+    assert review.returncode == 1, out + err
+    assert _git(setup["repo"], "rev-parse", "HEAD") != reviewed
+    assert _branch_record(setup)["head"] == reviewed, "the commit the checks read, not the one made meanwhile"
+    assert "meanwhile" not in "\n".join(p for _, p in setup["prompts"]())
+
+
+def test_a_review_whose_report_could_not_be_kept_is_not_remembered(setup):
+    """In the background the report is read from a file at the next push. Where that file could not
+    be written, the change was remembered as reviewed all the same, and its findings were never
+    shown to anyone. Held in the foreground, the report was printed to the person, and counts."""
+    (_state(setup) / "last-report.md").mkdir(parents=True)      # a folder where the report goes: it cannot be written
+    assert setup["run"]("--before-push", **BREAKS).returncode == 0
+    _wait(lambda: len(setup["prompts"]()) == 3)
+    _wait(lambda: not list(_state(setup).glob("*.running")))
+    time.sleep(0.5)
+    assert list(_state(setup).glob("*.json")) == [], "nothing is remembered of a review nobody was shown"
+    shown = setup["run"]("--before-push", **HOLD, **BREAKS)
+    assert shown.returncode == 1 and len(setup["prompts"]()) == 6 and "**breaks**" in shown.stdout, "reviewed again"
+    assert "could not be kept" in shown.stderr
+    assert len(_markers(setup)) == 1, "printed to the person, it was delivered"
+
+
+def test_a_second_unread_report_is_added_to_the_first(setup):
+    """Two branches reviewed before either report is read: the second report was written over the
+    first, whose change stayed remembered as reviewed, so its findings were gone. Each unread report
+    is kept, under its branch's name, until it is shown."""
+    inbox = _okl_set_up(setup) / "review-unread.md"
+    first = _git(setup["repo"], "rev-parse", "--abbrev-ref", "HEAD")
+    assert setup["run"]("--before-push", **HOLD, **BREAKS).returncode == 1
+    assert inbox.read_text().startswith(f"Branch `{first}`\n\n") and "---" not in inbox.read_text().split("|---|")[0]
+    _git(setup["repo"], "checkout", "-q", "-b", "second-branch")
+    _commit(setup, "other = 2")
+    assert setup["run"]("--before-push", **HOLD, PICKED='["l-gamma"]', VERDICTS='{"l-gamma": "breaks"}').returncode == 1
+    unread = inbox.read_text()
+    one, two = unread.split("\n---\n\n")
+    assert one.startswith(f"Branch `{first}`") and "`l-alpha`" in one and "l-gamma" not in one
+    assert two.startswith("Branch `second-branch`") and "`l-gamma`" in two and "l-alpha" not in two
+    # last-report.md is the last review alone: it is where one report is looked up, not the unread ones.
+    assert "l-alpha" not in (_state(setup) / "last-report.md").read_text()
+
+
+def test_init_copies_the_review_script_byte_for_byte_and_the_dry_run_lists_it_wherever_it_is_written(tmp_path, capsys, monkeypatch):
+    """Copied as text, the script got CRLF line endings on Windows and bash could not run it: it is
+    copied as bytes. And the dry run named the script only beside the pre-push hook, so with
+    --no-git-hook, or outside a git repository, it listed nothing where init writes the file."""
+    from okl.cli import install, main
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    monkeypatch.chdir(repo)
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--review-before-push", "claude -p"]
+    for extra in (["--no-git-hook"], []):       # in no git repository both times
+        assert main([*base, *extra, "--dry-run"]) == 0
+        listed = capsys.readouterr().out
+        assert "ci/lesson-review.sh" in listed and "the review the pre-push hook runs" in listed, extra
+        assert not (repo / "ci").exists(), "a dry run writes nothing"
+    # A shipped script with a carriage return in it shows a copy made as text on any system: read as
+    # text, the line ending is rewritten, as written as text it is on Windows.
+    shipped = tmp_path / "shipped.sh"
+    shipped.write_bytes(b"#!/usr/bin/env bash\n# --before-push\necho 'one\r\ntwo'\n")
+    monkeypatch.setattr(install, "REVIEW_SCRIPT_SRC", shipped)
+    assert main([*base, "--no-git-hook"]) == 0
+    script = repo / "ci" / "lesson-review.sh"
+    assert script.read_bytes() == shipped.read_bytes(), "byte for byte"
+    capsys.readouterr()
+    assert main([*base, "--dry-run"]) == 0
+    assert "ci/lesson-review.sh" not in capsys.readouterr().out, "it is there now, and a script in the repo is kept"

@@ -179,6 +179,7 @@ REMEMBER = []     # what to keep once the report is out: (path, facts) for the c
 STATE = None      # the folder that holds it, in the repository's git directory
 RUNNING = None    # a file that says a review of this change is under way
 TELL = False      # whether the report has something a person or an agent must be told: a broken lesson, or no review
+WHOSE = ""        # which branch a report kept for later is about
 
 
 def finish(report, code, after=None):
@@ -192,15 +193,28 @@ def finish(report, code, after=None):
     if out:
         with open(out, "w", encoding="utf-8") as f:
             f.write(report + "\n")
+    # In the foreground the report was just printed where the person is. In the background nobody
+    # saw that print, so the report is delivered only once it is in a file the next push reads.
+    delivered = not BACKGROUND
     if BEFORE_PUSH and STATE:
         try:
             os.makedirs(STATE, exist_ok=True)
-            for path in [os.path.join(STATE, "last-report.md")] + ([inbox()] if TELL and inbox() else []):
-                with open(path, "w", encoding="utf-8") as f:
-                    f.write(report + "\n")
+            with open(os.path.join(STATE, "last-report.md"), "w", encoding="utf-8") as f:
+                f.write(report + "\n")
+            box = inbox() if TELL else None
+            if box:
+                # Added to what is unread, never written over it: the reviews of two branches can
+                # both end before either is read, and the second erased the first's findings while
+                # the first's change stayed remembered as reviewed.
+                more = os.path.isfile(box) and os.path.getsize(box) > 0
+                with open(box, "a", encoding="utf-8") as f:
+                    f.write(("\n---\n\n" if more else "") + (WHOSE + "\n\n" if WHOSE else "") + report + "\n")
+            delivered = True
         except OSError as e:
             warn("the report could not be kept for the next push (%s)" % e)
-    for path, facts in REMEMBER:
+    if not delivered and REMEMBER:
+        warn("this review is not remembered, since its report could not be kept: the change will be reviewed again")
+    for path, facts in REMEMBER if delivered else []:
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
@@ -296,11 +310,15 @@ if not lessons:
 exclude = (ENV.get("REVIEW_EXCLUDE") or
            "*.lock **/*.lock package-lock.json **/package-lock.json yarn.lock pnpm-lock.yaml").split()
 start = change.get("merge_base") or BASE
+# The commit under review, read once, before the diff: the files, the diff and what is remembered
+# about the branch all name this one. Read again at the end, a branch rebased while a review ran in
+# the background was remembered at a commit no check had seen, and its next push was not reviewed.
+TIP = run(["git", "rev-parse", "HEAD"]).stdout.strip() if BEFORE_PUSH else ""
 if BEFORE_PUSH:
     # A push carries commits. Reviewed with the work in progress, as the review after writing is, an
     # uncommitted edit or a scratch file decided whether the push was held, and changed what counted
     # as the same change (lesson n_57cc4b427f05: a verdict on what ships reads what is committed).
-    files = [f for f in run(["git", "diff", "--name-only", "-z", "--no-ext-diff", start, "HEAD", "--"]).stdout.split("\0") if f]
+    files = [f for f in run(["git", "diff", "--name-only", "-z", "--no-ext-diff", start, TIP or "HEAD", "--"]).stdout.split("\0") if f]
     if not files:
         finish("%s\n\nNothing is committed since %s, so there was nothing to review." % (HEAD, cell(BASE, 200)), 0)
     # Which lessons govern the change was counted by okl with the work in progress. Where that holds a
@@ -310,7 +328,7 @@ if BEFORE_PUSH:
     # would log it as one (lesson eval-scripts-no-exposure, found by this mode's fourth real run).
     if set(files) != set(change.get("files") or []):
         governing = set()
-    diff = run(["git", "diff", "--no-ext-diff", start, "HEAD", "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
+    diff = run(["git", "diff", "--no-ext-diff", start, TIP or "HEAD", "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
 else:
     diff = run(["git", "diff", "--no-ext-diff", start, "--", ".", *[":(exclude,glob)" + p for p in exclude]]).stdout
     # A new file not yet added to git is in okl's list but in no `git diff`, so a check run before the
@@ -352,20 +370,33 @@ if MARKER and os.path.isfile(MARKER):
                    HEAD, cell(seen.get("at", "earlier"), 40), seen.get("breaks", 0), seen.get("holds", 0),
                    seen.get("no bearing", 0), " (reported broken: %s)" % was if was else ""), 0)
 # A branch is reviewed in full at its first push. A later push of it checks again the lessons that
-# review reported broken, and no others: the same branch, grown from the same place, on top of the
-# commit that was reviewed. Anything else is a new change: a branch started again, or main itself,
-# whose base moves with each push.
+# review reported broken or left with no verdict, and no others: the same branch, grown from the same
+# place, on top of the commit that was reviewed. Anything else is a new change: a branch started
+# again, or main itself, whose base moves with each push.
 RECHECK, BRANCH = None, None
+LEFT = []               # the lessons the branch's last review left with no verdict
+CARRY, CARRIED = [], {} # on a second try at the same commit: what the first try reported broken, and its counts
 if BEFORE_PUSH and MARKER:
     name = run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
-    tip = run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    tip = TIP
     if tip and name and name != "HEAD":
+        WHOSE = "Branch `%s`" % cell(name, 120).replace("`", "")
         BRANCH = os.path.join(STATE, "branch-%s.json" % hashlib.sha256(name.encode("utf-8", "replace")).hexdigest()[:16])
         was = read_json(BRANCH)
-        if was and was.get("base") == start and isinstance(was.get("head"), str) and was["head"] != tip \
-                and run(["git", "merge-base", "--is-ancestor", was["head"], tip]).returncode == 0:
-            RECHECK = [i for i in was.get("broken") or [] if isinstance(i, str)]
-            if not RECHECK:
+        if was and was.get("base") == start and isinstance(was.get("head"), str):
+            was_broken = [i for i in was.get("broken") or [] if isinstance(i, str)]
+            LEFT = [i for i in was.get("unfinished") or [] if isinstance(i, str)]
+            if was["head"] == tip:
+                # The same commit again. A review that left a lesson with no verdict does not remember
+                # its change, so the push comes back here for what is left, and only that: a lesson
+                # it reported broken was reported, and the same change is not held for it twice.
+                if LEFT:
+                    RECHECK, CARRY = LEFT, was_broken
+                    CARRIED = was.get("count") if isinstance(was.get("count"), dict) else {}
+            elif run(["git", "merge-base", "--is-ancestor", was["head"], tip]).returncode == 0:
+                # The lessons never checked go first, so the limit cannot leave the same ones out twice.
+                RECHECK = list(dict.fromkeys(LEFT + was_broken))
+            if RECHECK is not None and not RECHECK:
                 finish("%s\n\nThis branch was reviewed at its first push (%s) and nothing is left that it reported "
                        "broken, so this push adds no review. `bash ci/lesson-review.sh` reviews the whole change "
                        "again." % (HEAD, cell(was.get("at", "earlier"), 40)), 0)
@@ -380,7 +411,8 @@ if BEFORE_PUSH and MARKER:
     except (OSError, ValueError):
         pass
 if BEFORE_PUSH:
-    doing = ("checking again the %d lesson(s) this branch's review reported broken" % len(RECHECK) if RECHECK is not None
+    doing = ("checking again the %d lesson(s) this branch's review %s" % (
+                 len(RECHECK), "reported broken or did not check" if LEFT else "reported broken") if RECHECK is not None
              else "checking this change against %d lesson(s): one call to pick, then one per lesson picked" % len(lessons))
     if BACKGROUND:
         # The push goes now, and the review goes on without it: a child of its own session, with
@@ -585,8 +617,9 @@ done = [r for r in results if "verdict" in r]
 broken = [r for r in done if r["verdict"] == "breaks"]
 count = {v: sum(1 for r in done if r["verdict"] == v) for v in VERDICTS}
 out = [HEAD, "",
-       ("%d of the %d lessons this branch's first review reported broken were checked again, each in a fresh call"
-        % (len(done), len(picked)) if RECHECK is not None else
+       ("%d of the %d lessons this branch's %s were checked again, each in a fresh call"
+        % (len(done), len(picked), "last review reported broken or did not check" if LEFT else
+           "first review reported broken") if RECHECK is not None else
         "%d of the %d lessons picked from %d in scope were checked against this change, each in a fresh call"
         % (len(done), len(picked), len(lessons)))
        + ": %d broken, %d held, %d with no bearing%s." % (
@@ -605,8 +638,16 @@ if done:
         out.append("| `%s` %s | %s | %s%s |" % (r["id"], cell(in_scope[r["id"]]["title"], 200), verdict,
                                                   cell(r.get("finding")), where))
 missed = [r for r in results if "verdict" not in r]
-if missed:
+# Left for the next push: the lessons whose check gave no verdict, and the ones the limit left out of
+# a second check. Kept as the broken ones alone, a lesson whose check timed out fell off the branch's
+# list, the next push found nothing left, and it was never checked again.
+over = [i for i in (RECHECK or []) if i in in_scope and i not in picked]
+unfinished = [r["id"] for r in missed] + over
+if unfinished:
     out += ["", "Not checked:"] + ["- `%s`: %s" % (r["id"], cell(r["why"], 300)) for r in missed]
+    out += ["- `%s`: over the %d lessons one run checks" % (i, PICK) for i in over]
+    if BEFORE_PUSH and done:
+        out += ["", "The lessons not checked are checked at the next push of this branch."]
 if unknown:
     out += ["", "Picked, but not a lesson in scope, so left out: " + ", ".join("`%s`" % cell(u, 80).replace("`", "")
                                                                              for u in unknown[:20])]
@@ -633,19 +674,28 @@ if ON_GITHUB:
 if MARKER and done:
     # Remembered only when a lesson was checked: a run that checked none is tried again next time.
     when = time.strftime("%Y-%m-%d %H:%MZ", time.gmtime())
-    REMEMBER = [(MARKER, {"at": when, "base": BASE, "broken": [r["id"] for r in broken],
-                          "seconds": int(time.monotonic() - STARTED), "again": RECHECK is not None, **count})]
+    # A second try at the same commit adds to what the first found, so the change is remembered whole.
+    now_broken = list(dict.fromkeys(CARRY + [r["id"] for r in broken]))
+    total = {v: count[v] + (CARRIED.get(v) if isinstance(CARRIED.get(v), int) else 0) for v in VERDICTS}
+    REMEMBER = []
+    if not unfinished:      # the change counts as reviewed only when every lesson picked for it has a verdict
+        REMEMBER.append((MARKER, {"at": when, "base": BASE, "broken": now_broken,
+                                  "seconds": int(time.monotonic() - STARTED), "again": RECHECK is not None, **total}))
     if BRANCH:
-        REMEMBER.append((BRANCH, {"at": when, "base": start, "head": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
-                                  "broken": [r["id"] for r in broken]}))
+        REMEMBER.append((BRANCH, {"at": when, "base": start, "head": TIP, "broken": now_broken,
+                                  "unfinished": unfinished, "count": total}))
 if BEFORE_PUSH:
-    TELL = bool(broken) or not done
+    # A lesson with no verdict is told too: in the background nobody saw the report that names it.
+    TELL = bool(broken) or not done or bool(unfinished)
     if not done:
         finish(report, 2, "LESSONS NOT REVIEWED (no lesson got a verdict, above). Pushing anyway.")
     if broken and HOLD:
         finish(report, 1, "%d lesson(s) reported broken (above), so this push is held. Fix them and push again; "
-                          "or push again as it is: this change is now reviewed, and the same change is not held "
-                          "twice. `git push --no-verify` skips the review." % len(broken))
+                          "or push again as it is: %s `git push --no-verify` skips the review." % (
+                              len(broken),
+                              "what is reported here does not hold it twice, and the %d lesson(s) not checked are "
+                              "checked then." % len(unfinished) if unfinished else
+                              "this change is now reviewed, and the same change is not held twice."))
     finish(report, 0)
 # Blocking, a broken lesson fails the run (1), and a run that checked none of its lessons did not
 # run (2), never a pass.

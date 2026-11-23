@@ -264,18 +264,22 @@ it off. A pre-push hook of another tool runs it with one line, which holds the p
 
 - **It runs in the background, and the push goes at once.** Held for the review, every push of a
   new change waited about five minutes. The report is kept (`last-report.md` in the repository's
-  git directory). When it reports a broken lesson it is also shown at your next push, and okl adds
-  it to your agent's next briefing, once.
+  git directory). When it reports a broken lesson, or could not check one, it is also shown at
+  your next push, and okl adds it to your agent's next briefing, once. A report not yet read is
+  never written over: the next one is added under it, each under its branch's name.
 - **A branch is reviewed in full once.** Its first push costs one call to pick and one per lesson
   picked, ten unless `LESSON_REVIEW_PICK` says otherwise, so about eleven calls, four checks at a
-  time (`LESSON_REVIEW_PARALLEL`). A later push of the same branch checks again only the lessons that review reported broken:
-  a call each, and none once nothing is left broken. `bash ci/lesson-review.sh` reviews the whole
+  time (`LESSON_REVIEW_PARALLEL`). A later push of the same branch checks again only the lessons that review reported broken
+  or could not check: a call each, and none once nothing is left. `bash ci/lesson-review.sh` reviews the whole
   change again whenever you ask. New code in a later push is not picked over again; CI's review
   still reads every push.
 - **It reviews what is pushed:** the commits since the base, never an uncommitted edit or a
   scratch file. A push of some commit other than the checked-out one is not reviewed.
 - **Once per change.** A change already reviewed is not reviewed again, and a second push while a
-  review of it is running starts nothing. What it remembers is kept in the repository's git
+  review of it is running starts nothing. A change counts as reviewed only when every lesson
+  picked for it got a verdict and the report was kept or shown: a lesson whose check failed or
+  timed out is checked at the branch's next push, and pushed again as it is, the change is
+  checked for those lessons alone. What it remembers is kept in the repository's git
   directory, shared by its worktrees.
 - **It can hold the push, if you ask.** `okl init --review-before-push "<reviewer>"
   --review-holds-push` (`"review_before_push": "hold"`) runs it in the foreground: the push waits,

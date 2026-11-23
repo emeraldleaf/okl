@@ -577,6 +577,10 @@ def _init_dry_run(args: argparse.Namespace) -> int:
     else:
         print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
     _dry_run_drift_gates(args)
+    # Listed here and not with the hook: init writes the script wherever the review is asked for,
+    # with --no-git-hook and outside a git repository too, and the dry run named it for neither.
+    if _review_before_push_wanted(args, load_config()) and _symlinked(REVIEW_SCRIPT) is None and not REVIEW_SCRIPT.exists():
+        print(f"  {REVIEW_SCRIPT!s:<40}the review the pre-push hook runs (only where the repo has none)")
     if not _dry_run_owner(args, (wire or why == _BY_PLUGIN) and why != _OPTED_OUT and link is None):
         return 2
     recorded = load_config().get("interests")
@@ -642,8 +646,6 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
     else:
         print(f"  {hooks / 'pre-push'!s:<40}a git pre-push hook running the drift gate"
               + (" and the review before a push" if review else "") + " (never over another tool's hook)")
-    if review:
-        print(f"  {REVIEW_SCRIPT!s:<40}the review the pre-push hook runs, only when the repo has none")
 
 
 def _dry_run_pin(args: argparse.Namespace) -> str:
@@ -1143,6 +1145,7 @@ def _say_stop_hook_sees_worktrees() -> None:
 
 STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")
 REVIEW_SCRIPT = Path("ci/lesson-review.sh")
+REVIEW_SCRIPT_SRC = Path(__file__).resolve().parents[1] / "scaffold" / "ci" / "lesson-review.sh"
 # The line that runs the review from another tool's pre-push hook. Only exit 1 holds the push: 2 is a
 # review that did not run.
 _REVIEW_LINE = 'REVIEW_CMD="<your reviewer>" bash ci/lesson-review.sh --before-push || [ $? -ne 1 ] || exit 1'
@@ -1160,8 +1163,8 @@ def _wire_review_before_push(cfg: dict) -> None:
         print(f"! kept {REVIEW_SCRIPT}: {link} is a symlink, and okl does not write through links.")
     elif not REVIEW_SCRIPT.exists():
         REVIEW_SCRIPT.parent.mkdir(parents=True, exist_ok=True)
-        shipped = Path(__file__).resolve().parents[1] / "scaffold" / "ci" / "lesson-review.sh"
-        REVIEW_SCRIPT.write_text(shipped.read_text(encoding="utf-8"), encoding="utf-8")
+        # As bytes: written as text, Windows turns each newline into CRLF and bash cannot run the script.
+        REVIEW_SCRIPT.write_bytes(REVIEW_SCRIPT_SRC.read_bytes())
         REVIEW_SCRIPT.chmod(0o755)
         print(f"✓ installed the review script → {REVIEW_SCRIPT} (commit it: the pre-push hook runs it from the repo)")
     _say_review_before_push(cfg)
@@ -1171,7 +1174,7 @@ def _wire_review_before_push(cfg: dict) -> None:
            "agent at its next prompt (--review-holds-push holds the push for it)")
     print(f"• review before a push: on, with `{cfg.get('review_cmd') or '(no reviewer named: --review-before-push <command>)'}`. "
           f"A branch's first push is reviewed in full, about eleven calls; a later push checks again only what "
-          f"that review reported broken. {how}. Turn it off with `okl init --no-review-before-push`, or for one "
+          f"that review reported broken or could not check. {how}. Turn it off with `okl init --no-review-before-push`, or for one "
           "push with OKL_REVIEW_BEFORE_PUSH=0")
 
 
