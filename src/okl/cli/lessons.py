@@ -128,8 +128,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         # compact: the imperative list only, for small-context callers (subagents, CI)
         print(core.render_actions_only(result, limit=args.limit))
     else:
-        print(_briefing_text(result, args) + _review_of_the_last_push(args))
-        mark_review_read()
+        _print_briefing(result, args)
     # stdout is what the UserPromptSubmit hook hands the agent; setup advice is for the
     # person, so it goes to stderr and never enters the agent's context. Skipped for json,
     # whose consumers parse the output.
@@ -192,6 +191,16 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     else:
         print(text, end="")
     return 0
+
+
+def _print_briefing(result: dict[str, Any], args: argparse.Namespace) -> None:
+    """The briefing as text, with the last push's review after it where there is one to show. The
+    report is marked read only when it was shown: a file's briefing shows none, and marked it read
+    anyway, so it was lost unshown."""
+    review = _review_of_the_last_push(args)
+    print(_briefing_text(result, args) + review)
+    if review:
+        mark_review_read()
 
 
 def _review_of_the_last_push(args: argparse.Namespace) -> str:
@@ -276,15 +285,17 @@ def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> None
     # The last push's review goes inside the context, with the briefing: printed after this object it
     # made the hook's output two things and no longer JSON, and a host that cannot parse the output
     # drops the briefing with it (found by CI's review of the change that added it).
+    review = _review_of_the_last_push(args)
     out: dict[str, Any] = {"hookSpecificOutput": {
         "hookEventName": getattr(args, "hook_event", None) or "UserPromptSubmit",
-        "additionalContext": _briefing_text(result, args) + _review_of_the_last_push(args)}}
+        "additionalContext": _briefing_text(result, args) + review}}
     quiet = os.environ.get("OKL_QUIET") == "1"
     lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
     if lines:
         out["systemMessage"] = " · ".join(lines)
     print(json.dumps(out))
-    mark_review_read()      # once it is out, and not before
+    if review:
+        mark_review_read()      # once it is out, and not before
 
 
 def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> None:

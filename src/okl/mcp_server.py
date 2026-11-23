@@ -107,9 +107,9 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         # A task's briefing also carries the last push's review, once, when it reported a broken
         # lesson: it ran in the background, and this is how an agent with no hooks gets to read it.
         report = None if path else unread_review()
-        text = core.render_check_for_agent(result) + (f"\n\n{REVIEW_NOTE}{report}" if report else "")
-        mark_review_read()
-        return text
+        if report:      # marked read only when it is in the reply: a path's briefing carries none
+            mark_review_read()
+        return core.render_check_for_agent(result) + (f"\n\n{REVIEW_NOTE}{report}" if report else "")
 
     # Keyword-only: the SDK always calls a tool with named arguments, and fourteen
     # mostly-string parameters are too easy to pass in the wrong order by position.

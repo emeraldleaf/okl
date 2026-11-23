@@ -470,6 +470,14 @@ def test_before_a_push_the_review_runs_in_the_background_and_holds_nothing(setup
                            env=setup["env"], capture_output=True, text=True, check=True).stdout
     assert "the lesson review of your last push reported this" in plain and "a report nobody has read" in plain
     assert not inbox.exists()
+    # A file's briefing shows no report, in either format, and leaves it for the task briefing that will:
+    # it marked the report read all the same, and the report was lost unshown (found by CI's review).
+    inbox.write_text("a report nobody has read\n")
+    for form in ([], ["--format", "hook"]):
+        shown = subprocess.run([sys.executable, "-m", "okl", "check", "--path", "a.py", *form], cwd=setup["repo"],
+                               env=setup["env"], capture_output=True, text=True, check=True).stdout
+        assert "lesson review of your last push" not in shown and inbox.is_file(), form
+    inbox.unlink()
     # Read without marking, and marked only when told: a briefing that fails to print keeps the report.
     from okl.client import mark_review_read, unread_review
     inbox.write_text("a report nobody has read\n")
@@ -930,3 +938,40 @@ def test_no_doc_says_the_pre_push_hook_holds_a_push_only_for_drift():
                  "src/okl/scaffold/MANIFEST.md", "src/okl/scaffold/git-hooks/pre-push", "docs/ARCHITECTURE.md"):
         text = " ".join((ROOT / path).read_text().split())
         assert re.search(r"review before a push|--review-before-push|--before-push|reviews the push", text), path
+
+
+def test_an_agent_that_asks_over_mcp_is_handed_the_report_once(tmp_path, monkeypatch):
+    """An agent with no hooks asks for its briefing with okl_check. A task's briefing carries the
+    last push's review, once; a path's carries none and leaves the report unread for the task
+    briefing that will show it."""
+    pytest.importorskip("mcp")
+    import asyncio
+
+    from okl.client import Client
+    from okl.mcp_server import _build
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    Client().record(type="Rule", title="retries need a deadline", scope="org", fix="give each retry a deadline")
+    inbox = tmp_path / ".okl" / "review-unread.md"
+    inbox.write_text("| `l-alpha` | **breaks** | the report nobody has read |\n")
+
+    def text(res) -> str:
+        res = res[0] if isinstance(res, tuple) else res        # mcp 1.x: (content blocks, structured result)
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+
+    async def ask() -> tuple[str, str, str]:
+        mcp = _build()
+        by_path = text(await mcp.call_tool("okl_check", {"path": ["a.py"]}))
+        still_unread = inbox.is_file()
+        first = text(await mcp.call_tool("okl_check", {"task": "add a retry to the fetch call"}))
+        second = text(await mcp.call_tool("okl_check", {"task": "add a retry to the fetch call"}))
+        assert still_unread, "a path's briefing must leave the report unread"
+        return by_path, first, second
+
+    by_path, first, second = asyncio.run(ask())
+    assert "lesson review of your last push" not in by_path
+    assert "the lesson review of your last push reported this" in first and "the report nobody has read" in first
+    assert "lesson review of your last push" not in second and not inbox.exists()
