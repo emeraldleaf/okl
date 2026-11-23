@@ -27,7 +27,9 @@
   holds a push: it says LESSONS NOT REVIEWED and exits 2, "did not run" (no reviewer, no script,
   no verdict, or a fault in the script itself, which exited 1 and would have read as a hold). It
   reviews what is pushed, the commits and never the work in progress, and not a push of some
-  other commit than the checked-out one. It stops after 480 seconds unless
+  other commit than the checked-out one. The hook names the commit and branch git is pushing, so a
+  commit made while the hook runs is not the one reviewed, and a review of an older commit that
+  ends last adds to the branch's record and never replaces a newer one. It stops after 480 seconds unless
   `LESSON_REVIEW_DEADLINE` says otherwise. `LESSON_REVIEW_ONCE=1` makes a review run by hand
   count for the push. `OKL_REVIEW_BEFORE_PUSH=0` or `1` decides one push. okl's hook hands the
   script the okl it resolved, and the script reads it and the reviewer as command lines, so a
@@ -55,7 +57,9 @@
     SQLite ran an empty full-text query and found nothing; Postgres matched title and body only;
     and a search for `%` matched every row.
   - **An SQLite built without FTS5** matches any word of the query and ranks by the same field
-    weights. It searched for the whole query as one phrase, unranked.
+    weights. It searched for the whole query as one phrase, unranked. A word found only in a lesson's tags finds it there too, after
+    the lessons that say the word: the fallback read no tags, so a tag-only match the index and
+    Postgres return was missing from it.
   - **`Store.edges([])`** returns nothing, as documented: its list names what to return, where
     the lists in `neighbors` and `search` are filters and empty means all. The contract test now
     runs one body against SQLite, SQLite without FTS5 and Postgres.

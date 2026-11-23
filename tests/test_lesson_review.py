@@ -2,6 +2,7 @@
 
 A stand-in reviewer records each prompt it is given and the folder it ran in, and answers as the
 test tells it: a pick, then a verdict per lesson, or a failure."""
+import hashlib
 import json
 import os
 import re
@@ -1200,3 +1201,67 @@ def test_the_unread_report_is_never_written_read_or_shown_through_a_link(setup):
     linked = push()
     assert linked.returncode == 0 and "OUTSIDE-FILE" not in linked.stdout + linked.stderr, linked.stderr
     assert (elsewhere / "review-unread.md").read_text() == "OUTSIDE-FILE\n"
+
+
+def test_the_review_reads_the_commit_git_is_pushing(setup):
+    """git's hook matched the pushed commit to the checked-out one, and the script then read the
+    checked-out one again: a commit made in between was reviewed and remembered while git pushed
+    the other (found by the review sweep after the review at a push merged). The hook names the
+    commit and the branch it is pushing, and the script reviews and remembers those."""
+    pushed = _git(setup["repo"], "rev-parse", "HEAD")
+    _commit(setup, "made_in_between = 1")
+    r = setup["run"]("--before-push", **HOLD, **BREAKS, LESSON_REVIEW_TIP=pushed, LESSON_REVIEW_BRANCH="named-by-git")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "made_in_between" not in "\n".join(p for _, p in setup["prompts"]()), "the later commit is not in the review"
+    (record,) = _state(setup).glob("branch-*.json")
+    assert record.name == f"branch-{hashlib.sha256(b'named-by-git').hexdigest()[:16]}.json"
+    assert json.loads(record.read_text())["head"] == pushed
+    # A name that is no commit is not used: the checked-out commit is reviewed, as when run by hand.
+    for no_commit in ("--not-a-commit", "0" * 40):
+        _forget(setup)
+        r = setup["run"]("--before-push", **HOLD, **BREAKS, LESSON_REVIEW_TIP=no_commit)
+        assert r.returncode == 1 and _branch_record(setup)["head"] == _git(setup["repo"], "rev-parse", "HEAD"), r.stderr
+    assert "made_in_between" in "\n".join(p for _, p in setup["prompts"]())
+
+
+def test_gits_pre_push_hook_names_the_commit_and_branch_it_pushes(setup):
+    """The hook hands the script the commit it matched and the branch git pushes it from. Pushed as
+    HEAD, git names no branch, and the script reads the checked-out one."""
+    push, pushed = _hooked(setup)
+    repo = setup["repo"]
+    (repo / "ci" / "lesson-review.sh").write_text(
+        '#!/usr/bin/env bash\n# stands in for the review: --before-push\n'
+        'printf "%s %s\\n" "$LESSON_REVIEW_TIP" "$LESSON_REVIEW_BRANCH" > "$CALLS_DIR/named"\n')
+    head, branch = _git(repo, "rev-parse", "HEAD"), _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+    env = {**setup["env"], "OKL_BIN": f"{sys.executable} -m okl"}
+    by_name = subprocess.run(["git", "push", "-q", "origin", f"{branch}:main"], cwd=repo, env=env, capture_output=True, text=True)
+    assert by_name.returncode == 0 and pushed(), by_name.stdout + by_name.stderr
+    assert (setup["calls"] / "named").read_text() == f"{head} {branch}\n"
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "another")
+    assert push().returncode == 0
+    assert (setup["calls"] / "named").read_text() == f"{_git(repo, 'rev-parse', 'HEAD')} \n"
+
+
+def test_an_older_review_that_ends_last_does_not_write_over_a_newer_one(setup):
+    """Two commits of one branch can be under review at once: a review under way holds off only a
+    second review of the same change. The older one ended last and wrote its record over the
+    newer one's, so the next push checked the older list and never the lesson only the newer
+    review had reported broken. The newer commit's record keeps its head and gains what the older
+    review found."""
+    slow = {"PICKED": '["l-alpha", "l-beta"]', "VERDICTS": '{"l-alpha": "SLEEP", "l-beta": "breaks"}', "SLEEP_SECONDS": "6"}
+    older = subprocess.Popen(["bash", str(setup["repo"] / "ci" / "lesson-review.sh"), "--before-push"], cwd=setup["repo"],
+                             env={**setup["env"], **HOLD, **slow}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        _wait(lambda: len(setup["prompts"]()) >= 2)      # its pick is over and its slow check is under way
+        _commit(setup, "newer = 1")
+        second = _git(setup["repo"], "rev-parse", "HEAD")
+        newer = setup["run"]("--before-push", **HOLD, PICKED='["l-gamma"]', VERDICTS='{"l-gamma": "breaks"}')
+        assert newer.returncode == 1 and "already running" not in newer.stdout, newer.stdout + newer.stderr
+        assert (_branch_record(setup)["head"], _branch_record(setup)["broken"]) == (second, ["l-gamma"])
+        out, err = older.communicate(timeout=60)
+    finally:
+        older.kill()
+    assert older.returncode == 1, out + err
+    record = _branch_record(setup)
+    assert record["head"] == second, "the newer commit's review is still the branch's"
+    assert sorted(record["broken"]) == ["l-beta", "l-gamma"] and record["unfinished"] == ["l-alpha"], record

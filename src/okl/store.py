@@ -784,8 +784,8 @@ def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
 # The fields that say what a record is about, with the weight of a word found there: every full-text
-# column but the id and the tags. A match in these sorts ahead of a tag-only one, and they are what a
-# search with no index to ask reads.
+# column but the id and the tags. A match in these sorts ahead of a tag-only one. A search with no
+# index to ask reads these and, for a query's words, the tags after them.
 _MATCHED = tuple((name, weight) for name, weight in _FTS_WEIGHTS.items() if name not in ("id", "tags"))
 
 
@@ -910,7 +910,7 @@ class _SQLiteBackend(_Backend):
                 c.rollback()
             # Only a SQLite without FTS5 falls back to LIKE. A rebuild that failed (a writer
             # holding the lock past the timeout, a tokenizer SQLite lacks) raises instead: the
-            # fallback cannot see tags, and while it is on, writes skip the index (review on #309).
+            # fallback ranks without bm25, and while it is on, writes skip the index (review on #309).
             if "no such module: fts5" not in str(e):
                 raise
             self._has_fts = False
@@ -984,11 +984,15 @@ class _SQLiteBackend(_Backend):
         """Search with no full-text index. A query with no word in it is one substring, unranked.
         Words, on an SQLite built without FTS5, match singly and are ranked here: the rows holding
         any of them are read and sorted by `_weighted_hits`, ties in id order, since LIKE has no
-        relevance to order by."""
+        relevance to order by. A word found only in a record's tags finds it too, after every record
+        that says the word (a tag adds no weight), as the index does it: read from `_MATCHED` alone, a lesson tagged
+        `messaging` was found by that word with FTS5 and on Postgres and not here (found by the
+        review sweep after #503). A query with no word in it stays out of the tags."""
         needles = words or [q]
-        field_sql = " OR ".join(f"n.{name} LIKE ? ESCAPE '\\'" for name, _ in _MATCHED)
+        names = [name for name, _ in _MATCHED] + (["tags"] if words else [])
+        field_sql = " OR ".join(f"n.{name} LIKE ? ESCAPE '\\'" for name in names)
         where = " OR ".join(f"({field_sql})" for _ in needles)
-        params: list[Any] = [_like(w) for w in needles for _ in _MATCHED]
+        params: list[Any] = [_like(w) for w in needles for _ in names]
         more, more_params = self._filters(scope, node_types)
         # Only the fixed column names and "?" marks are interpolated; every value is bound.
         sql = f"SELECT n.* FROM node n WHERE ({where}){more}"  # noqa: S608
