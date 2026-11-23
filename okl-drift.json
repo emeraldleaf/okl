@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1795406489576,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 6c2b0d4f2bc0 @ 2026-11-23T04:01Z",
-      "verified_commit": "6c2b0d4f2bc028453c56fa2873c40c9a64598d75"
+      "verified_at": 1795472303131,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 84e6b816e86c @ 2026-11-23T22:18Z",
+      "verified_commit": "84e6b816e86c636ca6f325dba812d4c7020b6136"
     },
     {
       "id": "doc-init-flags",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1795406488948,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 6c2b0d4f2bc0 @ 2026-11-23T04:01Z",
-      "verified_commit": "6c2b0d4f2bc028453c56fa2873c40c9a64598d75"
+      "verified_at": 1795472302472,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 84e6b816e86c @ 2026-11-23T22:18Z",
+      "verified_commit": "84e6b816e86c636ca6f325dba812d4c7020b6136"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1795412040273,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit a2ac51e509de @ 2026-11-23T05:34Z",
-      "verified_commit": "a2ac51e509de501fa240d73cde69a1d9cce7ff47"
+      "verified_at": 1795472303906,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 84e6b816e86c @ 2026-11-23T22:18Z",
+      "verified_commit": "84e6b816e86c636ca6f325dba812d4c7020b6136"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1795406489278,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 6c2b0d4f2bc0 @ 2026-11-23T04:01Z",
-      "verified_commit": "6c2b0d4f2bc028453c56fa2873c40c9a64598d75"
+      "verified_at": 1795472302842,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 84e6b816e86c @ 2026-11-23T22:18Z",
+      "verified_commit": "84e6b816e86c636ca6f325dba812d4c7020b6136"
     },
     {
       "id": "n_ead8e0a2b43d",
