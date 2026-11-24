@@ -1,6 +1,9 @@
 """ci/review-before-pr.sh: the review the developer guide asks for before a pull request, and the
 record that it ran. Twelve pull requests in a row were opened without it, since nothing looked
-(#500 to #511); `--check`, run at a push, says so. The proof of lesson cli-review-before-the-pr."""
+(#500 to #511); `--check`, run at a push, says so, and in Claude Code a committed hook stops
+`gh pr create` until it has run. The proof of lesson cli-review-before-the-pr."""
+import json
+import os
 import shutil
 import subprocess
 import sys
@@ -10,6 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "ci" / "review-before-pr.sh"
+HOOK = ROOT / ".claude" / "hooks" / "pretooluse-review-before-pr.py"
 
 FAKE = r'''
 import subprocess, sys
@@ -166,3 +170,144 @@ def test_the_record_is_never_written_or_read_through_a_link(branch, tmp_path):
     _git(repo, "commit", "-q", "--allow-empty", "-m", "more")
     refused = run()
     assert refused.returncode == 2 and "is a symlink" in refused.stderr and outside.read_text() == kept
+
+
+def test_the_check_can_be_asked_about_a_branch_that_is_not_checked_out(branch):
+    """`--check <branch>` reads a named local branch at its own tip: a pull request can be opened
+    for a branch from another folder. A name that is no branch here cannot be told (2)."""
+    repo, run = branch
+    _git(repo, "checkout", "-q", "main")
+    assert run("--check").returncode == 0, "main itself has nothing to review"
+    named = run("--check", "feature")
+    assert named.returncode == 1 and "NO REVIEW RECORDED for branch 'feature'" in named.stderr and named.stdout == ""
+    for args in (("--check", "no-such-branch"), ("--check", "feature", "more")):
+        r = run(*args)
+        assert r.returncode == 2 and r.stdout == "" and "review-before-pr:" in r.stderr, (args, r.stderr)
+    _git(repo, "checkout", "-q", "feature")
+    assert run().returncode == 0
+    _git(repo, "checkout", "-q", "main")
+    assert run("--check", "feature").returncode == 0
+
+
+def _asked(repo: Path, command: str, cwd: Path | None = None, payload: str | None = None) -> subprocess.CompletedProcess:
+    """What the agent hook answers when Claude Code is about to run `command` in `cwd`."""
+    hook = repo / ".claude" / "hooks" / HOOK.name
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(HOOK, hook)
+    sent = payload if payload is not None else json.dumps({
+        "hook_event_name": "PreToolUse", "tool_name": "Bash", "cwd": str(cwd or repo), "tool_input": {"command": command}})
+    env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(repo.parent)}
+    return subprocess.run([sys.executable, str(hook)], input=sent, env=env, capture_output=True, text=True)
+
+
+def test_the_agent_hook_stops_a_pull_request_until_the_branch_has_a_recorded_review(branch):
+    """In Claude Code the hook exits 2 on `gh pr create` for a branch with no recorded review, and
+    stderr (what the agent is given) names the branch, how to run the review and how a waiver is
+    said. Once a review is recorded the same command goes through, with nothing printed."""
+    repo, run = branch
+    stopped = _asked(repo, "gh pr create --title x --body y")
+    assert stopped.returncode == 2 and stopped.stdout == "", stopped.stdout + stopped.stderr
+    for said in ("NO REVIEW RECORDED for branch 'feature'", "PULL REQUEST NOT OPENED", "ci/review-before-pr.sh", "PR_REVIEW_WAIVED=docs-only"):
+        assert said in stopped.stderr, stopped.stderr
+    assert run().returncode == 0
+    through = _asked(repo, "gh pr create --title x --body y")
+    assert (through.returncode, through.stdout, through.stderr) == (0, "", "")
+
+
+BODY = """gh pr create --title "it's ready" --body "$(cat <<'EOF'
+Don't read this as a flag: --head nope
+gh pr create --head nope
+EOF
+)" """
+
+
+@pytest.mark.parametrize("command, checked_out", [
+    ("cd {repo} && gh pr create --fill", "feature"),
+    ('cd "{repo}" && git push -q && PAGER=cat gh pr create --fill', "feature"),
+    ("gh pr create --head feature --title x", "main"),
+    ("cd {repo}; gh pr create -H someone:feature", "main"),
+    ("gh pr create \\\n  --head=feature", "main"),
+    ("if gh pr create --fill; then echo opened; fi", "feature"),
+    (BODY, "feature"),
+], ids=["cd", "cd-quoted-then-push", "head", "head-with-owner", "head-on-the-next-line", "inside-if", "body-with-quotes"])
+def test_the_agent_hook_finds_the_branch_the_pull_request_is_for(branch, command, checked_out):
+    """The agent opens pull requests from another folder (`cd <worktree> && gh pr create`) or for a
+    named branch (`--head`): the hook reads the branch from the command, not from where the session
+    is, and a body's own words (quotes, a heredoc that mentions --head) do not mislead it."""
+    repo, _ = branch
+    _git(repo, "checkout", "-q", checked_out)
+    elsewhere = repo.parent if command.startswith("cd") else repo
+    r = _asked(repo, command.replace("{repo}", str(repo)), cwd=elsewhere)
+    assert r.returncode == 2 and "NO REVIEW RECORDED for branch 'feature'" in r.stderr and r.stdout == "", r.stderr
+
+
+@pytest.mark.parametrize("command", [
+    'git commit -m "Stop gh pr create for a branch nobody reviewed"',
+    "grep -rn 'gh pr create' docs/",
+    "echo run gh pr create when the review is done",
+    "cat > note.md <<'EOF'\ngh pr create --fill\nEOF",
+    "gh pr view 12 && gh pr list && gh issue create --title x && gh pr created",
+    "PR_REVIEW_WAIVED=docs-only gh pr create --fill",
+    'PR_REVIEW_WAIVED="docs only" gh pr create --fill',
+    "gh pr create --repo someone/elsewhere --fill",
+    "cd {other} && gh pr create --fill",
+    "cd {nowhere} && gh pr create --fill",
+], ids=["commit-message", "grep", "an-argument", "heredoc", "other-gh-commands", "waived", "waived-quoted", "another-repo-named",
+        "another-repository", "no-repository"])
+def test_the_agent_hook_lets_through_what_is_not_a_pull_request_for_this_repository(branch, tmp_path, command):
+    """On a branch with no review the hook still says nothing (exit 0, no output) to a command that
+    only mentions `gh pr create`, to one that says its waiver, and to a pull request for another
+    repository: the rule is this repository's own."""
+    repo, _ = branch
+    _git(repo, "remote", "add", "origin", "https://example.invalid/me/okl.git")
+    other = tmp_path / "other"
+    other.mkdir()
+    _git(other, "init", "-q")
+    _git(other, "commit", "-q", "--allow-empty", "-m", "another repository's base")
+    _git(other, "branch", "-M", "main")
+    _git(other, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(other, "checkout", "-q", "-b", "feature")
+    _git(other, "commit", "-q", "--allow-empty", "-m", "its own unreviewed work: let through only because it is another repository")
+    nowhere = tmp_path / "plain-folder"
+    nowhere.mkdir()
+    r = _asked(repo, command.replace("{other}", str(other)).replace("{nowhere}", str(nowhere)))
+    assert (r.returncode, r.stdout, r.stderr) == (0, "", ""), r.stderr
+
+
+@pytest.mark.parametrize("command, says", [
+    ("PR_REVIEW_WAIVED= gh pr create --fill", "NO REVIEW RECORDED"),
+    ("echo PR_REVIEW_WAIVED=yes; gh pr create --fill", "NO REVIEW RECORDED"),
+    ('gh pr create --title x --body "PR_REVIEW_WAIVED=yes"', "NO REVIEW RECORDED"),
+    ("gh pr create --repo me/okl --fill", "NO REVIEW RECORDED"),
+    ("cd /no/such/folder && gh pr create --fill", "cannot tell which folder"),
+    ("gh pr create --head no-such-branch", "no local branch 'no-such-branch'"),
+], ids=["empty-waiver", "waiver-on-another-command", "waiver-in-the-body", "this-repo-named", "folder-missing", "branch-missing"])
+def test_the_agent_hook_stops_what_it_cannot_tell_and_a_waiver_that_was_not_said(branch, command, says):
+    """A waiver counts only as a non-empty assignment on the `gh pr create` command itself. Where
+    the hook cannot tell which branch is meant, it stops the command and says why: silence there
+    would read as reviewed."""
+    repo, _ = branch
+    _git(repo, "remote", "add", "origin", "https://example.invalid/me/okl.git")
+    r = _asked(repo, command)
+    assert r.returncode == 2 and says in r.stderr and "PULL REQUEST NOT OPENED" in r.stderr and r.stdout == "", r.stderr
+
+
+def test_the_agent_hook_lets_through_input_it_cannot_read(branch):
+    """Anything that is not a Bash call's payload is let through, silently: the hook never holds a
+    tool call it could not read."""
+    repo, _ = branch
+    for payload in ("", "not json", "[]", json.dumps({"tool_input": {"file_path": "gh pr create"}}), json.dumps({"tool_input": {"command": 7}})):
+        r = _asked(repo, "", payload=payload)
+        assert (r.returncode, r.stdout, r.stderr) == (0, "", ""), (payload, r.stderr)
+
+
+def test_the_agent_hook_is_registered_for_every_bash_call_and_can_run():
+    """A check nobody runs is a paragraph. The committed Claude Code settings run the hook before
+    every Bash call, with no `if` filter (Claude Code calls that filter best-effort, and a command
+    it missed would open the pull request unseen); the file is there and executable."""
+    entries = json.loads((ROOT / ".claude" / "settings.json").read_text())["hooks"]["PreToolUse"]
+    ours = [h for e in entries if e.get("matcher") == "Bash" for h in e["hooks"]
+            if h["command"].endswith(f"/.claude/hooks/{HOOK.name}")]
+    assert len(ours) == 1 and ours[0]["type"] == "command" and "if" not in ours[0], entries
+    assert ours[0]["command"].startswith('"$CLAUDE_PROJECT_DIR"/'), "anchored to the project, not to where a cd left the session"
+    assert HOOK.is_file() and os.access(HOOK, os.X_OK)

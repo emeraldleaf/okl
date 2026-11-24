@@ -148,7 +148,17 @@ That is expected; see CONTRIBUTING.
     docs-only change can wait for the next sweep. Twelve pull requests in a row were opened
     without the review while this rule was only a paragraph here (#500 to #511).
   - It checks the branch that is checked out, not the refs git is pushing: `git push origin
-    other-branch` from somewhere else is not looked at.
+    other-branch` from somewhere else is not looked at. `--check <branch>` asks about a named
+    local branch instead.
+  - In Claude Code the rule holds at the step it names. `.claude/hooks/pretooluse-review-before-pr.py`
+    runs before every Bash call (a PreToolUse hook, registered in `.claude/settings.json`) and
+    stops `gh pr create` for a branch of this repository with no recorded review, saying how to
+    run one. The push-time line only reports, and an agent opened those twelve pull requests.
+    The hook reads the branch from `--head`, or from the folder a `cd` in the same command
+    names, or from where the command runs. A docs-only change says so in the command, where
+    whoever approves it reads it: `PR_REVIEW_WAIVED=docs-only gh pr create ...`. It reads the
+    command as text, so a `gh pr create` inside `bash -c '...'` is not seen; nor is a pull
+    request opened in the browser, or by an agent whose settings do not load this hook.
   - The record is on your machine alone, so the check says nothing in CI.
 - **Sweep every few merges.** Changes that went in without a CLI review (docs, figures,
   small fixes) get one batched review on an up-to-date `main`:

@@ -4,6 +4,9 @@
 #   bash ci/review-before-pr.sh            run the review CLI on this branch's commits; when it
 #                                          finishes, record the commit it reviewed
 #   bash ci/review-before-pr.sh --check    say whether the checked-out branch has a recorded review
+#   bash ci/review-before-pr.sh --check <branch>   the same for a named local branch, wherever it is
+#                                          checked out (the agent hook names the one a pull request
+#                                          is being opened for: .claude/hooks/pretooluse-review-before-pr.py)
 #
 # Why it exists. The rule was a paragraph in the developer guide, and twelve pull requests in a row
 # were opened without the review: nothing looked, so nothing noticed (2026-11, #500 to #511). The
@@ -42,6 +45,11 @@ common=$(git rev-parse --git-common-dir 2>/dev/null) || did_not_run "this is not
 state="$common/okl-pr-review"
 
 if [[ "${1:-}" == "--check" ]]; then
+  [[ $# -le 2 ]] || did_not_run "--check takes one branch name at most."
+  if [[ $# -eq 2 ]]; then
+    branch=$2
+    tip=$(git rev-parse --verify -q "refs/heads/$branch^{commit}" 2>/dev/null) || did_not_run "no local branch '$branch' is here, so it cannot tell."
+  fi
   # Nothing to review is not a missing review: the default branch, a detached commit, or a branch
   # with no commit of its own.
   [[ "$branch" != "HEAD" && "$branch" != "${BASE#*/}" ]] || exit 0
