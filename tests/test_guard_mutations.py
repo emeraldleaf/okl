@@ -83,6 +83,38 @@ def test_a_test_left_out_by_name_is_named_in_the_result_and_hides_no_missed_guar
     assert capsys.readouterr().out.strip() == f"GUARD MUTATIONS CAUGHT 1 of 1, with 1 test(s) left out: {BROKEN}"
 
 
+def test_a_test_left_out_that_is_not_there_is_refused(check, capsys):
+    """pytest ignores a --deselect that matches nothing, so a mistyped id would be named in the
+    result as left out though every test ran. The check refuses it (2) and counts nothing."""
+    assert check.main(["--deselect", "tests/test_toy.py::test_no_such_test"]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and "names no test here" in said.err and "test_no_such_test" in said.err, said.err
+
+
+def test_the_checks_runs_leave_no_bytecode_behind(check, capsys):
+    """Python trusts a cached .pyc whose source has the same size and the same second of
+    modification. Both guards here are switched off by a line of the same length, and the file is
+    restored within the second, so a cache written by one run would feed the next the wrong code
+    (lesson stale-pyc-after-probe). The check's runs write none."""
+    assert len(HELD[1]) == len(HELD[2]) and len(NOT_HELD[1]) == len(NOT_HELD[2]), "same-length mutants, the risky kind"
+    assert check.main([]) == 1
+    capsys.readouterr()
+    assert not list((check.REPO / "src").rglob("*.pyc")), "a run cached the code it imported"
+
+
+def test_the_guide_names_the_flag_the_check_has_and_a_test_that_exists():
+    """docs/DEVELOPING.md tells a developer whose installed okl is a release to leave the version
+    test out by name. The flag is the check's and the test is in the suite: renaming either leaves
+    the guide's command wrong, and this fails."""
+    import re
+    guide = (ROOT / "docs" / "DEVELOPING.md").read_text()
+    named = re.search(r"check-guard-mutations\.py.*?(--\w+) (tests/\S+)::(\w+)", guide, re.S)
+    assert named, "the guide no longer shows how to leave a test out"
+    flag, file, test = named.groups()
+    assert f'"{flag}"' in (ROOT / "ci" / "check-guard-mutations.py").read_text(), flag
+    assert f"def {test}(" in (ROOT / file).read_text(), (file, test)
+
+
 def test_tests_that_cannot_be_collected_are_not_a_pass(check, monkeypatch, capsys):
     """A test file that is not there is pytest exit 4, not 1: nothing was run, so nothing is counted."""
     monkeypatch.setattr(check, "TESTS", ["tests/test_not_here.py"])

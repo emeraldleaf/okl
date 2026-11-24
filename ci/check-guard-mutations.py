@@ -136,9 +136,18 @@ def replace_span(source: str, site: tuple[int, int, int, int, str, str]) -> str:
     return source[:start] + site[5] + source[end:]
 
 
+def _env() -> dict[str, str]:
+    """This checkout's code first on the path, and no bytecode written. Python trusts a cached
+    .pyc whose source has the same size and the same modification time to the second, so a
+    mutant the length of the original, written or restored within that second, left the next
+    run importing the other one's code (lesson stale-pyc-after-probe, okl #386). With nothing
+    cached by these runs, each one compiles the file that is on disk."""
+    return {**os.environ, "PYTHONPATH": str(REPO / "src"), "PYTHONDONTWRITEBYTECODE": "1"}
+
+
 def run_tests(tests: list[str], left_out: list[str]) -> subprocess.CompletedProcess[str]:
     """The tests, stopping at the first failure, with this checkout's code first on the path."""
-    env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+    env = _env()
     return subprocess.run([sys.executable, "-m", "pytest", "-x", "-q", "-p", "no:cacheprovider",
                            *(f"--deselect={t}" for t in left_out), *tests],
                           cwd=REPO, env=env, capture_output=True, text=True)
@@ -153,7 +162,7 @@ def caught(path: str, mutated: str, tests: list[str], left_out: list[str]) -> in
     original = target.read_bytes()
     target.write_text(mutated)
     try:
-        env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+        env = _env()
         module = path.removeprefix("src/").removesuffix(".py").replace("/", ".")
         if subprocess.run([sys.executable, "-c", f"import {module}"], cwd=REPO, env=env,
                           capture_output=True).returncode != 0:
@@ -183,6 +192,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"GUARD MUTATIONS NOT RUN: commit or stash these first, they are edited in place:\n{dirty}",  # noqa: T201
               file=sys.stderr)
         return 2
+    # A test left out must be one pytest finds: it ignores a --deselect that matches nothing, and
+    # the result would then name a test as left out that was never there to leave out.
+    for name in left_out:
+        found = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", name],
+                               cwd=REPO, env=_env(), capture_output=True, text=True)
+        if found.returncode != 0:
+            print(f"GUARD MUTATIONS NOT RUN: --deselect {name} names no test here (pytest exit {found.returncode}).",  # noqa: T201
+                  file=sys.stderr)
+            return 2
     # With every guard on, the tests must pass: pytest's exit 1 is the only evidence a guard was
     # caught, and a test that fails anyway gives that exit for every guard.
     whole = run_tests(TESTS, left_out)
