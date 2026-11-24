@@ -1661,6 +1661,16 @@ def _backend_conformance(store, label):
     assert any("pin every tool" in n.title for n in store.search("unpinned linter", limit=5)), \
         f"{label}: symptom is not searchable"
 
+    # ASSERT (3b) — a word found only in a record's tags finds it, after every record that says the
+    # word. The SQLite search with no FTS5 read no tags at all, so a lesson found by its tag with
+    # the index, and on Postgres, was not found without it.
+    core.record(store, type="Rule", title="page every list endpoint", scope="org", tags="messaging",
+                fix="return a cursor with each page")
+    core.record(store, type="Rule", title="messaging consumers are idempotent", scope="org", tags="method")
+    assert [n.title for n in store.search("messaging", limit=5)] == \
+        ["messaging consumers are idempotent", "page every list endpoint"], \
+        f"{label}: a tag-only match is found, after the content match"
+
     # ASSERT (4) — OR-permissive across terms. Postgres's websearch_to_tsquery ANDs by
     # default, which silently returns fewer results than SQLite for the same query.
     assert len(store.search("ownership unpinned", limit=5)) >= 2, \
