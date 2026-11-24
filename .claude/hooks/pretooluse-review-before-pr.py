@@ -51,6 +51,10 @@ HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1([^\n]*)\n(?:.*?\n)?[ \t]*\2[ \t]*(
 MARK = re.compile("\x00(\\d+)\x00")
 
 
+class RefusedError(Exception):
+    """A `gh pr create` that must not run. The message is the reason the agent is given."""
+
+
 def skeleton(command: str) -> tuple[str, list[str]]:
     """The command with each heredoc body dropped and each quoted string replaced by a numbered
     mark, and the strings the marks stand for. What is left is the words the shell runs."""
@@ -97,7 +101,7 @@ def stop(reason: str) -> NoReturn:
         f"{reason.rstrip()}\n"
         "PULL REQUEST NOT OPENED (docs/DEVELOPING.md, \"Review before the PR\"). Run the review in that\n"
         f"  branch's folder first: bash {CHECK}\n"
-        "  It takes about ten minutes. Fix what it finds in one push, then open the pull request.\n"
+        "  Fix what it finds in one push, then open the pull request.\n"
         "  A docs-only change says so in the command: PR_REVIEW_WAIVED=docs-only gh pr create ...\n"
         "  Any other waiver is the user's to give.\n")
     sys.exit(2)
@@ -120,46 +124,46 @@ def main() -> None:
     # Every `gh pr create` in the call, each with its own waiver: one waived command does not
     # cover the next.
     start = Path(payload.get("cwd") or Path.cwd())
-    for create in CREATE.finditer(text):
-        reason = reason_to_stop(create, text, said, start)
-        if reason:
-            stop(reason)
+    try:
+        for create in CREATE.finditer(text):
+            clear(create, text, said, start)
+    except RefusedError as why:
+        stop(str(why))
 
 
-def reason_to_stop(create: re.Match[str], text: str, said: Callable[[str], str], start: Path) -> str | None:
-    """Why one `gh pr create` in the command must not run, or None when it may."""
+def clear(create: re.Match[str], text: str, said: Callable[[str], str], start: Path) -> None:
+    """Return when one `gh pr create` in the command may run; raise RefusedError when it must not."""
     waived = WAIVED.search(" " + create.group(1))
     if waived and said(waived.group(1)).strip():
-        return None
-    before = text[:create.start()]
-    folder = folder_of(before, said, start)
-    branch = folder if isinstance(folder, str) else branch_of(create, text, said, folder)
-    if not isinstance(branch, list) or isinstance(folder, str):
-        return branch   # a reason it cannot tell, or None: not this repository's pull request
+        return
+    folder = folder_of(text[:create.start()], said, start)
+    branch = branch_of(create, text, said, folder)
+    if branch is None:
+        return   # another repository's pull request: not this repository's rule
     try:
         check = subprocess.run(["bash", str(CHECK), "--check", *branch], cwd=folder, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError) as e:
-        return f"review-before-pr: the check did not run ({type(e).__name__}), so it cannot tell whether the branch was reviewed."
-    said_nothing = f"review-before-pr: the check exited {check.returncode} and said nothing."
-    return (check.stderr or said_nothing) if check.returncode != 0 else None
+        raise RefusedError(f"review-before-pr: the check did not run ({type(e).__name__}), so it cannot tell whether the branch was reviewed.") from e
+    if check.returncode != 0:
+        raise RefusedError(check.stderr or f"review-before-pr: the check exited {check.returncode} and said nothing.")
 
 
-def folder_of(before: str, said: Callable[[str], str], start: Path) -> Path | str:
-    """Where the command will be when it reaches `gh pr create`, or why that cannot be told."""
+def folder_of(before: str, said: Callable[[str], str], start: Path) -> Path:
+    """Where the command will be when it reaches `gh pr create`. RefusedError when that cannot be told."""
     folder = start
     for move in CD.findall(before):   # each cd starts where the last one ended
         folder = folder / Path(os.path.expandvars(said(move))).expanduser()
         if not folder.is_dir():
-            return f"review-before-pr: cannot tell which folder `cd {said(move)}` is, so not which branch the pull request is for."
+            raise RefusedError(f"review-before-pr: cannot tell which folder `cd {said(move)}` is, so not which branch the pull request is for.")
     return folder
 
 
-def branch_of(create: re.Match[str], text: str, said: Callable[[str], str], folder: Path) -> list[str] | str | None:
+def branch_of(create: re.Match[str], text: str, said: Callable[[str], str], folder: Path) -> list[str] | None:
     """The branch to ask the check about: [name] when `--head` names it, [] for the one checked
-    out in `folder`. A string is why it cannot be told; None is another repository's pull request."""
+    out in `folder`, None for another repository's pull request. RefusedError when it cannot be told."""
     theirs, ours = repository(folder), repository(CHECK.parents[1])
     if theirs is None or theirs != ours:
-        return None   # another repository, or none: not this repository's rule
+        return None   # another repository, or none
     rest = re.split(r"[;&|)\n]", text[create.end():], maxsplit=1)[0]
     # Owner and name, however each is written: git@host:owner/name.git, https://host/owner/name,
     # owner/name, host/owner/name.
@@ -171,12 +175,12 @@ def branch_of(create: re.Match[str], text: str, said: Callable[[str], str], fold
     if head:
         owner, _, name = said(head.group(1)).rpartition(":")
         if owner and (len(origin) != 2 or owner.lower() != origin[0]):
-            return (f"review-before-pr: cannot tell which branch `--head {owner}:{name}` is. The reviews on record are of "
-                    "this repository's own branches, and that names another owner's.")
+            raise RefusedError(f"review-before-pr: cannot tell which branch `--head {owner}:{name}` is. The reviews on record are of "
+                          "this repository's own branches, and that names another owner's.")
         return [name]
     if CHANGES_BRANCH.search(text[:create.start()]):
-        return ("review-before-pr: a branch is checked out earlier in this command, so it cannot tell which branch the "
-                "pull request is for. Open it in a call of its own, or name the branch with --head.")
+        raise RefusedError("review-before-pr: a branch is checked out earlier in this command, so it cannot tell which branch the "
+                      "pull request is for. Open it in a call of its own, or name the branch with --head.")
     return []
 
 
