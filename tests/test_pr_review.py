@@ -225,18 +225,23 @@ EOF
     ("cd {repo} && gh pr create --fill", "feature"),
     ('cd "{repo}" && git push -q && PAGER=cat gh pr create --fill', "feature"),
     ("gh pr create --head feature --title x", "main"),
-    ("cd {repo}; gh pr create -H someone:feature", "main"),
+    ("cd {repo}; gh pr create -H me:feature", "main"),
     ("gh pr create \\\n  --head=feature", "main"),
     ("if gh pr create --fill; then echo opened; fi", "feature"),
+    ("cd ci && cd .. && gh pr create --fill", "feature"),
+    ("git checkout -q feature && gh pr create --head feature", "main"),
     (BODY, "feature"),
-], ids=["cd", "cd-quoted-then-push", "head", "head-with-owner", "head-on-the-next-line", "inside-if", "body-with-quotes"])
+], ids=["cd", "cd-quoted-then-push", "head", "head-with-owner", "head-on-the-next-line", "inside-if", "cd-twice",
+        "checked-out-then-named", "body-with-quotes"])
 def test_the_agent_hook_finds_the_branch_the_pull_request_is_for(branch, command, checked_out):
     """The agent opens pull requests from another folder (`cd <worktree> && gh pr create`) or for a
     named branch (`--head`): the hook reads the branch from the command, not from where the session
-    is, and a body's own words (quotes, a heredoc that mentions --head) do not mislead it."""
+    is, and a body's own words (quotes, a heredoc that mentions --head) do not mislead it. One `cd`
+    after another is followed from where the last one ended."""
     repo, _ = branch
+    _git(repo, "remote", "add", "origin", "git@example.invalid:me/okl.git")
     _git(repo, "checkout", "-q", checked_out)
-    elsewhere = repo.parent if command.startswith("cd") else repo
+    elsewhere = repo.parent if "{repo}" in command else repo
     r = _asked(repo, command.replace("{repo}", str(repo)), cwd=elsewhere)
     assert r.returncode == 2 and "NO REVIEW RECORDED for branch 'feature'" in r.stderr and r.stdout == "", r.stderr
 
@@ -278,16 +283,26 @@ def test_the_agent_hook_lets_through_what_is_not_a_pull_request_for_this_reposit
     ("PR_REVIEW_WAIVED= gh pr create --fill", "NO REVIEW RECORDED"),
     ("echo PR_REVIEW_WAIVED=yes; gh pr create --fill", "NO REVIEW RECORDED"),
     ('gh pr create --title x --body "PR_REVIEW_WAIVED=yes"', "NO REVIEW RECORDED"),
+    ("PR_REVIEW_WAIVED=docs-only gh pr create --head main; gh pr create --fill", "NO REVIEW RECORDED"),
     ("gh pr create --repo me/okl --fill", "NO REVIEW RECORDED"),
+    ("gh pr create --repo example.invalid/me/okl --fill", "NO REVIEW RECORDED"),
     ("cd /no/such/folder && gh pr create --fill", "cannot tell which folder"),
+    ("cd - && gh pr create --fill", "cannot tell which folder"),
     ("gh pr create --head no-such-branch", "no local branch 'no-such-branch'"),
-], ids=["empty-waiver", "waiver-on-another-command", "waiver-in-the-body", "this-repo-named", "folder-missing", "branch-missing"])
+    ("gh pr create --head someone:feature", "cannot tell which branch `--head someone:feature`"),
+    ("git checkout -q main && gh pr create --fill", "checked out earlier in this command"),
+    ("gh pr checkout 12; gh pr create --fill", "checked out earlier in this command"),
+], ids=["empty-waiver", "waiver-on-another-command", "waiver-in-the-body", "waiver-on-the-first-of-two", "this-repo-named",
+        "this-repo-named-with-its-host", "folder-missing", "folder-unknown", "branch-missing", "another-owners-branch",
+        "checked-out-first", "pull-request-checked-out-first"])
 def test_the_agent_hook_stops_what_it_cannot_tell_and_a_waiver_that_was_not_said(branch, command, says):
-    """A waiver counts only as a non-empty assignment on the `gh pr create` command itself. Where
-    the hook cannot tell which branch is meant, it stops the command and says why: silence there
-    would read as reviewed."""
+    """A waiver counts only as a non-empty assignment on the `gh pr create` command itself, and
+    only for that one. Where the hook cannot tell which branch is meant, it stops the command and
+    says why: silence there would read as reviewed. It runs before the command, so a branch the
+    command checks out first is one it cannot read. This repository named with its host is still
+    this repository."""
     repo, _ = branch
-    _git(repo, "remote", "add", "origin", "https://example.invalid/me/okl.git")
+    _git(repo, "remote", "add", "origin", "git@example.invalid:me/okl.git")
     r = _asked(repo, command)
     assert r.returncode == 2 and says in r.stderr and "PULL REQUEST NOT OPENED" in r.stderr and r.stdout == "", r.stderr
 

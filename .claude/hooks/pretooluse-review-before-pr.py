@@ -12,9 +12,14 @@ It is okl's own rule for its own repository: `okl init` installs no copy of it.
 
 What it reads. The command as text, with heredoc bodies and quoted strings set aside, so a commit
 message or a pull request body that mentions `gh pr create` is not one. The branch is the one
-`--head` names, else the one checked out in the folder a `cd` earlier in the same command names,
-else the one checked out where the command runs. A `gh pr create` inside `bash -c '...'` or behind
-a variable is not seen.
+`--head` names, else the one checked out in the folder the `cd`s earlier in the same command lead
+to, else the one checked out where the command runs. Each `gh pr create` in the call is read, with
+its own waiver. A `gh pr create` inside `bash -c '...'` or behind a variable is not seen.
+
+What it stops because it cannot tell. The hook runs before the command, so a branch the command
+itself checks out first (`git checkout x && gh pr create`) is not the one it would read: that is
+stopped unless `--head` names the branch. So is `--head owner:branch` for another owner, since
+the reviews on record are of this repository's own branches.
 
 A waiver is said in the command itself, where whoever approves the command reads it:
 
@@ -29,6 +34,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
@@ -40,6 +46,7 @@ CD = re.compile(START + r"cd\s+(?:--\s+)?" + WORD)
 HEAD = re.compile(r"\s(?:--head|-H)(?:=|\s+)" + WORD)
 REPO = re.compile(r"\s(?:--repo|-R)(?:=|\s+)" + WORD)
 WAIVED = re.compile(r"(?:^|\s)PR_REVIEW_WAIVED=(\S*)")
+CHANGES_BRANCH = re.compile(r"(?<![\w-])git\s[^;&|\n]*?(?<![\w-])(?:checkout|switch)(?![\w-])|(?<![\w-])gh\s+pr\s+checkout(?![\w-])")
 HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1([^\n]*)\n(?:.*?\n)?[ \t]*\2[ \t]*(?=\n|$)", re.S)
 MARK = re.compile("\x00(\\d+)\x00")
 
@@ -110,35 +117,67 @@ def main() -> None:
     def said(word: str) -> str:
         return MARK.sub(lambda m: words[int(m.group(1))], word)
 
-    create = CREATE.search(text)
-    if not create:
-        return
+    # Every `gh pr create` in the call, each with its own waiver: one waived command does not
+    # cover the next.
+    start = Path(payload.get("cwd") or Path.cwd())
+    for create in CREATE.finditer(text):
+        reason = reason_to_stop(create, text, said, start)
+        if reason:
+            stop(reason)
+
+
+def reason_to_stop(create: re.Match[str], text: str, said: Callable[[str], str], start: Path) -> str | None:
+    """Why one `gh pr create` in the command must not run, or None when it may."""
     waived = WAIVED.search(" " + create.group(1))
     if waived and said(waived.group(1)).strip():
-        return
-    rest = re.split(r"[;&|)\n]", text[create.end():], maxsplit=1)[0]
-
-    folder = Path(payload.get("cwd") or Path.cwd())
-    moves = CD.findall(text[:create.start()])
-    if moves:
-        folder = folder / Path(os.path.expandvars(said(moves[-1]))).expanduser()
-        if not folder.is_dir():
-            stop(f"review-before-pr: cannot tell which folder `cd {said(moves[-1])}` is, so not which branch the pull request is for.")
-    theirs, ours = repository(folder), repository(CHECK.parents[1])
-    if theirs is None or theirs != ours:
-        return   # another repository, or none: not this repository's rule
-    named = REPO.search(" " + create.group(0) + rest)
-    origin = (git(folder, "remote", "get-url", "origin") or "").lower().removesuffix(".git")
-    if named and origin and not re.search(r"[/:]" + re.escape(said(named.group(1)).lower().removesuffix(".git")) + "$", origin):
-        return   # a pull request in another repository
-    head = HEAD.search(rest)
-    branch = [said(head.group(1)).rsplit(":", 1)[-1]] if head else []
+        return None
+    before = text[:create.start()]
+    folder = folder_of(before, said, start)
+    branch = folder if isinstance(folder, str) else branch_of(create, text, said, folder)
+    if not isinstance(branch, list) or isinstance(folder, str):
+        return branch   # a reason it cannot tell, or None: not this repository's pull request
     try:
         check = subprocess.run(["bash", str(CHECK), "--check", *branch], cwd=folder, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError) as e:
-        stop(f"review-before-pr: the check did not run ({type(e).__name__}), so it cannot tell whether the branch was reviewed.")
-    if check.returncode != 0:
-        stop(check.stderr or f"review-before-pr: the check exited {check.returncode} and said nothing.")
+        return f"review-before-pr: the check did not run ({type(e).__name__}), so it cannot tell whether the branch was reviewed."
+    said_nothing = f"review-before-pr: the check exited {check.returncode} and said nothing."
+    return (check.stderr or said_nothing) if check.returncode != 0 else None
+
+
+def folder_of(before: str, said: Callable[[str], str], start: Path) -> Path | str:
+    """Where the command will be when it reaches `gh pr create`, or why that cannot be told."""
+    folder = start
+    for move in CD.findall(before):   # each cd starts where the last one ended
+        folder = folder / Path(os.path.expandvars(said(move))).expanduser()
+        if not folder.is_dir():
+            return f"review-before-pr: cannot tell which folder `cd {said(move)}` is, so not which branch the pull request is for."
+    return folder
+
+
+def branch_of(create: re.Match[str], text: str, said: Callable[[str], str], folder: Path) -> list[str] | str | None:
+    """The branch to ask the check about: [name] when `--head` names it, [] for the one checked
+    out in `folder`. A string is why it cannot be told; None is another repository's pull request."""
+    theirs, ours = repository(folder), repository(CHECK.parents[1])
+    if theirs is None or theirs != ours:
+        return None   # another repository, or none: not this repository's rule
+    rest = re.split(r"[;&|)\n]", text[create.end():], maxsplit=1)[0]
+    # Owner and name, however each is written: git@host:owner/name.git, https://host/owner/name,
+    # owner/name, host/owner/name.
+    origin = [p for p in re.split(r"[/:]", (git(folder, "remote", "get-url", "origin") or "").lower().removesuffix(".git")) if p][-2:]
+    named = REPO.search(" " + create.group(0) + rest)
+    if named and len(origin) == 2 and said(named.group(1)).lower().removesuffix(".git").split("/")[-2:] != origin:
+        return None   # a pull request in another repository
+    head = HEAD.search(rest)
+    if head:
+        owner, _, name = said(head.group(1)).rpartition(":")
+        if owner and (len(origin) != 2 or owner.lower() != origin[0]):
+            return (f"review-before-pr: cannot tell which branch `--head {owner}:{name}` is. The reviews on record are of "
+                    "this repository's own branches, and that names another owner's.")
+        return [name]
+    if CHANGES_BRANCH.search(text[:create.start()]):
+        return ("review-before-pr: a branch is checked out earlier in this command, so it cannot tell which branch the "
+                "pull request is for. Open it in a call of its own, or name the branch with --head.")
+    return []
 
 
 if __name__ == "__main__":

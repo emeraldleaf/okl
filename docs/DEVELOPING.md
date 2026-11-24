@@ -154,8 +154,11 @@ That is expected; see CONTRIBUTING.
     runs before every Bash call (a PreToolUse hook, registered in `.claude/settings.json`) and
     stops `gh pr create` for a branch of this repository with no recorded review, saying how to
     run one. The push-time line only reports, and an agent opened those twelve pull requests.
-    The hook reads the branch from `--head`, or from the folder a `cd` in the same command
-    names, or from where the command runs. A docs-only change says so in the command, where
+    The hook reads the branch from `--head`, or from the folder the `cd`s in the same command
+    lead to, or from where the command runs. It runs before the command, so it stops what it
+    cannot tell: a branch checked out earlier in the same command with no `--head`
+    (`git checkout x && gh pr create`), and `--head owner:branch` for another owner. A
+    docs-only change says so in the command, where
     whoever approves it reads it: `PR_REVIEW_WAIVED=docs-only gh pr create ...`. It reads the
     command as text, so a `gh pr create` inside `bash -c '...'` is not seen; nor is a pull
     request opened in the browser, or by an agent whose settings do not load this hook.
