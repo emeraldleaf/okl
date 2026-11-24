@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:d0132d8b235b13c191761c1e5212615d94acfcfcc2ec840eff30b54eebc50aaa
+# okl-fingerprint: sha256:cb2d5c3b92f66e90e9682e7689abe5cf45ff829ba0b7ad723407379f80ca3968
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -42,7 +42,11 @@ okl_config() {
     if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
     d=$(dirname "$d")
   done
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  # Asked for plainly and made absolute here. --path-format is git 2.31's, and an older git prints
+  # an option it does not know back as a line of its answer: in a worktree under git 2.30 this
+  # read two lines, found no config, and the hook stepped aside as if okl had never been set up.
+  common=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ "$common" == /* ]] || common="$PWD/$common"
   [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
   printf '%s\n' "${common%/.git}/.okl/config.json"
 }

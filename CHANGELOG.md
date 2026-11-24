@@ -78,6 +78,14 @@
   Where `okl` is not a command in the session's shell, the hook now names the command it resolved,
   quoted for a shell, and the skill says what to run in that case, allows `python3 -m okl`, and has
   the agent say so when no okl command starts (#501).
+- **In a git worktree, okl's hooks no longer switch themselves off under a git older than 2.31.**
+  Since 0.20.0 each hook finds the main checkout's `.okl/config.json` from a worktree by asking git
+  with `--path-format=absolute`. A git before 2.31 does not know that option and prints it back as
+  a line of its answer, so the hook read two lines, found no config and stepped aside as if okl had
+  never been set up: no briefing, no question at the stop, no checks at a read or an edit, and no
+  okl tools from the launcher. The five hooks now ask for the plain value and make it absolute
+  themselves. `okl init` (or `okl init --force` over an edited hook) installs the fixed scripts.
+  The main checkout was never affected (#510).
 
 ## 0.20.0
 
