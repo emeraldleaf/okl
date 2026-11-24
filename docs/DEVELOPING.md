@@ -135,10 +135,21 @@ That is expected; see CONTRIBUTING.
   merging closes it. The roadmap is the
   [`loop-review` issues](https://github.com/emeraldleaf/okl/issues?q=is%3Aopen+label%3Aloop-review).
 - **Review before the PR, not after.** Run the CodeRabbit CLI on the branch's committed
-  changes, `coderabbit review --committed --base origin/main`, and fix what it finds in one
+  changes with `bash ci/review-before-pr.sh` (it runs
+  `coderabbit review --committed --base origin/main`), and fix what it finds in one
   push. The PR bot no longer reviews automatically (`.coderabbit.yaml`): every push spent a
   review, and the allowance fell to one an hour. Ask for a PR review with
   `@coderabbitai review` when a second look on the PR itself is worth the wait.
+  - The script records the commit it reviewed, in the repository's git directory, and only
+    when the review finished: the CLI exits 0 when the allowance refused it.
+  - `bash ci/review-before-pr.sh --check` exits 1 and names the branch when no review of it
+    is recorded. Put it in your pre-push hook as `bash ci/review-before-pr.sh --check || true`:
+    it reports at the push that precedes the pull request and holds nothing, since a
+    docs-only change can wait for the next sweep. Twelve pull requests in a row were opened
+    without the review while this rule was only a paragraph here (#500 to #511).
+  - It checks the branch that is checked out, not the refs git is pushing: `git push origin
+    other-branch` from somewhere else is not looked at.
+  - The record is on your machine alone, so the check says nothing in CI.
 - **Sweep every few merges.** Changes that went in without a CLI review (docs, figures,
   small fixes) get one batched review on an up-to-date `main`:
   `coderabbit review --committed --base-commit <the commit the last sweep ended at>`. One
