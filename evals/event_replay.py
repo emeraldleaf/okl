@@ -42,7 +42,8 @@ import review_graded as g
 import run_guard
 
 EXT = r"(?:py|sh|md|json|jsonl|ya?ml|toml|html|svg|txt|cfg|ini|lock)"
-PATH = re.compile(rf"(?<![\w/.:-])((?:[\w.*-]+/)+[\w.*-]*|[\w-]+\.{EXT})(?![\w-])")
+FILE = rf"[\w-]+(?:\.[\w-]+)*\.{EXT}"         # a file name, whatever dots it holds before its extension
+PATH = re.compile(rf"(?<![\w/.:-])((?:[\w.*-]+/)+[\w.*-]*|{FILE})(?![\w-])")
 CODE = [re.compile(p) for p in (
     r"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+\b",          # a dotted.name
     r"\b[A-Za-z_]\w{2,}(?=\()",                       # a call
@@ -73,7 +74,7 @@ def named_code(text: str) -> set[str]:
     for rx in CODE:
         for m in rx.finditer(text):
             t = m.group(0)
-            if len(t) > 4 and not re.fullmatch(rf"[\w-]+\.{EXT}", t):
+            if len(t) > 4 and not re.fullmatch(FILE, t):
                 out.add(t)
     return out
 
@@ -90,9 +91,10 @@ def added_lines(diff: str) -> str:
 
 def path_fires(named: set[str], paths: list[str]) -> bool:
     """Whether a named path is a changed file, the folder of one, or the bare name of one; `*` in
-    a name stands for any run of characters within one path segment."""
+    a name stands for any run of characters within one path segment, and the name still has to
+    start and end on a segment: `hooks/*.sh` is not `otherhooks/run.sh` or `hooks/run.sh.bak`."""
     for t in named:
-        rx = re.compile(re.escape(t).replace(r"\*", r"[^/]*")) if "*" in t else None
+        rx = re.compile(r"(?:^|/)" + re.escape(t).replace(r"\*", r"[^/]*") + r"(?:$|/)") if "*" in t else None
         for p in paths:
             if rx is not None:
                 if rx.search(p):
@@ -103,8 +105,12 @@ def path_fires(named: set[str], paths: list[str]) -> bool:
 
 
 def code_fires(named: set[str], added: str) -> bool:
-    """Whether a named piece of code appears whole in a line the change added."""
-    return any(re.search(rf"(?<![\w]){re.escape(t)}(?![\w])", added) for t in named)
+    """Whether a named piece of code appears whole in a line the change added. A flag's name can
+    hold hyphens, so `--no-log` is not found inside `--no-log-extra`."""
+    def whole(t: str) -> str:
+        edge = r"[\w-]" if t.startswith("--") else r"\w"
+        return rf"(?<!{edge}){re.escape(t)}(?!{edge})"
+    return any(re.search(whole(t), added) for t in named)
 
 
 def one(task: dict[str, Any]) -> dict[str, Any]:

@@ -44,6 +44,9 @@ def test_a_lesson_names_paths_and_pieces_of_code(replay):
     ({"intake.py"}, ["src/okl/cli/intake.py"], True),              # a bare file name
     ({"hooks/*.sh"}, ["hooks/stop-okl-encode.sh"], True),          # a star within one segment
     ({"hooks/*.sh"}, ["hooks/nested/x.sh"], False),
+    ({"hooks/*.sh"}, ["src/hooks/a.sh"], True),                    # as a path without a star ends a longer one
+    ({"hooks/*.sh"}, ["otherhooks/run.sh"], False),                # a star does not loosen where the name starts
+    ({"hooks/*.sh"}, ["hooks/run.sh.bak"], False),                 # or where it ends
     ({"src/okl/cli"}, ["src/okl/client.py"], False),               # a folder is not a prefix of a name
     ({"docs/COSTS-AND-KNOBS.md"}, ["README.md"], False),
 ])
@@ -63,3 +66,13 @@ def test_named_code_fires_only_whole_and_only_in_added_lines(replay):
     assert replay.code_fires({"OKL_BRIEFING_LOG"}, added) is True
     assert replay.code_fires({"Client.check"}, added) is False, "removed, and check_all is another name"
     assert replay.code_fires({"client.check"}, added) is False, "client.check_all is not client.check"
+    assert replay.code_fires({"--no-log"}, "run(\"--no-log-extra\")") is False, "a longer flag is another flag"
+    assert replay.code_fires({"--no-log"}, "run(\"--no-log\")") is True and replay.code_fires({"--no-log"}, "x --no-log y") is True
+
+
+def test_a_file_name_with_several_dots_is_one_path_and_not_code(replay):
+    """`worker.test.py` is a file: named whole as a path, and never read as the dotted name of some code."""
+    text = "symptom: the suite in worker.test.py passes while okl.client.check fails"
+    assert replay.named_paths(text) == {"worker.test.py"}
+    assert "worker.test.py" not in replay.named_code(text) and "okl.client.check" in replay.named_code(text)
+    assert replay.path_fires({"worker.test.py"}, ["src/worker.test.py"]) is True
