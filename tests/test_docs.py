@@ -746,6 +746,121 @@ def test_the_coverage_check_names_a_missing_command_and_flag():
         "is documented (docs/COMMANDS.md, README.md)"]
 
 
+# The same direction for the two sheets (docs/overview/), which summarise what okl does on its own.
+# A summary drifts by leaving a new behaviour out, and nothing in it goes false (lesson
+# omission-drift-uncaught). It happened twice. On 0.17.0 the review after writing went on by
+# default and the overview said nothing of it (#455). Then the review before a push shipped with
+# the docs and two diagrams updated and both sheets left as they were (#511); the person who asked
+# "did we update the diagrams and docs" found it, and that neither sheet named the briefing at a
+# file read. The test added for #455 held commands and flags to the Markdown docs and never read
+# the sheets. Both sets below are read from the code: a script okl installs to run on its own, and
+# a switch `okl init` has. A new one fails here until a sheet names it, or it is listed with why
+# it is not there.
+SHEETS = ("docs/overview/okl-overview.html", "docs/overview/okl-anatomy.html")
+# Each installed script, and the words every sheet uses for the moment it runs.
+MOMENTS = {
+    "userpromptsubmit-okl-check.sh": "every prompt",
+    "posttooluse-okl-read.sh": "the agent reads",
+    "posttooluse-okl-edit.sh": "after each edit",
+    "stop-okl-encode.sh": "review after writing",
+    "pre-push": "pre-push",
+}
+NOT_A_MOMENT = {"okl-mcp.sh": "starts the MCP server when the agent asks for it; it runs nothing on its own"}
+# `okl init` flags no sheet names, each with why. A flag that turns on something okl then runs by
+# itself belongs on a sheet, not here.
+NOT_ON_THE_SHEETS = {
+    "--claude": "which agent's files init writes; the sheets say what is Claude Code's",
+    "--no-claude": "the off switch of --claude",
+    "--no-ci": "the off switch of --ci, which the anatomy sheet names",
+    "--no-git-hook": "the off switch of --git-hook, which the anatomy sheet names",
+    "--review-after-writing": "the review is on by default, and both sheets name it; this switches it back on",
+    "--no-review-after-writing": "the off switch of the review after writing",
+    "--no-review-before-push": "the off switch of --review-before-push, which the anatomy sheet names",
+    "--review-holds-push": "how --review-before-push runs (in the foreground), not another moment",
+    "--dry-run": "shows what init would write and runs nothing",
+    "--force": "replaces files init wrote before",
+    "--uninstall": "removes what init wrote",
+    "--no-seed": "skips loading the starter lessons",
+    "--interests": "which subjects reach this repo's briefings: a setting of the briefing the sheets describe",
+    "--owner": "who must approve changes to okl's own files (docs/AGENT-IDENTITY.md), outside a lesson's life",
+    "--owned": "the paths --owner covers",
+    "--service": "points the repo at a shared service in place of its local store",
+}
+
+
+def _sheet_words(name: str) -> str:
+    """What a sheet says: its body with drawings and tags removed and spaces evened out."""
+    html = (ROOT / name).read_text()
+    body = re.sub(r"<svg.*?</svg>", " ", html[html.index("<body"):], flags=re.S)
+    return " ".join(re.sub(r"<[^>]+>", " ", body).replace("&nbsp;", " ").split())
+
+
+def _installed_scripts() -> list[str]:
+    """Every script okl installs to run on its own: the agent hooks and git's hooks it ships."""
+    shipped = ROOT / "src" / "okl" / "scaffold"
+    return sorted([p.name for p in (shipped / "hooks").glob("*.sh")] + [p.name for p in (shipped / "git-hooks").iterdir()])
+
+
+def _sheet_problems(sheets: dict[str, str], scripts: list[str], init_flags: list[str]) -> list[str]:
+    """What the sheets leave out of the two sets, and each table entry that names nothing okl has."""
+    problems = []
+    for script in scripts:
+        if script in NOT_A_MOMENT:
+            continue
+        if script not in MOMENTS:
+            problems.append(f"okl installs {script} to run on its own, and no sheet is held to it: add it to MOMENTS "
+                            "with the words the sheets use for when it runs, and say so on both sheets")
+            continue
+        problems.extend(f"{name} does not say \"{MOMENTS[script]}\", when {script} runs"
+                        for name, words in sheets.items() if MOMENTS[script] not in words)
+    problems.extend(f"`okl init {flag}` is on neither sheet ({', '.join(sheets)}): name it on one, or add it to "
+                    "NOT_ON_THE_SHEETS with why it is not there"
+                    for flag in init_flags
+                    if flag not in NOT_ON_THE_SHEETS and not any(_names(words, flag) for words in sheets.values()))
+    problems.extend(f"{name} is in {table} and okl no longer has it: remove the entry"
+                    for table, names, have in (("MOMENTS", MOMENTS, scripts), ("NOT_A_MOMENT", NOT_A_MOMENT, scripts),
+                                               ("NOT_ON_THE_SHEETS", NOT_ON_THE_SHEETS, init_flags))
+                    for name in names if name not in have)
+    return problems
+
+
+def _init_flags() -> list[str]:
+    return next(flags for path, _, flags in _doc_commands().every_command() if path == "okl init")
+
+
+def test_the_sheets_name_every_moment_okl_runs_and_every_switch_init_has():
+    """Both sheets say when each installed script runs, and every `okl init` flag is on a sheet or
+    listed with why it is not. Nothing was reading the sheets for what they leave out."""
+    scripts, flags = _installed_scripts(), _init_flags()
+    assert len(scripts) >= 6 and len(flags) >= 20, (scripts, flags)   # a walk that found nothing would pass
+    problems = _sheet_problems({name: _sheet_words(name) for name in SHEETS}, scripts, flags)
+    assert not problems, "the sheets leave out what okl does:\n  " + "\n  ".join(problems)
+
+
+def test_the_sheet_coverage_check_names_what_a_sheet_leaves_out():
+    """Red where it should be: a sheet as it was before the review before a push was added to it, a
+    script and a flag added later, and a table entry for something okl no longer has."""
+    scripts, flags = _installed_scripts(), _init_flags()
+    sheets = {name: _sheet_words(name) for name in SHEETS}
+    overview, anatomy = SHEETS
+    # The anatomy sheet as it was on main after #511: no word of the flag that turns the review on.
+    assert _names(sheets[anatomy], "--review-before-push"), "move this test's flag with the sheet"
+    before = {**sheets, anatomy: sheets[anatomy].replace("--review-before-push", "")}
+    assert _sheet_problems(before, scripts, flags) == [
+        f"`okl init --review-before-push` is on neither sheet ({overview}, {anatomy}): name it on one, or add it to "
+        "NOT_ON_THE_SHEETS with why it is not there"]
+    # One sheet that stops saying when the read hook runs.
+    silent = {**sheets, overview: sheets[overview].replace("the agent reads", "")}
+    assert _sheet_problems(silent, scripts, flags) == [
+        f'{overview} does not say "the agent reads", when posttooluse-okl-read.sh runs']
+    # A hook and a switch that do not exist yet: each fails until someone decides where it goes.
+    later = _sheet_problems(sheets, [*scripts, "posttooluse-okl-plan.sh"], [*flags, "--review-at-commit"])
+    assert len(later) == 2 and "okl installs posttooluse-okl-plan.sh" in later[0] and "`okl init --review-at-commit`" in later[1], later
+    # An entry for a script okl stopped shipping.
+    gone = _sheet_problems(sheets, [s for s in scripts if s != "okl-mcp.sh"], flags)
+    assert gone == ["okl-mcp.sh is in NOT_A_MOMENT and okl no longer has it: remove the entry"]
+
+
 # The same direction for two more sets okl's code defines (#455): the keys of .okl/config.json
 # and the environment variables okl reads. Before this, nine of the seventeen keys were named in
 # no doc as a key of that file, and twenty of the variables in no doc at all. Each set is read
