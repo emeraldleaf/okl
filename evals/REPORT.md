@@ -7518,15 +7518,17 @@ about to run, a set of files changing, a health check. This asks whether that ca
 the review is measured on, with no model call and nothing authored: only what a lesson already names in
 its text.
 
-An agent (Claude) wrote `evals/event_replay.py` and ran it at 10e9daa, on §4bj's 43 graded broken
-tasks, with the lessons as the review held them for each task. A first run at d0cb295 gave the same
-counts; its receipt lacked the list of commits its rows ran, which a test requires, so the script was given
-it and the run repeated. Its rules were written before the run and
+An agent (Claude) wrote `evals/event_replay.py` and ran it at 24a504f, on §4bj's 43 graded broken
+tasks, with the lessons as the review held them for each task. It was run three times, and every count
+was the same each time: first at d0cb295; again at 10e9daa, because the first receipt lacked the list of
+commits its rows ran, which a test requires; and at 24a504f, after a review of the script found three
+boundary errors in its matching (a file name with several dots was not read as a path, a starred path
+matched part of a longer one, a flag was found inside a longer flag). Its rules were written before the run and
 are tested in `tests/test_event_replay.py`. A lesson names a *path* (something with a slash, or a file name
 with a known extension) or a *piece of code* (a dotted name, a call, an ALL_CAPS, snake_case or CamelCase
 name, a `--flag`). An event fires for a lesson on a change when a path it names is a changed file, that
 file's folder or its bare name, or when a piece of code it names appears in a line the change added.
-Receipt `event-replay-20261125-2235.json`.
+Receipt `event-replay-20261125-2249.json`, from the last run.
 
 | what chooses the lessons | the right lesson is among them | lessons chosen per change, median (range) |
 |---|---|---|
@@ -7561,8 +7563,10 @@ What it suggests, not tested:
 
 **Threats.**
 - One repository; 43 tasks from 33 changes; the in-sample tasks are counted with the rest.
-- The rules are one author's patterns, written before the run and not pre-registered. Other patterns would
-  give other counts; the direction (worse reach than the pick, at a longer list) held for every arm.
+- The rules are one author's patterns, written before the first run and not pre-registered. Three of them
+  were corrected after it, from a review that had not seen the counts' effect, and no count moved. Other
+  patterns would give other counts; the direction (worse reach than the pick, at a longer list) held for
+  every arm.
 - The change is read as §4bl's pick was given it, cut to the same size, so a path or a line past the cut is
   not seen.
 - The count of lessons with a check reads the store on the day of the run, not as it stood for each task:

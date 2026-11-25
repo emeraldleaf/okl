@@ -1,9 +1,9 @@
 {
  "written_by": "evals/event_replay.py",
- "at": "10e9daa662a96003498239ca56ea4589bb66500a",
+ "at": "24a504f69d9f6cbe9f3813730ff40f2d7be487f3",
  "tasks": 43,
  "run_commits": [
-  "10e9daa"
+  "24a504f"
  ],
  "rates": {
   "governs today": {
@@ -82,7 +82,7 @@
  "rows": [
   {
    "id": "t01",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "eval-scripts-no-exposure",
    "lessons": 339,
    "changed_files": 5,
@@ -97,7 +97,7 @@
   },
   {
    "id": "t02",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_0637c92c032f",
    "lessons": 338,
    "changed_files": 9,
@@ -112,7 +112,7 @@
   },
   {
    "id": "t03",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e7988ff536fb",
    "lessons": 164,
    "changed_files": 9,
@@ -127,7 +127,7 @@
   },
   {
    "id": "t04",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_02cc84da158d",
    "lessons": 334,
    "changed_files": 13,
@@ -142,7 +142,7 @@
   },
   {
    "id": "t05",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "filter-after-fetch-widens-window",
    "lessons": 287,
    "changed_files": 8,
@@ -157,7 +157,7 @@
   },
   {
    "id": "t06",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "filter-after-fetch-widens-window",
    "lessons": 276,
    "changed_files": 21,
@@ -172,7 +172,7 @@
   },
   {
    "id": "t07",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "importer-keeps-local-decision",
    "lessons": 276,
    "changed_files": 21,
@@ -187,7 +187,7 @@
   },
   {
    "id": "t08",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_916330f61994",
    "lessons": 314,
    "changed_files": 22,
@@ -202,7 +202,7 @@
   },
   {
    "id": "t09",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "remote-path-test-through-client",
    "lessons": 331,
    "changed_files": 16,
@@ -217,7 +217,7 @@
   },
   {
    "id": "t10",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e7988ff536fb",
    "lessons": 163,
    "changed_files": 7,
@@ -232,7 +232,7 @@
   },
   {
    "id": "t11",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "remote-timeout-not-a-deadline",
    "lessons": 276,
    "changed_files": 19,
@@ -247,7 +247,7 @@
   },
   {
    "id": "t12",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "temp-marker-keyed-by-scope",
    "lessons": 332,
    "changed_files": 15,
@@ -256,13 +256,13 @@
    "paths:right": false,
    "paths:fired": 17,
    "code:right": true,
-   "code:fired": 35,
+   "code:fired": 34,
    "either:right": true,
-   "either:fired": 49
+   "either:fired": 48
   },
   {
    "id": "t13",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "remote-path-test-through-client",
    "lessons": 274,
    "changed_files": 8,
@@ -277,7 +277,7 @@
   },
   {
    "id": "t14",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "hook-cli-version-skew",
    "lessons": 331,
    "changed_files": 15,
@@ -286,13 +286,13 @@
    "paths:right": false,
    "paths:fired": 17,
    "code:right": true,
-   "code:fired": 34,
+   "code:fired": 33,
    "either:right": true,
-   "either:fired": 48
+   "either:fired": 47
   },
   {
    "id": "t19",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_adea7f2c7373",
    "lessons": 159,
    "changed_files": 3,
@@ -307,7 +307,7 @@
   },
   {
    "id": "t20",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
    "lessons": 164,
    "changed_files": 10,
@@ -322,7 +322,7 @@
   },
   {
    "id": "t21",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e7988ff536fb",
    "lessons": 186,
    "changed_files": 12,
@@ -337,7 +337,7 @@
   },
   {
    "id": "t22",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "eval-scripts-no-exposure",
    "lessons": 222,
    "changed_files": 11,
@@ -352,7 +352,7 @@
   },
   {
    "id": "t23",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "guarantee-holds-on-every-write-path",
    "lessons": 276,
    "changed_files": 19,
@@ -367,7 +367,7 @@
   },
   {
    "id": "t24",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "remote-path-test-through-client",
    "lessons": 289,
    "changed_files": 13,
@@ -382,7 +382,7 @@
   },
   {
    "id": "t25",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e49be14d6207",
    "lessons": 289,
    "changed_files": 13,
@@ -397,7 +397,7 @@
   },
   {
    "id": "t26",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "filter-after-fetch-widens-window",
    "lessons": 307,
    "changed_files": 9,
@@ -412,7 +412,7 @@
   },
   {
    "id": "t27",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "hook-cli-version-skew",
    "lessons": 307,
    "changed_files": 9,
@@ -427,7 +427,7 @@
   },
   {
    "id": "t28",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "guarantee-holds-on-every-write-path",
    "lessons": 338,
    "changed_files": 9,
@@ -442,7 +442,7 @@
   },
   {
    "id": "t29",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "report-commands-use-briefable-set",
    "lessons": 339,
    "changed_files": 9,
@@ -457,7 +457,7 @@
   },
   {
    "id": "t30",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e7988ff536fb",
    "lessons": 334,
    "changed_files": 13,
@@ -472,7 +472,7 @@
   },
   {
    "id": "t31",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_aa3e45a2ecd6",
    "lessons": 287,
    "changed_files": 3,
@@ -487,7 +487,7 @@
   },
   {
    "id": "t32",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_b578addf6269",
    "lessons": 289,
    "changed_files": 12,
@@ -502,7 +502,7 @@
   },
   {
    "id": "t33",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_b578addf6269",
    "lessons": 298,
    "changed_files": 8,
@@ -517,7 +517,7 @@
   },
   {
    "id": "t34",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "doc-init-flags",
    "lessons": 292,
    "changed_files": 10,
@@ -532,7 +532,7 @@
   },
   {
    "id": "t35",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e49be14d6207",
    "lessons": 315,
    "changed_files": 9,
@@ -547,7 +547,7 @@
   },
   {
    "id": "t36",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_967ef9825472",
    "lessons": 315,
    "changed_files": 15,
@@ -562,7 +562,7 @@
   },
   {
    "id": "t37",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "model-reply-parse-fails-open-loudly",
    "lessons": 321,
    "changed_files": 9,
@@ -571,13 +571,13 @@
    "paths:right": false,
    "paths:fired": 15,
    "code:right": false,
-   "code:fired": 33,
+   "code:fired": 31,
    "either:right": false,
-   "either:fired": 44
+   "either:fired": 42
   },
   {
    "id": "t38",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_713b8c104f12",
    "lessons": 322,
    "changed_files": 20,
@@ -592,7 +592,7 @@
   },
   {
    "id": "t39",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_e49be14d6207",
    "lessons": 289,
    "changed_files": 12,
@@ -607,7 +607,7 @@
   },
   {
    "id": "t40",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_d8166465591e",
    "lessons": 170,
    "changed_files": 15,
@@ -622,7 +622,7 @@
   },
   {
    "id": "t41",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "fail-closed-at-every-entry-point",
    "lessons": 335,
    "changed_files": 10,
@@ -637,7 +637,7 @@
   },
   {
    "id": "t42",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "model-server-warm-up-before-serving",
    "lessons": 309,
    "changed_files": 17,
@@ -652,7 +652,7 @@
   },
   {
    "id": "t43",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "remote-timeout-not-a-deadline",
    "lessons": 321,
    "changed_files": 7,
@@ -667,7 +667,7 @@
   },
   {
    "id": "t44",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_b4050b826687",
    "lessons": 338,
    "changed_files": 9,
@@ -682,7 +682,7 @@
   },
   {
    "id": "t45",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_713b8c104f12",
    "lessons": 331,
    "changed_files": 16,
@@ -697,7 +697,7 @@
   },
   {
    "id": "t46",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "owned-file-features-check-the-kept-copy",
    "lessons": 326,
    "changed_files": 11,
@@ -712,7 +712,7 @@
   },
   {
    "id": "t47",
-   "okl_commit": "10e9daa",
+   "okl_commit": "24a504f",
    "right": "n_5ddb0776a863",
    "lessons": 339,
    "changed_files": 5,
@@ -726,6 +726,6 @@
    "either:fired": 28
   }
  ],
- "okl_commit_at_start": "10e9daa",
- "okl_commit": "10e9daa"
+ "okl_commit_at_start": "24a504f",
+ "okl_commit": "24a504f"
 }
