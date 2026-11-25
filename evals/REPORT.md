@@ -7564,7 +7564,7 @@ What it suggests, not tested:
 **Threats.**
 - One repository; 43 tasks from 33 changes; the in-sample tasks are counted with the rest.
 - The rules are one author's patterns, written before the first run and not pre-registered. Three of them
-  were corrected after it, from a review that had not seen the counts' effect, and no count moved. Other
+  were corrected after it, on a code review's findings, and no count moved. Other
   patterns would give other counts; the direction (worse reach than the pick, at a longer list) held for
   every arm.
 - The change is read as §4bl's pick was given it, cut to the same size, so a path or a line past the cut is
