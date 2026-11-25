@@ -178,7 +178,8 @@ def main() -> int:
     if args.receipt:
         out = results / f"event-replay-{datetime.now(UTC):%Y%m%d-%H%M}.json"
         receipt = run.stamp({"written_by": "evals/event_replay.py", "at": g.o.git("rev-parse", "HEAD").strip(),
-                             "tasks": n, "rates": rates, "store_today": today,
+                             "tasks": n, "run_commits": sorted({r["okl_commit"] for r in rows}), "rates": rates,
+                             "store_today": today,
                              "compared_with": {MODEL_PICK_RECEIPT: {"n10": pick["n10"]["rate"], "n30": pick["n30"]["rate"]},
                                                WORDS_RECEIPT: words},
                              "rows": rows})
