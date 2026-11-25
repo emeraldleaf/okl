@@ -63,7 +63,8 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   `"warm": true` turns it on, the okl your hooks run lacks the extra and no warm server is
   answering, `okl doctor` exits 1 and names that okl, and `okl init` says it as it pins one: left
   unsaid, every briefing there used word search alone. While a server another okl started is
-  answering, doctor says the pinned okl cannot start one again, and exits 0.
+  answering, doctor says the pinned okl cannot start one again, and exits 0; it also says when the
+  model is on and was stopped with `okl warm stop`.
 - **The Claude Code prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see

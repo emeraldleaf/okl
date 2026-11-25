@@ -114,6 +114,18 @@ def test_a_server_that_answers_is_the_model_working_and_is_said_as_one_that_can_
     assert not fault and "a server is answering" in line and "cannot start one" in line and str(lacks) in line, line
 
 
+def test_a_model_stopped_on_purpose_is_said_and_is_no_fault(envs, monkeypatch):
+    """`okl warm stop` keeps the model off until someone starts it again. In a repo that turned the
+    model on, that is the person's own choice, so it is said with how to resume and counts as no fault."""
+    from okl import client
+    has, _, _ = envs
+    monkeypatch.setattr(client.warm, "stopped", lambda: True)
+    line, fault = warm_gap({"warm": True, "okl_bin": f"{has} -m okl"}, None)
+    assert not fault and "stopped with `okl warm stop`" in line and "okl warm start" in line, line
+    monkeypatch.setattr(client.warm, "stopped", lambda: False)
+    assert warm_gap({"warm": True, "okl_bin": f"{has} -m okl"}, None) == ("", False)
+
+
 def _doctor(proj: Path, home: Path) -> subprocess.CompletedProcess:
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "PYTHONPATH": str(Path(warm.__file__).parents[1]),
            "OKL_WARM_SOCKET": str(home / "no-server.sock")}
