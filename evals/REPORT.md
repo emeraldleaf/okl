@@ -7508,6 +7508,74 @@ What it suggests, not tested in sessions:
 - The decoys' "breaks" may be true: nothing grades them.
 - 43 tasks from 33 changes, in one repository; the in-sample tasks are counted with the rest.
 
+## 4bm. EXPLORATORY, NOT PRE-REGISTERED: can a lesson's own text say when it applies? (2026-11-25)
+
+§4bk found that the review's pick loses most of what the review loses. A rule that says by itself when
+it applies would need no pick. In the week before this was run, three rules of okl's own were broken with
+nothing looking (a review before each pull request, two summary pages updated with a behaviour change, the
+warm model running where it was turned on), and each was then held by an event and a script: a command
+about to run, a set of files changing, a health check. This asks whether that carries over to the breaks
+the review is measured on, with no model call and nothing authored: only what a lesson already names in
+its text.
+
+An agent (Claude) wrote `evals/event_replay.py` and ran it at 24a504f, on §4bj's 43 graded broken
+tasks, with the lessons as the review held them for each task. It was run three times, and every count
+was the same each time: first at d0cb295; again at 10e9daa, because the first receipt lacked the list of
+commits its rows ran, which a test requires; and at 24a504f, after a review of the script found three
+boundary errors in its matching (a file name with several dots was not read as a path, a starred path
+matched part of a longer one, a flag was found inside a longer flag). Its rules were written before the run and
+are tested in `tests/test_event_replay.py`. A lesson names a *path* (something with a slash, or a file name
+with a known extension) or a *piece of code* (a dotted name, a call, an ALL_CAPS, snake_case or CamelCase
+name, a `--flag`). An event fires for a lesson on a change when a path it names is a changed file, that
+file's folder or its bare name, or when a piece of code it names appears in a line the change added.
+Receipt `event-replay-20261125-2249.json`, from the last run.
+
+| what chooses the lessons | the right lesson is among them | lessons chosen per change, median (range) |
+|---|---|---|
+| the files a lesson governs, as the review lists today | 2 of 43 (0.047) | 7 (0 to 10) |
+| a path the lesson names | 2 of 43 (0.047) | 16 (1 to 26) |
+| a piece of code the lesson names | 17 of 43 (0.395) | 31 (6 to 46) |
+| either | 17 of 43 (0.395) | 46 (11 to 59) |
+
+Every row is from this one run. For scale, and from another sitting: on the same 43 tasks and the same
+lesson lists, §4bl's model picked ten lessons that held the right one on 0.628 of the tasks, and thirty on
+0.791 (`lesson-finding-20261117-0441.json`). That run called a model, at another commit, so the two are set
+side by side here and not measured against each other.
+
+- **An event read from the lesson reaches few of the right lessons, and chooses many.** Paths reach the
+  right lesson on 2 tasks. Named code reaches it on 17 while firing for a median of 31 lessons. Beside §4bl's
+  figures that is under two thirds of what a pick of ten reached, with three times as many lessons chosen.
+- **Most of the lessons broken already had a passing check.** The 43 tasks break 28 distinct lessons. In
+  the store as it stood on the day of the run, 20 of them have an observed check and 3 have files. Each
+  of those checks tests the code that existed when it was written; the task broke the rule in code written
+  later. `n_e7988ff536fb` (exit codes are the CLI's public API) is broken by four of the tasks, has such a
+  check, and is briefed on every prompt.
+
+What it suggests, not tested:
+
+- **These are general rules broken in new code**, and no event can be read for them: the rule is not tied
+  to a file or a command. The three rules broken the week before were of another kind, tied to a moment,
+  and an event with a script held each. The two kinds need different handling, and this result is about
+  the first only.
+- **"Has a passing check" is not "holds for new code".** A check over one instance says the rule was true
+  of the code then. A check over every file (a lint rule, a contract, a sweep such as
+  `tests/test_exit_codes.py`) covers code not yet written. okl marks a lesson verified in both cases, and
+  the briefing shows them alike.
+- **For rules of the first kind the review stays the mechanism**, with §4bl's figures as its measured
+  ceiling here.
+
+**Threats.**
+- One repository; 43 tasks from 33 changes; the in-sample tasks are counted with the rest.
+- The rules are one author's patterns, written before the first run and not pre-registered. Three of them
+  were corrected after it, on a code review's findings, and no count moved. Other
+  patterns would give other counts.
+- The change is read as §4bl's pick was given it, cut to the same size, so a path or a line past the cut is
+  not seen.
+- The count of lessons with a check reads the store on the day of the run, not as it stood for each task:
+  a check added after a task was written counts here.
+- The tasks were chosen for having an executable grader, so this says nothing about how many rules could
+  be given a check over every file.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
