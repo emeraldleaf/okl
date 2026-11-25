@@ -86,6 +86,21 @@
   okl tools from the launcher. The five hooks now ask for the plain value and make it absolute
   themselves. `okl init` (or `okl init --force` over an edited hook) installs the fixed scripts.
   The main checkout was never affected (#510).
+- **For people working on okl itself: two of its own checks now do what they say.** Neither is
+  installed by `okl init`.
+  - **The review before a pull request is recorded and checked.** The developer guide asks for a
+    CodeRabbit CLI review before a pull request, and twelve in a row were opened without one,
+    since nothing looked. `ci/review-before-pr.sh` runs it and records the commit it read, only
+    when the review finished: the CLI exits 0 when the allowance refused it. `--check` says at a
+    push when a branch has no recorded review, and in Claude Code a committed hook
+    (`.claude/hooks/pretooluse-review-before-pr.py`) stops `gh pr create` until one is recorded
+    (#514, #515).
+  - **The guard check no longer passes on tests that fail anyway.** `ci/check-guard-mutations.py`
+    counts a guard as caught when pytest exits 1 with it switched off. A test that failed with
+    nothing switched off gave that exit for every guard, so on a machine where one test could not
+    pass it reported every guard caught. It now runs its tests once with every guard on and exits
+    2, naming the failing test, when they do not pass; `--deselect` leaves out a test by name and
+    the result says so; and its runs write no bytecode (#512).
 
 ## 0.20.0
 
