@@ -7536,12 +7536,15 @@ Receipt `event-replay-20261125-2249.json`, from the last run.
 | a path the lesson names | 2 of 43 (0.047) | 16 (1 to 26) |
 | a piece of code the lesson names | 17 of 43 (0.395) | 31 (6 to 46) |
 | either | 17 of 43 (0.395) | 46 (11 to 59) |
-| a model's pick of ten (§4bl) | 0.628 | 10 |
-| a model's pick of thirty (§4bl) | 0.791 | 30 |
 
-- **An event read from the lesson does worse than the model's pick, and chooses more.** Paths reach the
-  right lesson on 2 tasks. Named code reaches it on 17 while firing for a median of 31 lessons: under two
-  thirds of the pick of ten's reach, at three times its length.
+Every row is from this one run. For scale, and from another sitting: on the same 43 tasks and the same
+lesson lists, §4bl's model picked ten lessons that held the right one on 0.628 of the tasks, and thirty on
+0.791 (`lesson-finding-20261117-0441.json`). That run called a model, at another commit, so the two are set
+side by side here and not measured against each other.
+
+- **An event read from the lesson reaches few of the right lessons, and chooses many.** Paths reach the
+  right lesson on 2 tasks. Named code reaches it on 17 while firing for a median of 31 lessons. Beside §4bl's
+  figures that is under two thirds of what a pick of ten reached, with three times as many lessons chosen.
 - **Most of the lessons broken already had a passing check.** The 43 tasks break 28 distinct lessons. In
   the store as it stood on the day of the run, 20 of them have an observed check and 3 have files. Each
   of those checks tests the code that existed when it was written; the task broke the rule in code written
@@ -7565,8 +7568,7 @@ What it suggests, not tested:
 - One repository; 43 tasks from 33 changes; the in-sample tasks are counted with the rest.
 - The rules are one author's patterns, written before the first run and not pre-registered. Three of them
   were corrected after it, on a code review's findings, and no count moved. Other
-  patterns would give other counts; the direction (worse reach than the pick, at a longer list) held for
-  every arm.
+  patterns would give other counts.
 - The change is read as §4bl's pick was given it, cut to the same size, so a path or a line past the cut is
   not seen.
 - The count of lessons with a check reads the store on the day of the run, not as it stood for each task:

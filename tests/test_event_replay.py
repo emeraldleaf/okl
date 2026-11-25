@@ -4,6 +4,8 @@ REPORT §4bm rests on these functions, so each rule is shown on a small case: a 
 instrument nobody tested is a figure about the instrument. The run itself needs §4bj's built tasks,
 which are not committed, so it is not run here.
 """
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -76,3 +78,27 @@ def test_a_file_name_with_several_dots_is_one_path_and_not_code(replay):
     assert replay.named_paths(text) == {"worker.test.py"}
     assert "worker.test.py" not in replay.named_code(text) and "okl.client.check" in replay.named_code(text)
     assert replay.path_fires({"worker.test.py"}, ["src/worker.test.py"]) is True
+
+
+def test_the_reports_figures_are_the_receipts():
+    """REPORT §4bm's table and counts are read back from the receipt it names, and the two figures
+    it sets beside them from §4bl's receipt: a table typed by hand is a table that can drift from
+    the run (lesson comparison-table-one-sitting-generated, which the review at a push applied to
+    this section's first draft)."""
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4bm."):report.index("## 5. Findings")]
+    results = REPO / "evals" / "results"
+    receipt = json.loads((results / re.search(r"`(event-replay-[0-9-]+[.]json)`", section).group(1)).read_text())
+    n = receipt["tasks"]
+    for arm in ("governs today", "paths", "code", "either"):
+        a = receipt["rates"][arm]
+        row = f"| {a['right_fired']} of {n} ({a['rate']}) | {a['fired_median']} ({a['fired_min']} to {a['fired_max']}) |"
+        assert row in section, (arm, row)
+    today = receipt["store_today"]
+    assert f"break {today['distinct_right_lessons']} distinct lessons" in section
+    assert (f"{len(today['with_an_observed_check'])} of them have an observed check and "
+            f"{len(today['with_files'])} have files") in section
+    assert receipt["okl_commit"] == receipt["okl_commit_at_start"] and f"at {receipt['okl_commit']}" in section
+    pick = json.loads((results / "lesson-finding-20261117-0441.json").read_text())["reach"]
+    assert f"on {pick['n10']['rate']} of the tasks" in section and f"{pick['n30']['rate']} (`lesson-finding" in section
+    assert "a model's pick of" not in section, "the other sitting's figures stay out of this run's table"
