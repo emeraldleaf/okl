@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:f63095acc39affc2727cdf1065b7e742ff9eb6381e8db11de28a9a6ae28a8be8
+# okl-fingerprint: sha256:e4c6ce62ca92ca1a19d654061256664413599bd5c8fafe22c5a7d9399ebc72fc
 # PostToolUse hook on Edit|Write|MultiEdit|NotebookEdit — after the agent edits a file in the
 # repository, run every lesson check the person approved, those of the lessons governing the file
 # first, and hand any failure back beside the edit (#435, #450).
@@ -33,7 +33,11 @@ okl_config() {
     if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
     d=$(dirname "$d")
   done
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  # Asked for plainly and made absolute here. --path-format is git 2.31's, and an older git prints
+  # an option it does not know back as a line of its answer: in a worktree under git 2.30 this
+  # read two lines, found no config, and the hook stepped aside as if okl had never been set up.
+  common=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ "$common" == /* ]] || common="$PWD/$common"
   [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
   printf '%s\n' "${common%/.git}/.okl/config.json"
 }

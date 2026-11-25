@@ -1463,13 +1463,20 @@ def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
     assert r.returncode == 2, (r.returncode, r.stderr)
 
 
-def test_hooks_in_a_worktree_use_the_main_checkouts_config_and_pinned_okl(tmp_path):
+@pytest.mark.parametrize("older_git", [False, True], ids=["this-git", "a-git-older-than-2.31"])
+def test_hooks_in_a_worktree_use_the_main_checkouts_config_and_pinned_okl(tmp_path, older_git):
     """git ignores .okl/, so a worktree beside the checkout has no config, and a session started in one
     found none by walking up: every hook stepped aside as if the repo had never been set up, though okl
     itself reads the main checkout's config there since #492. Each hook now finds it the same way, runs
     the okl it pins, and runs it in the worktree, as does git's pre-push hook. A worktree of a checkout
-    never set up still steps aside."""
+    never set up still steps aside.
+
+    Under a git older than 2.31 the same holds (#510). The hooks asked with `--path-format=absolute`,
+    which that git does not know and prints back as a line of its answer, so they read two lines,
+    found no config and stepped aside: no briefing, no question at the stop, no edit checks. The
+    suite's git was newer, so this test passed. It now also runs under a git that answers the old way."""
     import json
+    import shlex
     import shutil
     if shutil.which("git") is None:
         pytest.skip("git not available")
@@ -1489,8 +1496,22 @@ def test_hooks_in_a_worktree_use_the_main_checkouts_config_and_pinned_okl(tmp_pa
     fake.chmod(0o755)
     (checkout / ".okl").mkdir()
     (checkout / ".okl" / "config.json").write_text(json.dumps({"repo": "m", "okl_bin": str(fake), "on_edit": {}}))
+    path = "/usr/bin:/bin"
+    if older_git:
+        stand_in = tmp_path / "older-git"; stand_in.mkdir()
+        (stand_in / "git").write_text(
+            "#!/bin/sh\n"
+            'for a in "$@"; do case "$a" in --path-format=*) echo "$a";; esac; done\n'
+            'n=$#; i=0\n'
+            'while [ $i -lt $n ]; do a=$1; shift; i=$((i+1)); case "$a" in --path-format=*) ;; *) set -- "$@" "$a";; esac; done\n'
+            f'exec {shlex.quote(shutil.which("git"))} "$@"\n')
+        (stand_in / "git").chmod(0o755)
+        path = f"{stand_in}:{path}"
+        probe = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=wt,
+                               env={"PATH": path, "HOME": str(tmp_path)}, capture_output=True, text=True).stdout
+        assert probe.startswith("--path-format=absolute\n"), "the stand-in must answer as the older git does"
     # No okl on PATH and none importable: only the pin in the main checkout's config can be run.
-    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "TMPDIR": str(markers), "CLAUDE_PROJECT_DIR": str(wt)}
+    env = {"PATH": path, "HOME": str(tmp_path), "TMPDIR": str(markers), "CLAUDE_PROJECT_DIR": str(wt)}
 
     def run(name: str, payload: dict | None) -> list[str]:
         before = log.read_text().splitlines() if log.exists() else []
@@ -1515,7 +1536,7 @@ def test_hooks_in_a_worktree_use_the_main_checkouts_config_and_pinned_okl(tmp_pa
             assert os.path.realpath(line.split("|", 1)[0]) == os.path.realpath(wt), (name, line)
     # A worktree of a checkout never set up: the hooks step aside, and okl is never called.
     shutil.rmtree(checkout / ".okl")
-    env["PATH"] = f"/usr/bin:/bin:{fake.parent}"
+    env["PATH"] = f"{path}:{fake.parent}"
     assert run("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"}) == []
 
 
