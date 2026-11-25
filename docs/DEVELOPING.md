@@ -56,7 +56,14 @@ src/okl/
                                      # .svg carries its source's text: reads HEAD,
                                      # so commit first, or pass the .excalidraw paths to check
                                      # the working copies (as tests/test_architecture.py does)
-   python3 ci/check-guard-mutations.py # each guard switched off must fail a test (commit first)
+   python3 ci/check-guard-mutations.py # each guard switched off must fail a test (commit first).
+                                     # It first runs its tests with every guard on and exits 2
+                                     # when they do not pass: a test that fails anyway would
+                                     # count every guard as caught. Where the installed okl is
+                                     # a release and not this checkout, the version test cannot
+                                     # pass: run `pip install -e .`, or leave that one test out
+                                     # by name and the result says so:
+                                     #   --deselect tests/test_scaffold.py::test_the_package_version_is_the_installed_distributions
    python3 ci/e2e.py --okl <installed okl> # okl end to end on a fresh repo, as CI's e2e job runs it
    ```
 

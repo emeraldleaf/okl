@@ -16,9 +16,17 @@ Two kinds are switched off:
 
 Run from the repo root: `python3 ci/check-guard-mutations.py`. It edits each file in place and
 restores it byte for byte before the next; it refuses to start on a file with uncommitted edits.
+
+It first runs the tests with every guard on, and refuses to count anything when they do not pass.
+A guard counts as caught when pytest exits 1, and a test that fails anyway makes pytest exit 1
+for every guard: on a developer machine where the version test could not pass, this check said
+"CAUGHT 53 of 53" whatever the guards were, and CI then named one no test held (#511, #512).
+`--deselect <test id>` leaves out a test that cannot pass on this machine (docs/DEVELOPING.md);
+the result says which were left out. A guard only that test holds then reads as missed.
 """
 from __future__ import annotations
 
+import argparse
 import ast
 import os
 import subprocess
@@ -128,7 +136,24 @@ def replace_span(source: str, site: tuple[int, int, int, int, str, str]) -> str:
     return source[:start] + site[5] + source[end:]
 
 
-def caught(path: str, mutated: str, tests: list[str]) -> int:
+def _env() -> dict[str, str]:
+    """This checkout's code first on the path, and no bytecode written. Python trusts a cached
+    .pyc whose source has the same size and the same modification time to the second, so a
+    mutant the length of the original, written or restored within that second, left the next
+    run importing the other one's code (lesson stale-pyc-after-probe, okl #386). With nothing
+    cached by these runs, each one compiles the file that is on disk."""
+    return {**os.environ, "PYTHONPATH": str(REPO / "src"), "PYTHONDONTWRITEBYTECODE": "1"}
+
+
+def run_tests(tests: list[str], left_out: list[str]) -> subprocess.CompletedProcess[str]:
+    """The tests, stopping at the first failure, with this checkout's code first on the path."""
+    env = _env()
+    return subprocess.run([sys.executable, "-m", "pytest", "-x", "-q", "-p", "no:cacheprovider",
+                           *(f"--deselect={t}" for t in left_out), *tests],
+                          cwd=REPO, env=env, capture_output=True, text=True)
+
+
+def caught(path: str, mutated: str, tests: list[str], left_out: list[str]) -> int:
     """pytest's exit with `path` holding `mutated` (1: a test failed), or -1 when the mutated
     module does not import, which is a broken mutation and no evidence of a test. The import is
     tried first because pytest's exit cannot tell them apart: a test that runs okl in a
@@ -137,14 +162,12 @@ def caught(path: str, mutated: str, tests: list[str]) -> int:
     original = target.read_bytes()
     target.write_text(mutated)
     try:
-        env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+        env = _env()
         module = path.removeprefix("src/").removesuffix(".py").replace("/", ".")
         if subprocess.run([sys.executable, "-c", f"import {module}"], cwd=REPO, env=env,
                           capture_output=True).returncode != 0:
             return -1
-        r = subprocess.run([sys.executable, "-m", "pytest", "-x", "-q", "-p", "no:cacheprovider", *tests],
-                           cwd=REPO, env=env, capture_output=True, text=True)
-        return r.returncode
+        return run_tests(tests, left_out).returncode
     finally:
         target.write_bytes(original)
 
@@ -156,8 +179,30 @@ def _why(code: int) -> str:
     return "" if code == 0 else f" (pytest exit {code}: the tests did not run)"
 
 
-def main() -> int:
+def names_no_test(left_out: list[str]) -> str | None:
+    """The first id given to --deselect that is none of the tests this check runs, or None.
+
+    pytest ignores a --deselect that matches nothing, and the result would then name a test as
+    left out that was never there to leave out: a mistyped id, or a real test in a file this
+    check does not run. pytest leaves out every test whose id starts with the one given, so that
+    is the match made here. Where the tests cannot be collected at all, nothing is said here:
+    the run with every guard on reports that."""
+    if not left_out:
+        return None
+    collected = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", *TESTS],
+                               cwd=REPO, env=_env(), capture_output=True, text=True)
+    if collected.returncode != 0:
+        return None
+    ids = [line for line in collected.stdout.splitlines() if "::" in line]
+    return next((name for name in left_out if not any(i.startswith(name) for i in ids)), None)
+
+
+def main(argv: list[str] | None = None) -> int:
     """Switch each guard off in turn; exit 1 naming every one no test caught."""
+    parser = argparse.ArgumentParser(description="Switch each guard off in turn: a test must fail.")
+    parser.add_argument("--deselect", action="append", default=[], metavar="TEST_ID",
+                        help="leave out a test that cannot pass on this machine (repeatable); the result names it")
+    left_out: list[str] = parser.parse_args(argv).deselect
     files = sorted({*GUARD_CALLS, *(m[0] for m in MUTATIONS)})
     dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", *files],
                            capture_output=True, text=True, check=True).stdout.strip()
@@ -165,12 +210,26 @@ def main() -> int:
         print(f"GUARD MUTATIONS NOT RUN: commit or stash these first, they are edited in place:\n{dirty}",  # noqa: T201
               file=sys.stderr)
         return 2
+    if stray := names_no_test(left_out):
+        print(f"GUARD MUTATIONS NOT RUN: --deselect {stray} names no test this check runs.", file=sys.stderr)  # noqa: T201
+        return 2
+    # With every guard on, the tests must pass: pytest's exit 1 is the only evidence a guard was
+    # caught, and a test that fails anyway gives that exit for every guard.
+    whole = run_tests(TESTS, left_out)
+    if whole.returncode != 0:
+        failing = [line for line in whole.stdout.splitlines() if line.startswith(("FAILED ", "ERROR "))]
+        print(f"GUARD MUTATIONS NOT RUN: with every guard on, the tests do not pass (pytest exit {whole.returncode}), "  # noqa: T201
+              "so a guard switched off could not be told from one left on.\n"
+              + "\n".join(f"  {line}" for line in failing or whole.stdout.splitlines()[-3:])
+              + "\nFix that first. docs/DEVELOPING.md says what to do on a machine where a test cannot pass.",
+              file=sys.stderr)
+        return 2
     missed, total = [], 0
     for path, guards in GUARD_CALLS.items():
         source = (REPO / path).read_text()
         for site in call_sites(path, guards):
             total += 1
-            code = caught(path, replace_span(source, site), TESTS)
+            code = caught(path, replace_span(source, site), TESTS, left_out)
             if code != 1:
                 missed.append(f"{path}:{site[0]} `{site[4]}` -> {site[5]}" + _why(code))
     for path, text, replacement, label in MUTATIONS:
@@ -178,13 +237,15 @@ def main() -> int:
         total += 1
         if source.count(text) != 1:
             missed.append(f"{path}: the guard for '{label}' is not found once; update MUTATIONS")
-        elif (code := caught(path, source.replace(text, replacement), TESTS)) != 1:
+        elif (code := caught(path, source.replace(text, replacement), TESTS, left_out)) != 1:
             missed.append(f"{path}: {label}" + _why(code))
     if missed:
-        print(f"GUARD MUTATIONS MISSED {len(missed)} of {total}: no test fails with each of these off")  # noqa: T201
+        without = f" ({len(left_out)} test(s) left out: {', '.join(left_out)})" if left_out else ""
+        print(f"GUARD MUTATIONS MISSED {len(missed)} of {total}: no test fails with each of these off{without}")  # noqa: T201
         print("\n".join(f"  {m}" for m in missed))  # noqa: T201
         return 1
-    print(f"GUARD MUTATIONS CAUGHT {total} of {total}")  # noqa: T201 - a check script reports on stdout
+    without = f", with {len(left_out)} test(s) left out: {', '.join(left_out)}" if left_out else ""
+    print(f"GUARD MUTATIONS CAUGHT {total} of {total}{without}")  # noqa: T201 - a check script reports on stdout
     return 0
 
 
