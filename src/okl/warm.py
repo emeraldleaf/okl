@@ -409,15 +409,34 @@ def installed_for(okl_bin: str) -> bool | None:
     development okl with it ran the commands, and every briefing fell back to word search for six
     days with nothing saying so but the end of a status line (#522). It asks that okl's own
     interpreter, since an older release has no command to ask."""
-    interpreter = _interpreter_of(okl_bin)
+    return _has_module(_interpreter_of(okl_bin), "fastembed")
+
+
+def _has_module(interpreter: str | None, module: str) -> bool | None:
+    """Whether an interpreter can find a module, or None when it cannot be asked."""
     if not interpreter:
         return None
-    probe = "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('fastembed') else 3)"
+    probe = f"import importlib.util, sys; sys.exit(0 if importlib.util.find_spec({module!r}) else 3)"
     try:
         done = subprocess.run([interpreter, "-c", probe], capture_output=True, timeout=COMMAND_TIMEOUT_S, check=False)
     except (OSError, subprocess.SubprocessError):
         return None
     return {0: True, 3: False}.get(done.returncode)
+
+
+def hooks_okl(pinned: object) -> str:
+    """The okl a repo's hooks run, found in the order each hook looks (`resolve_okl` in the hook
+    scripts): OKL_BIN, the `okl_bin` the config pins, `okl` on PATH, then `python3 -m okl`. The
+    first whose interpreter answers is the one; "" when none does.
+
+    Asking only the pin missed the other three: a session that sets OKL_BIN runs that okl
+    whatever the config says, and a repo with no pin runs the first okl on PATH, which need not
+    be the okl running `okl doctor` (lesson n_ec568941f68a, found by the review at a push)."""
+    python3 = shutil.which("python3")
+    for candidate in (os.environ.get("OKL_BIN"), pinned, shutil.which("okl")):
+        if isinstance(candidate, str) and candidate.strip() and _has_module(_interpreter_of(candidate), "sys") is True:
+            return candidate
+    return f"{python3} -m okl" if python3 and _has_module(python3, "okl") is True else ""
 
 
 def log_path() -> Path:

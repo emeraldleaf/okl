@@ -829,9 +829,12 @@ def cmd_init(args: argparse.Namespace) -> int:
     # The okl just pinned is the one the hooks run. Where the repo turned the warm model on and
     # that okl cannot load it, every briefing loses it silently: re-running init is how okl's
     # own repo came to brief without it for six days (#522).
-    warm_line, _ = warm_gap(cfg, os.environ.get("OKL_WARM"))
-    if warm_line:
-        print(warm_line)
+    # A warm setting that is neither on nor off is refused by the commands that brief; init has
+    # written the config by now, and stopping here would leave the hooks unwired.
+    with contextlib.suppress(ValueError):
+        warm_line, _ = warm_gap(cfg, os.environ.get("OKL_WARM"))
+        if warm_line:
+            print(warm_line)
     _wire_claude_code(args)
     _say_review_after_writing(cfg)
     _say_stop_hook_sees_worktrees()

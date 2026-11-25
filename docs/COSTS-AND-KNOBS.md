@@ -61,7 +61,8 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   the usual one; `--format json` says why in `warm_unavailable`
   ([REPORT §4z](../evals/REPORT.md)). In Claude Code the status line under the prompt says so too. Where
   `"warm": true` turns it on, the okl your hooks run lacks the extra and no warm server is
-  answering, `okl doctor` exits 1 and names that okl, and `okl init` says it as it pins one: left
+  answering, `okl doctor` exits 1 and names that okl (found as the hooks find it: `OKL_BIN`, the
+  pinned okl, `okl` on PATH, then `python3 -m okl`), and `okl init` says it as it pins one: left
   unsaid, every briefing there used word search alone. While a server another okl started is
   answering, doctor says the pinned okl cannot start one again, and exits 0; it also says when the
   model is on and was stopped with `okl warm stop`.

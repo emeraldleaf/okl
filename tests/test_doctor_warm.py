@@ -20,10 +20,11 @@ from okl.client import warm_gap
 
 
 def _fake_python(folder: Path, name: str, has_the_extra: bool) -> Path:
-    """A stand-in for another environment's Python: it answers the one question asked of it,
-    whether it can find fastembed, the way a real one does (exit 0, or the probe's own 3)."""
+    """A stand-in for another environment's Python. It answers the question the check asks, whether
+    it can find a module, the way a real one does (exit 0, or the probe's own 3): every module is
+    there but fastembed, which is there only with the extra."""
     path = folder / name
-    path.write_text(f"#!/bin/sh\nexit {0 if has_the_extra else 3}\n")
+    path.write_text(f'#!/bin/sh\ncase "$2" in *fastembed*) exit {0 if has_the_extra else 3} ;; *) exit 0 ;; esac\n')
     path.chmod(0o755)
     return path
 
@@ -42,6 +43,7 @@ def envs(tmp_path, monkeypatch):
     service URL in their shell, would otherwise decide these tests."""
     monkeypatch.setenv("OKL_WARM_SOCKET", str(tmp_path / "no-server.sock"))
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    monkeypatch.delenv("OKL_BIN", raising=False)
     return _fake_python(tmp_path, "python-with", True), _fake_python(tmp_path, "python-without", False), tmp_path
 
 
@@ -75,10 +77,11 @@ def test_what_cannot_be_asked_is_not_answered(envs, tmp_path):
         assert warm.installed_for(pinned) is None, pinned
 
 
-def test_the_fault_is_the_model_turned_on_where_the_pinned_okl_cannot_load_it(envs):
+def test_the_fault_is_the_model_turned_on_where_the_pinned_okl_cannot_load_it(envs, monkeypatch, tmp_path):
     """A fault only when the repo turned the model on and its pinned okl lacks the extra. Left to
     its default, or turned off, nothing is said; an okl that can load it says nothing; one that
-    cannot be asked gets a line and no fault; a setting that is neither on nor off is a fault."""
+    cannot be asked gets a line and no fault. A setting that is neither on nor off raises, for the
+    command line to report as it does for every command that reads it."""
     has, lacks, _ = envs
     line, fault = warm_gap({"warm": True, "okl_bin": f"{lacks} -m okl"}, None)
     assert fault and "cannot load it" in line and str(lacks) in line and "observed-knowledge-ledger[warm]" in line, line
@@ -87,10 +90,39 @@ def test_the_fault_is_the_model_turned_on_where_the_pinned_okl_cannot_load_it(en
     assert warm_gap({"warm": False, "okl_bin": f"{lacks} -m okl"}, None) == ("", False)
     assert warm_gap({"warm": True, "okl_bin": f"{lacks} -m okl"}, "off") == ("", False), "OKL_WARM wins over the config"
     assert warm_gap({"okl_bin": f"{lacks} -m okl"}, "on")[1] is True
-    unknown, fault = warm_gap({"warm": True, "okl_bin": "/no/such/okl"}, None)
-    assert not fault and "could not tell" in unknown, unknown
-    mistyped, fault = warm_gap({"warm": "onn"}, None)
-    assert fault and "warm must be on or off" in mistyped, mistyped
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.setattr(warm, "installed", lambda: False)
+    nowhere, fault = warm_gap({"warm": True, "okl_bin": "/no/such/okl"}, None)
+    assert fault and "this okl cannot load it" in nowhere, "no okl where the hooks look: the running one is asked"
+    # An okl that answers one question and not the next cannot be said to lack the extra: a line, and no fault.
+    monkeypatch.setattr(warm, "installed_for", lambda _okl: None)
+    unknown, fault = warm_gap({"warm": True, "okl_bin": f"{has} -m okl"}, None)
+    assert not fault and "could not tell" in unknown and str(has) in unknown, unknown
+    with pytest.raises(ValueError, match="warm must be on or off"):
+        warm_gap({"warm": "onn"}, None)
+
+
+def test_the_okl_asked_is_the_one_the_hooks_run_in_the_order_they_look(envs, monkeypatch, tmp_path):
+    """Each hook looks for okl in OKL_BIN, then the config's pin, then `okl` on PATH, then
+    `python3 -m okl`, and runs the first that answers. The check asks that same okl: a pin with the
+    extra says nothing of a session whose OKL_BIN names an okl without it, and a repo with no pin,
+    or a pin that is gone, runs the okl on PATH."""
+    has, lacks, folder = envs
+    pin_has, pin_lacks = f"{has} -m okl", f"{lacks} -m okl"
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    assert warm.hooks_okl(pin_has) == pin_has
+    monkeypatch.setenv("OKL_BIN", pin_lacks)
+    assert warm.hooks_okl(pin_has) == pin_lacks
+    line, fault = warm_gap({"warm": True, "okl_bin": pin_has}, None)
+    assert fault and str(lacks) in line, "OKL_BIN names the okl the hooks run, whatever the pin can load"
+    monkeypatch.delenv("OKL_BIN")
+    on_path = tmp_path / "bin"
+    on_path.mkdir()
+    script = _okl_script(on_path, "okl", f"#!{lacks}\n")
+    monkeypatch.setenv("PATH", str(on_path))
+    assert warm.hooks_okl(None) == script and warm.hooks_okl("/no/such/okl") == script
+    assert warm_gap({"warm": True}, None)[1] is True, "no pin: the okl on PATH is asked"
+    assert warm.hooks_okl(pin_has) == pin_has, "a pin that answers comes before PATH"
 
 
 def test_a_repo_a_shared_service_briefs_is_not_asked_about_the_local_model(envs, monkeypatch):
@@ -129,7 +161,7 @@ def test_a_model_stopped_on_purpose_is_said_and_is_no_fault(envs, monkeypatch):
 def _doctor(proj: Path, home: Path) -> subprocess.CompletedProcess:
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "PYTHONPATH": str(Path(warm.__file__).parents[1]),
            "OKL_WARM_SOCKET": str(home / "no-server.sock")}
-    for name in ("CLAUDE_CONFIG_DIR", "OKL_WARM", "OKL_DATABASE_URL", "OKL_SERVICE_URL"):
+    for name in ("CLAUDE_CONFIG_DIR", "OKL_WARM", "OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_BIN"):
         env.pop(name, None)
     return subprocess.run([sys.executable, "-m", "okl", "doctor"], capture_output=True, text=True, cwd=proj, env=env)
 
@@ -171,3 +203,9 @@ def test_init_says_it_when_it_pins_an_okl_that_cannot_load_the_model(tmp_path, m
     (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "proj"}))
     main(["init", "--repo", "proj", "--no-seed", "--no-claude", "--no-ci", "--no-git-hook"])
     assert "warm model" not in capsys.readouterr().out
+    # A setting that is neither on nor off: init refused it only at its end before this check, after
+    # its own steps, and still does. The check must not stop it earlier, with the config written and
+    # the rest of init not done.
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "proj", "warm": "onn"}))
+    main(["init", "--repo", "proj", "--no-seed", "--no-claude", "--no-ci", "--no-git-hook"])
+    assert "review after writing" in capsys.readouterr().out, "init went on past the warm check"

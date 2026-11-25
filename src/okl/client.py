@@ -321,22 +321,21 @@ def warm_gap(config: dict[str, Any], env: str | None) -> tuple[str, bool]:
     A fault is a repo that turned the model on (`"warm": true`, or OKL_WARM) while the okl its
     hooks run cannot load it and no server is answering: the briefing the repo asked for is not
     the one it gets (#522, the pack lesson measured_default_not_running). A repo briefed by a
-    shared service is not asked, since the local model is not used there. Left to its default the model is used only where
+    shared service is not asked, since the local model is not used there. The line and the flag
+    are a finding to print, not an error: a setting that is neither on nor off raises ValueError,
+    which the command line turns into its exit 2 as it does wherever that setting is read. Left to its default the model is used only where
     it can load, so nothing is said. An empty line means there is nothing to say."""
-    try:
-        wanted = warm_setting(env, config.get("warm"))
-    except ValueError as e:
-        return f"! {e}: `\"warm\"` in .okl/config.json, or OKL_WARM", True
+    wanted = warm_setting(env, config.get("warm"))   # a setting that is neither raises, as it does for every command
     # A shared service briefs the repo that names one, and the local model is not asked there.
     served_elsewhere = bool(os.environ.get("OKL_SERVICE_URL") or config.get("service_url"))
     if wanted is not True or served_elsewhere:
         return "", False
-    pinned = config.get("okl_bin")
-    return _warm_gap_of(pinned if isinstance(pinned, str) else "")
+    return _warm_gap_of(warm.hooks_okl(config.get("okl_bin")))
 
 
 def _warm_gap_of(pinned: str) -> tuple[str, bool]:
-    """warm_gap's answer for a repo that turned the local model on, given the okl its config pins."""
+    """warm_gap's answer for a repo that turned the local model on, given the okl its hooks run
+    ("" where none of the places the hooks look holds one: then the running okl is asked)."""
     can = warm.installed_for(pinned) if pinned else warm.installed()
     who = f"the okl this repo's hooks run ({pinned})" if pinned else "this okl"
     install = f"pip install '{warm.EXTRA}' (for a uv or pipx tool, reinstall the tool with that extra)"
