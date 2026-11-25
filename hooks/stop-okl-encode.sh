@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:aa0c23ee2dd326f3715eaf011b1ab54493a5011665be769a4dd41b4aa1dcded5
+# okl-fingerprint: sha256:1b9f7102f9650f3de8ac9e21ce44094b6c332204a290c01fd5315b30bfb38871
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -38,7 +38,11 @@ okl_config() {
     if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
     d=$(dirname "$d")
   done
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  # Asked for plainly and made absolute here. --path-format is git 2.31's, and an older git prints
+  # an option it does not know back as a line of its answer: in a worktree under git 2.30 this
+  # read two lines, found no config, and the hook stepped aside as if okl had never been set up.
+  common=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ "$common" == /* ]] || common="$PWD/$common"
   [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
   printf '%s\n' "${common%/.git}/.okl/config.json"
 }

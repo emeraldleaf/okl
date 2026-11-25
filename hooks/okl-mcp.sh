@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:fcd3d9198ff66e11dbe712a6bd21a54c024c20d0b3caf21decd1de49cec9e52f
+# okl-fingerprint: sha256:6d45454dad9917fbe8a4df21544ec0b9ce73627853a66e4ca1a2f17e08cf7943
 # The okl MCP server, started the way the hooks start okl (#206). `.mcp.json` named a bare
 # `okl`, so a Claude Code session launched from an IDE, with PATH=/usr/bin:/bin and none of
 # the directories uv tool or pipx install into, failed with "Executable not found in $PATH:
@@ -26,7 +26,11 @@ okl_config() {
     if [[ -f "$d/.okl/config.json" ]]; then printf '%s\n' "$d/.okl/config.json"; return 0; fi
     d=$(dirname "$d")
   done
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  # Asked for plainly and made absolute here. --path-format is git 2.31's, and an older git prints
+  # an option it does not know back as a line of its answer: in a worktree under git 2.30 this
+  # read two lines, found no config, and the hook stepped aside as if okl had never been set up.
+  common=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+  [[ "$common" == /* ]] || common="$PWD/$common"
   [[ "${common##*/}" == ".git" && -f "${common%/.git}/.okl/config.json" ]] || return 1
   printf '%s\n' "${common%/.git}/.okl/config.json"
 }
