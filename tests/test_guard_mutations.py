@@ -85,10 +85,15 @@ def test_a_test_left_out_by_name_is_named_in_the_result_and_hides_no_missed_guar
 
 def test_a_test_left_out_that_is_not_there_is_refused(check, capsys):
     """pytest ignores a --deselect that matches nothing, so a mistyped id would be named in the
-    result as left out though every test ran. The check refuses it (2) and counts nothing."""
+    result as left out though every test ran. So would a real test in a file this check does not
+    run. The check refuses both (2) and counts nothing."""
     assert check.main(["--deselect", "tests/test_toy.py::test_no_such_test"]) == 2
     said = capsys.readouterr()
-    assert said.out == "" and "names no test here" in said.err and "test_no_such_test" in said.err, said.err
+    assert said.out == "" and "names no test this check runs" in said.err and "test_no_such_test" in said.err, said.err
+    # A real test, in a file this check does not run: leaving it out removes nothing either.
+    assert check.main(["--deselect", BROKEN]) == 2
+    said = capsys.readouterr()
+    assert said.out == "" and f"--deselect {BROKEN} names no test this check runs" in said.err, said.err
 
 
 def test_the_checks_runs_leave_no_bytecode_behind(check, capsys):

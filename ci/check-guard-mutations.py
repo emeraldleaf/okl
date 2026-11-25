@@ -179,6 +179,24 @@ def _why(code: int) -> str:
     return "" if code == 0 else f" (pytest exit {code}: the tests did not run)"
 
 
+def names_no_test(left_out: list[str]) -> str | None:
+    """The first id given to --deselect that is none of the tests this check runs, or None.
+
+    pytest ignores a --deselect that matches nothing, and the result would then name a test as
+    left out that was never there to leave out: a mistyped id, or a real test in a file this
+    check does not run. pytest leaves out every test whose id starts with the one given, so that
+    is the match made here. Where the tests cannot be collected at all, nothing is said here:
+    the run with every guard on reports that."""
+    if not left_out:
+        return None
+    collected = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", *TESTS],
+                               cwd=REPO, env=_env(), capture_output=True, text=True)
+    if collected.returncode != 0:
+        return None
+    ids = [line for line in collected.stdout.splitlines() if "::" in line]
+    return next((name for name in left_out if not any(i.startswith(name) for i in ids)), None)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Switch each guard off in turn; exit 1 naming every one no test caught."""
     parser = argparse.ArgumentParser(description="Switch each guard off in turn: a test must fail.")
@@ -192,15 +210,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"GUARD MUTATIONS NOT RUN: commit or stash these first, they are edited in place:\n{dirty}",  # noqa: T201
               file=sys.stderr)
         return 2
-    # A test left out must be one pytest finds: it ignores a --deselect that matches nothing, and
-    # the result would then name a test as left out that was never there to leave out.
-    for name in left_out:
-        found = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", name],
-                               cwd=REPO, env=_env(), capture_output=True, text=True)
-        if found.returncode != 0:
-            print(f"GUARD MUTATIONS NOT RUN: --deselect {name} names no test here (pytest exit {found.returncode}).",  # noqa: T201
-                  file=sys.stderr)
-            return 2
+    if stray := names_no_test(left_out):
+        print(f"GUARD MUTATIONS NOT RUN: --deselect {stray} names no test this check runs.", file=sys.stderr)  # noqa: T201
+        return 2
     # With every guard on, the tests must pass: pytest's exit 1 is the only evidence a guard was
     # caught, and a test that fails anyway gives that exit for every guard.
     whole = run_tests(TESTS, left_out)
