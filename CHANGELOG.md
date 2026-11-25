@@ -92,7 +92,9 @@
   the status line under each prompt; on okl's own repo that lasted six days. `okl doctor` now
   asks the pinned okl's own interpreter, names that okl and the install line, and exits 1.
   `okl init` says the same as it pins an okl. Left to its default the model is used only where
-  it loads, so nothing is said there (#522).
+  it loads, so nothing is said there. While a warm server another okl started is answering,
+  doctor says the pinned okl cannot start one again and exits 0; a repo a shared service briefs
+  is not asked (#522).
 - **For people working on okl itself: two of its own checks now do what they say.** Neither is
   installed by `okl init`.
   - **The review before a pull request is recorded and checked.** The developer guide asks for a

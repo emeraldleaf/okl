@@ -319,22 +319,35 @@ def warm_gap(config: dict[str, Any], env: str | None) -> tuple[str, bool]:
     """What `okl doctor` and `okl init` say about the warm model here, and whether it is a fault.
 
     A fault is a repo that turned the model on (`"warm": true`, or OKL_WARM) while the okl its
-    hooks run cannot load it: the briefing the repo asked for is not the one it gets (#522, the
-    pack lesson measured_default_not_running). Left to its default the model is used only where
+    hooks run cannot load it and no server is answering: the briefing the repo asked for is not
+    the one it gets (#522, the pack lesson measured_default_not_running). A repo briefed by a
+    shared service is not asked, since the local model is not used there. Left to its default the model is used only where
     it can load, so nothing is said. An empty line means there is nothing to say."""
     try:
         wanted = warm_setting(env, config.get("warm"))
     except ValueError as e:
         return f"! {e}: `\"warm\"` in .okl/config.json, or OKL_WARM", True
-    if wanted is not True:
+    # A shared service briefs the repo that names one, and the local model is not asked there.
+    served_elsewhere = bool(os.environ.get("OKL_SERVICE_URL") or config.get("service_url"))
+    if wanted is not True or served_elsewhere:
         return "", False
-    pinned = config.get("okl_bin") if isinstance(config.get("okl_bin"), str) else ""
+    pinned = config.get("okl_bin")
+    return _warm_gap_of(pinned if isinstance(pinned, str) else "")
+
+
+def _warm_gap_of(pinned: str) -> tuple[str, bool]:
+    """warm_gap's answer for a repo that turned the local model on, given the okl its config pins."""
     can = warm.installed_for(pinned) if pinned else warm.installed()
     who = f"the okl this repo's hooks run ({pinned})" if pinned else "this okl"
+    install = f"pip install '{warm.EXTRA}' (for a uv or pipx tool, reinstall the tool with that extra)"
+    if can is False and warm.ping(warm.COMMAND_TIMEOUT_S):
+        # The model is served by one process for the whole user account, so a server some other
+        # okl started answers this one too: briefings use it now, and stop when it exits.
+        return (f"• the warm model is on here and a server is answering, but {who} cannot start one: once that "
+                f"server stops, every briefing uses word search alone. Install the extra there: {install}"), False
     if can is False:
         return (f"! the warm model is on here and {who} cannot load it: its environment lacks the warm extra, so "
-                f"every briefing uses word search alone. Install it there: pip install '{warm.EXTRA}' "
-                "(for a uv or pipx tool, reinstall the tool with that extra)"), True
+                f"every briefing uses word search alone. Install it there: {install}"), True
     if can is None:
         return f"• the warm model is on here; okl could not tell whether {who} can load it", False
     if warm.stopped():
