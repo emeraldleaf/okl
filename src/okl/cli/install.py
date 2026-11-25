@@ -22,6 +22,7 @@ from ..client import (
     load_config,
     review_setting,
     save_config,
+    warm_gap,
 )
 from .on_edit import HOOK_TIMEOUT, quick_hint
 from .on_edit import KEY as ON_EDIT_KEY
@@ -825,6 +826,12 @@ def cmd_init(args: argparse.Namespace) -> int:
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
+    # The okl just pinned is the one the hooks run. Where the repo turned the warm model on and
+    # that okl cannot load it, every briefing loses it silently: re-running init is how okl's
+    # own repo came to brief without it for six days (#522).
+    warm_line, _ = warm_gap(cfg, os.environ.get("OKL_WARM"))
+    if warm_line:
+        print(warm_line)
     _wire_claude_code(args)
     _say_review_after_writing(cfg)
     _say_stop_hook_sees_worktrees()

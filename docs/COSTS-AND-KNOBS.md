@@ -59,7 +59,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   It applies to a local store's calibrated and tiered checks,
   not to a shared service or `--decision floor`. When the model does not answer, the briefing is
   the usual one; `--format json` says why in `warm_unavailable`
-  ([REPORT §4z](../evals/REPORT.md)).
+  ([REPORT §4z](../evals/REPORT.md)). In Claude Code the status line under the prompt says so too. Where
+  `"warm": true` turns it on and the okl your hooks run lacks the extra, `okl doctor` exits 1 and
+  names that okl, and `okl init` says it as it pins one: left unsaid, every briefing there used
+  word search alone.
 - **The Claude Code prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see

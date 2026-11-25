@@ -23,6 +23,8 @@ import importlib
 import importlib.util
 import json
 import os
+import re
+import shutil
 import socket
 import struct
 import subprocess
@@ -373,6 +375,48 @@ def _handle(conn: socket.socket, encode: Encoder, state: dict[str, Any]) -> str 
 def installed() -> bool:
     """Whether this environment can load the model at all (the warm extra is installed)."""
     return importlib.util.find_spec("fastembed") is not None
+
+
+def _interpreter_of(okl_bin: str) -> str | None:
+    """The Python an okl command runs under: the one named before ` -m okl`, or the one its
+    script's first line names. pip and uv write that line; where the path is too long for a
+    kernel's `#!` or holds a space, pip writes `#!/bin/sh` and the interpreter on the next line."""
+    if okl_bin.endswith(" -m okl"):
+        return okl_bin[: -len(" -m okl")].strip() or None
+    try:
+        with Path(okl_bin).open("rb") as f:
+            head = f.read(1024).decode("utf-8", "replace").splitlines()
+    except OSError:
+        return None
+    if not head or not head[0].startswith("#!"):
+        return None
+    words = head[0][2:].split()
+    if words and Path(words[0]).name == "sh" and len(head) > 1:
+        quoted = re.search(r'exec\'? +"([^"]+)"', head[1])
+        return quoted.group(1) if quoted else None
+    if words and Path(words[0]).name == "env":
+        return shutil.which(words[-1]) if len(words) > 1 else None
+    return words[0] if words else None
+
+
+def installed_for(okl_bin: str) -> bool | None:
+    """Whether the okl a repo's hooks run (the `okl_bin` its config pins) can load the model,
+    or None when that cannot be told.
+
+    `installed()` answers for the okl that is running, which is not always the one that briefs:
+    on okl's own repo the config pinned a released okl installed without the warm extra, while a
+    development okl with it ran the commands, and every briefing fell back to word search for six
+    days with nothing saying so but the end of a status line (#522). It asks that okl's own
+    interpreter, since an older release has no command to ask."""
+    interpreter = _interpreter_of(okl_bin)
+    if not interpreter:
+        return None
+    probe = "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('fastembed') else 3)"
+    try:
+        done = subprocess.run([interpreter, "-c", probe], capture_output=True, timeout=COMMAND_TIMEOUT_S, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {0: True, 3: False}.get(done.returncode)
 
 
 def log_path() -> Path:

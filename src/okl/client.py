@@ -315,6 +315,33 @@ def _revive_warm(note: str) -> str:
                       "or run `okl warm start --wait 60`"}[state]
 
 
+def warm_gap(config: dict[str, Any], env: str | None) -> tuple[str, bool]:
+    """What `okl doctor` and `okl init` say about the warm model here, and whether it is a fault.
+
+    A fault is a repo that turned the model on (`"warm": true`, or OKL_WARM) while the okl its
+    hooks run cannot load it: the briefing the repo asked for is not the one it gets (#522, the
+    pack lesson measured_default_not_running). Left to its default the model is used only where
+    it can load, so nothing is said. An empty line means there is nothing to say."""
+    try:
+        wanted = warm_setting(env, config.get("warm"))
+    except ValueError as e:
+        return f"! {e}: `\"warm\"` in .okl/config.json, or OKL_WARM", True
+    if wanted is not True:
+        return "", False
+    pinned = config.get("okl_bin") if isinstance(config.get("okl_bin"), str) else ""
+    can = warm.installed_for(pinned) if pinned else warm.installed()
+    who = f"the okl this repo's hooks run ({pinned})" if pinned else "this okl"
+    if can is False:
+        return (f"! the warm model is on here and {who} cannot load it: its environment lacks the warm extra, so "
+                f"every briefing uses word search alone. Install it there: pip install '{warm.EXTRA}' "
+                "(for a uv or pipx tool, reinstall the tool with that extra)"), True
+    if can is None:
+        return f"• the warm model is on here; okl could not tell whether {who} can load it", False
+    if warm.stopped():
+        return "• the warm model is on here and stopped with `okl warm stop`; `okl warm start` resumes it", False
+    return "", False
+
+
 def decision_setting(env: str | None, configured: Any) -> str:
     """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
     over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in

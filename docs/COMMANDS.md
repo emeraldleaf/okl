@@ -119,7 +119,9 @@ okl doctor           # names other agent-memory tools installed beside okl (clau
                      #   `init --owner`, asks GitHub (through gh) whether the owner's
                      #   approval is enforced; and which org lessons this
                      #   repo's interests keep out of every briefing, with the default
-                     #   subjects the list lacks. Writes nothing.
+                     #   subjects the list lacks; and, where the repo turned the warm model
+                     #   on, whether the okl its hooks run can load it (exit 1 when it
+                     #   cannot: every briefing there uses word search alone). Writes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal.
                      #   Code lines are those of the .py, .cs, .ts, .tsx, .js, .jsx, .go, .rs,

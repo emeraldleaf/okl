@@ -4,22 +4,23 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..client import Client, OKLUnreachableError, _find_config, project_root, store_url
+from ..client import Client, OKLUnreachableError, _find_config, project_root, store_url, warm_gap
 from .common import _print_json
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
     """Report agent-memory tools installed beside okl and how they collide (#40).
 
-    Exit 1 when any is found, or when okl itself is wired twice (its plugin enabled AND
+    Exit 1 when any is found, when okl itself is wired twice (its plugin enabled AND
     its hooks registered in the project or user settings, so every prompt is briefed
-    twice) -- findings,
-    per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
+    twice), or when the repo turned the warm model on and the okl its hooks run cannot
+    load it (#522) -- findings, per the CLI contract -- and 0 when none is. It reads settings files, asks git where
     its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
     the owner's approval is enforced (a few reads; informational, not a finding). Where a
     store exists it reads its lessons, to say which the interests keep out of briefings
@@ -51,9 +52,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     owners = _owner_state(root, recorded if isinstance(recorded, dict) else {})
     if owners:
         print(owners)
+    warm_line, warm_fault = warm_gap(recorded if isinstance(recorded, dict) else {}, os.environ.get("OKL_WARM"))
+    if warm_line:
+        print(f"\n{warm_line}" if warm_fault else warm_line)
     for line in _interest_lines(Client()):
         print(line)
-    return 1 if (found or twice) else 0
+    return 1 if (found or twice or warm_fault) else 0
 
 
 def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) -> list[str]:
