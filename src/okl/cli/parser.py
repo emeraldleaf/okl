@@ -5,6 +5,7 @@ import argparse
 import math
 
 from .. import __version__, core, decide, semantic
+from ..store import COVERS
 from .changes import cmd_changes
 from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
@@ -356,6 +357,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pvf.add_argument("--expect", help="substring that must appear in the output — a positive success "
                      "signal, so exit 0 alone can't self-certify (the exit-0-zero-files lesson)")
     pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")
+    pvf.add_argument("--covers", choices=COVERS,
+                     help="what this check covers, as you claim it: new-code when it reads every file the rule "
+                          "could apply to, ones not yet written included (a lint rule, a contract, a sweep); "
+                          "instance when it tests the code as it stands. okl cannot tell which, so it records "
+                          "your claim; without it an earlier claim for this command stands")
     pvf.set_defaults(func=cmd_verify)
 
     prv = sub.add_parser("reverify", help="re-run the stored check of every drifted lesson, and of any last checked on another branch, and re-stamp the passes")

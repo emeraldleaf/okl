@@ -359,3 +359,252 @@ def test_the_retry_without_a_time_reads_what_was_refused_not_the_words(detail, r
         with pytest.raises(OKLRejectedError):
             Client._post_check_run(me, run, 0.4)
     assert ["seconds" in b for b in sent] == ([True, False] if retried else [True])
+
+
+# --- what a check is claimed to cover (#524) -------------------------------------------------------
+# A check that passed says the rule was true of the code that existed. Of 28 lessons that real
+# changes broke, 20 had such a check (REPORT §4bm). `okl verify --covers new-code` records the
+# claim that a check reads every file the rule applies to, ones not yet written included, and the
+# briefing, `okl show` and `okl metric` then tell that lesson from one checked once.
+
+
+def _cover(node_id: str = "les") -> str | None:
+    return Client().get(node_id)["covers"]
+
+
+def test_a_claim_is_kept_with_the_run_and_belongs_to_the_lesson_and_its_command(repo, capsys):
+    """`--covers new-code` is recorded on the passing run. A later run of the same command that
+    says nothing keeps it, as `okl reverify` and an older okl do; `--covers instance` takes it
+    back; a different command is a different check and starts with no claim; and a run that
+    failed claims nothing."""
+    assert _cover() is None
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+    assert _cover() == "new-code" and _checks()[-1].covers == "new-code"
+    assert main(["verify", "les", "--run", "true"]) == 0
+    assert _cover() == "new-code" and _checks()[-1].covers is None, "a run with no claim changes none"
+    assert main(["verify", "les", "--run", "exit 3", "--covers", "new-code"]) == 1
+    assert _checks()[-1].covers is None, "a failed run claims nothing"
+    assert main(["verify", "les", "--run", "true", "--covers", "instance"]) == 0
+    assert _cover() == "instance"
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+    assert main(["verify", "les", "--run", "true && true"]) == 0
+    assert _cover() is None, "another command is another check"
+    capsys.readouterr()
+    with pytest.raises(SystemExit):
+        main(["verify", "les", "--run", "true", "--covers", "everything"])
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_log_check_refuses_a_claim_it_does_not_know(tmp_path):
+    """The store's own entry refuses a word that is no claim, so a service's caller cannot write one."""
+    s = Store(f"sqlite:///{tmp_path / 'c.db'}")
+    core.record(s, id="x", type="Rule", title="t", scope="org")
+    with pytest.raises(ValueError, match="covers must be one of new-code, instance"):
+        core.log_check(s, "x", passed=True, command="true", outcome="exit 0", covers="all")
+    assert s.coverage_claims() == {}
+    s.close()
+
+
+def test_show_says_which_of_three_things_a_lessons_proof_is(repo, capsys):
+    """`okl show` tells a lesson with no check, one checked on the code as it stood, and one whose
+    check is claimed to cover new code apart, and says how to make the claim."""
+    main(["show", "les"])
+    assert "not proven yet" in capsys.readouterr().out
+    assert main(["verify", "les", "--run", "true"]) == 0
+    capsys.readouterr()
+    main(["show", "les"])
+    once = capsys.readouterr().out
+    assert "its check covers the code as it stood" in once and "--covers new-code" in once
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+    capsys.readouterr()
+    main(["show", "les"])
+    held = capsys.readouterr().out
+    assert "its check is claimed to cover new code" in held and "as it stood" not in held
+
+
+def test_the_briefing_marks_the_three_kinds_apart(repo, capsys):
+    """In the briefing a lesson with no check is UNCHECKED, one whose check is claimed to cover
+    new code says so, and one checked once carries no mark; each mark is explained once below, in
+    the full briefing and in the compact one."""
+    c = Client()
+    c.record(id="held", type="Rule", title="refunds are held to the ledger", scope="repo", fix="post through the ledger")
+    c.record(id="never", type="Rule", title="refunds never skip the audit", scope="repo", fix="write the audit row")
+    assert main(["verify", "les", "--run", "true"]) == 0
+    assert main(["verify", "held", "--run", "true", "--covers", "new-code"]) == 0
+    capsys.readouterr()
+    main(["check", "--task", "refunds post after the charge, held to the ledger, never skip the audit"])
+    out = capsys.readouterr().out
+    lines = {key: next(line for line in out.splitlines() if f"[{key}]" in line) for key in ("les", "held", "never")}
+    assert "*(COVERS NEW CODE)*" in lines["held"] and "UNCHECKED" not in lines["held"]
+    assert "*(UNCHECKED)*" in lines["never"]
+    assert "COVERS" not in lines["les"] and "UNCHECKED" not in lines["les"]
+    assert "1 lesson(s) marked COVERS NEW CODE" in out and "1 lesson(s) marked UNCHECKED" in out
+    main(["check", "--task", "refunds post after the charge, held to the ledger, never skip the audit", "--format", "actions"])
+    compact = capsys.readouterr().out
+    assert "COVERS NEW CODE: that lesson's check is said to read every file" in compact, compact
+
+
+def test_metric_counts_how_each_lesson_is_held(repo, capsys):
+    """`okl metric` counts the lessons in scope once each, under the strongest thing true of it:
+    a check claimed to cover new code, a check with files drift watches, a check that passed once,
+    or none."""
+    c = Client()
+    c.record(id="held", type="Rule", title="a", scope="repo")
+    c.record(id="watched", type="Rule", title="b", scope="repo", files="app.py")
+    c.record(id="never", type="Rule", title="c", scope="repo")
+    for args in (["les"], ["held", "--covers", "new-code"], ["watched"]):
+        assert main(["verify", args[0], "--run", "true", *args[1:]]) == 0
+    assert Client().hygiene_report()["proof"] == {
+        "lessons": 4, "covers_new_code": 1, "watched": 1, "checked_once": 1, "unchecked": 1}
+    capsys.readouterr()
+    assert main(["metric"]) == 0
+    assert ("proof: of 4 lessons in scope here, 1 have a check claimed to cover new code, 1 are watched"
+            in capsys.readouterr().out)
+
+
+def test_the_command_a_claim_is_kept_under_is_the_one_reverify_reads():
+    """The claim is looked up by the command in the lesson's evidence, and `okl reverify` runs the
+    command it reads there: both must read the command that was stored. Each expected command is
+    written out here. The first version took it from the other reader, and once both called one
+    parser the test compared a function with itself (found by the review at a push on #528)."""
+    from okl.cli.verification import _stored_check
+    from okl.store import stored_command
+    for evidence, command in (
+            ("`pytest -q` exit 0 @ 2026-11-25T10:00Z", "pytest -q"),
+            ("`pytest -q -k 'a or b'` exit 0, matched 'passed' on commit abc1234 @ 2026-11-25T10:00Z", "pytest -q -k 'a or b'"),
+            ("`echo '` exit 0' && true` exit 0 on commit abc1234 @ 2026-11-25T10:00Z", "echo '` exit 0' && true"),
+            ("imported with no evidence", None), ("", None), (None, None)):
+        assert stored_command(evidence) == command, evidence
+        parsed = _stored_check(evidence)
+        assert (parsed[0] if parsed else None) == command, evidence
+    # Evidence that does not end the way verify writes it: read as it always was. Text after the
+    # run that is no signal leaves the command; a signal that is not a quoted string names no check.
+    assert _stored_check("`pytest -q` exit 0, as recorded by hand") == ("pytest -q", None)
+    assert _stored_check("`pytest -q` exit 0, matched 'pas @ 2026-11-25T10:00Z") is None
+    assert _stored_check("`pytest -q` exit 0, matched 5 @ 2026-11-25T10:00Z") is None
+
+
+@pytest.mark.parametrize(("run", "expect"), [
+    ("pytest -q", None), ("pytest -q", "passed"),
+    ("echo '` exit 0' && true", None),                    # the characters that end a run, in the command
+    ("echo ok", "` exit 0"),                              # and in the signal: the second time in the evidence
+    ("echo '` exit 0' && true", "` exit 0, matched 'x"),  # in both, with the words that follow a run
+    ("true", "ok on commit abc1234"), ("true", "a @ 2026-11-25T10:00Z"),
+])
+@pytest.mark.parametrize("commit", [" on commit abc1234def0", ""])
+def test_the_command_is_read_back_whole_whatever_the_signal_holds(run, expect, commit):
+    """`okl verify` writes the command, the signal and the stamp into one line, and both may hold
+    any text. Reading the command back from the last "` exit 0" in the line cut it short when the
+    signal held those characters: `okl reverify` then listed a command nobody stored, and the
+    claim kept under the real one was not found."""
+    from okl.store import stored_check
+    evidence = f"`{run}` exit 0" + (f", matched {expect!r}" if expect else "") + f"{commit} @ 2026-11-25T10:00Z"
+    assert stored_check(evidence) == (run, expect), evidence
+
+
+def test_a_claim_is_found_when_the_signal_holds_the_text_that_ends_a_run(repo):
+    """The whole path, with a real run: a check whose output and --expect hold "` exit 0" keeps
+    its claim, and reverify reads back the command that was run."""
+    from okl.cli.verification import _stored_check
+    run, expect = "echo 'the run printed ` exit 0 here'", "` exit 0"
+    assert main(["verify", "les", "--run", run, "--expect", expect, "--covers", "new-code"]) == 0
+    assert _stored_check(Client().get("les")["verified_by"]) == (run, expect)
+    assert _cover() == "new-code"
+
+
+def test_a_store_from_before_claims_gains_the_column_on_open(tmp_path):
+    """A check log written before #524 has no `covers` column: opening the store adds it, its
+    rows claim nothing, a new run keeps its claim, and opening it again changes nothing."""
+    db = tmp_path / "old.db"
+    c = sqlite3.connect(db)
+    c.execute("""CREATE TABLE check_run(
+        at INTEGER NOT NULL, node_id TEXT NOT NULL, passed INTEGER NOT NULL,
+        command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT, seconds REAL)""")
+    c.execute("INSERT INTO check_run VALUES(1, 'x', 1, 'pytest -q', 'exit 0', 'passed', NULL, NULL)")
+    c.commit(); c.close()
+
+    s = Store(f"sqlite:///{db}")
+    assert s.coverage_claims() == {}
+    s.log_check("x", True, "pytest -q", "exit 0", covers="new-code")
+    s.close()
+    again = Store(f"sqlite:///{db}")
+    with contextlib.closing(sqlite3.connect(db)) as c:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(check_run)")]
+    assert cols.count("covers") == 1, cols
+    assert [r.covers for r in again.checks("x")] == [None, "new-code"]
+    assert again.coverage_claims() == {("x", "pytest -q"): "new-code"}
+    again.close()
+
+
+def test_a_service_keeps_the_claim_and_briefs_with_it(remote, capsys):
+    """Through the client's real remote code the claim reaches the service's store, and the
+    lesson it briefs carries it, so the client's mark has something to read."""
+    core.record(remote.store, id="les", type="Rule", title="refunds post after the charge", scope="org", fix="post it")
+
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+
+    assert remote.store.coverage_claims() == {("les", "true"): "new-code"}
+    assert [b.get("covers") for p, b in remote.sent if p == "/check-run"] == ["new-code"]
+    capsys.readouterr()
+    main(["check", "--task", "refunds post after the charge"])
+    assert "[les] *(COVERS NEW CODE)*" in capsys.readouterr().out
+
+
+def test_a_service_too_old_to_keep_a_claim_is_said_and_the_claim_is_not_dropped(remote, capsys):
+    """A service from before #524 refuses the field. The run is not sent again without the claim,
+    as it is for a run's time: a claim the person made would then vanish with exit 0. okl verify
+    stamps the lesson, says the claim was not recorded, and exits 2. With no claim made, the same
+    service keeps the run as before."""
+    from fastapi import Body, HTTPException
+    core.record(remote.store, id="les", type="Rule", title="t", scope="org")
+    known = {"id", "passed", "command", "outcome", "expect", "commit", "seconds"}
+
+    def older(body: dict = Body(...)) -> dict:  # noqa: B008 - how FastAPI declares a request body
+        extra = sorted(set(body) - known)
+        if extra:   # what pydantic's extra="forbid" answers
+            raise HTTPException(422, detail=[{"type": "extra_forbidden", "loc": ["body", k],
+                                              "msg": "Extra inputs are not permitted"} for k in extra])
+        core.log_check(remote.store, body["id"], passed=body["passed"], command=body["command"],
+                       outcome=body["outcome"], expect=body.get("expect"), commit=body.get("commit"))
+        return {"ok": True}
+    remote.app.router.routes = [r for r in remote.app.router.routes
+                                if getattr(r, "path", "") != "/check-run"]
+    remote.app.post("/check-run")(older)
+
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 2
+    err = capsys.readouterr().err
+    assert "keeps what a check covers" in err and "--covers new-code was NOT recorded" in err, err
+    assert "`okl show les` says" in err and "as it stood" not in err, "what the lesson reads as now is not guessed"
+    assert remote.store.checks("les") == [], "the run is not kept with its claim cut off"
+    assert remote.store.get_node("les").verified_at is not None, "the stamp is recorded all the same"
+    assert main(["verify", "les", "--run", "true"]) == 0
+    assert [r.covers for r in remote.store.checks("les")] == [None]
+
+
+def test_a_claim_whose_answer_was_lost_is_not_said_to_be_missing(repo, monkeypatch, capsys):
+    """A run that was sent and never answered may have been kept, so the claim "may not have been
+    recorded"; one that could not be written "was NOT recorded". Neither says what the lesson reads
+    as now: with an earlier claim on the same command, that claim still stands. Both exit 2."""
+    from okl.client import OKLNoAnswerError
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+    capsys.readouterr()
+
+    real = Client.log_check
+
+    def lost(self, *a, **k):
+        raise OKLNoAnswerError("no answer came back")
+    monkeypatch.setattr(Client, "log_check", lost)
+    assert main(["verify", "les", "--run", "true", "--covers", "instance"]) == 2
+    err = capsys.readouterr().err
+    assert "--covers instance may not have been recorded" in err and "NOT recorded" not in err, err
+    assert "`okl show les` says" in err and "as it stood" not in err, err
+
+    def full(self, *a, **k):
+        raise OSError("database or disk is full")
+    monkeypatch.setattr(Client, "log_check", full)
+    assert main(["verify", "les", "--run", "true", "--covers", "instance"]) == 2
+    assert "--covers instance was NOT recorded" in capsys.readouterr().err
+    monkeypatch.setattr(Client, "log_check", real)
+    assert _cover() == "new-code", "the earlier claim stands, as the message left open"
+    monkeypatch.setattr(Client, "log_check", lost)
+    assert main(["verify", "les", "--run", "true"]) == 0, "with no claim asked for, a run that is not logged is still a pass"

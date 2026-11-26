@@ -28,11 +28,14 @@ from typing import Any
 from . import decide, semantic, warm
 from . import rerank as rerank_stage
 from .store import (
+    COVERS,
+    NOT_ADVICE,
     RETIRED_STATUSES,
     Edge,
     Node,
     Store,
     _now_ms,
+    claimed_cover,
     has_observed_check,
     path_matches,
     split_tags,
@@ -324,6 +327,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     _attach_named(out, store, buckets, also=also if decision == "tiered" else None,
                   near=left_out[:NEAR_MISSES] if near_misses else None,
                   index_scope=(repo_scope, interests) if index else None)
+    _attach_cover(out, store)
     return out
 
 
@@ -367,7 +371,25 @@ def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
     out = _paths_answer(repo, paths, buckets)
     if out["match_count"] == 0:
         out["store_records"] = len(store.all_nodes())
+    _attach_cover(out, store)
     return out
+
+
+def _attach_cover(out: dict[str, Any], store: Store) -> None:
+    """Put on each briefed record what its check is claimed to cover (#524), where a claim was
+    made. A passing check says the rule was true of the code that existed; only a check that
+    reads every file the rule applies to, new ones included, says anything about code written
+    later, and the briefing showed the two alike. The client's proof mark reads this field, as
+    it reads the stamp's: the claim is in the store, and a shared service's client has none."""
+    claims = store.coverage_claims()
+    if not claims:
+        return
+    for value in out.values():
+        for rec in value if isinstance(value, list) else ():
+            if isinstance(rec, dict) and rec.get("id") and "verified_by" in rec:
+                cover = claimed_cover(claims, rec["id"], rec.get("verified_by"))
+                if cover:
+                    rec["covers"] = cover
 
 
 def no_paths_answer(repo: str) -> dict[str, Any]:
@@ -1308,14 +1330,15 @@ def get(store: Store, node_id: str) -> dict[str, Any] | None:
     # Separately: the latest runs can all be passes, and the last failure is the catch.
     failed = [r for r in runs if not r.passed]
     d["last_failed_check"] = asdict(failed[-1]) if failed else None
+    d["covers"] = claimed_cover(store.coverage_claims(), n.id, n.verified_by)
     return d
 
 
 def log_check(store: Store, node_id: str, *, passed: bool, command: str, outcome: str,
               expect: str | None = None, commit: str | None = None,
-              seconds: float | None = None) -> None:
-    """Keep one run of a lesson's check, pass or fail (okl review R3), and how long it took
-    (#467), when the caller timed it.
+              seconds: float | None = None, covers: str | None = None) -> None:
+    """Keep one run of a lesson's check, pass or fail (okl review R3), how long it took (#467)
+    when the caller timed it, and what the check is claimed to cover (#524) when the caller says.
 
     The stamp keeps only the last pass, so a check that caught a regression left no trace,
     and nothing could tell a check that has caught changes from one that never failed.
@@ -1330,13 +1353,15 @@ def log_check(store: Store, node_id: str, *, passed: bool, command: str, outcome
         raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
     if seconds is not None and (not math.isfinite(seconds) or seconds < 0):
         raise ValueError(f"seconds must be a finite number of at least 0, got {seconds!r}")
+    if covers is not None and covers not in COVERS:
+        raise ValueError(f"covers must be one of {', '.join(COVERS)}, got {covers!r}")
     if store.get_node(node_id) is None:
         raise ValueError(f"no node with id {node_id!r}")
     # The command as it ran, unstripped, so it matches the one in the lesson's evidence;
     # an empty expected signal is no signal.
     store.log_check(node_id, bool(passed), command, outcome.strip() or "unknown",
                     expect=expect or None, commit=commit,
-                    seconds=None if seconds is None else float(seconds))
+                    seconds=None if seconds is None else float(seconds), covers=covers)
 
 
 _RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}
@@ -1554,10 +1579,14 @@ def _actions_text(result: dict[str, Any], limit: int | None) -> str:
 def _unchecked_note(lines: list[str]) -> list[str]:
     """`lines`, and what the UNCHECKED mark means when one of them carries it: the compact path
     prints no footer, and a mark with no meaning tells the agent nothing (review of #316)."""
-    if not any("*(UNCHECKED)*" in line for line in lines):
-        return lines
-    return [*lines, "UNCHECKED: no observed check backs that lesson. Treat it as advice, and confirm "
-                    "it against the code before relying on it."]
+    notes = []
+    if any("*(UNCHECKED)*" in line for line in lines):
+        notes.append("UNCHECKED: no observed check backs that lesson. Treat it as advice, and confirm "
+                     "it against the code before relying on it.")
+    if any("*(COVERS NEW CODE)*" in line for line in lines):
+        notes.append("COVERS NEW CODE: that lesson's check is said to read every file the rule applies to, "
+                     "ones you add included. Break it and that check should fail.")
+    return [*lines, *notes]
 
 
 def _also_line(e: dict[str, Any]) -> str:
@@ -1876,6 +1905,10 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("unchecked"):
         lines.append(f"> {result['unchecked']} lesson(s) marked UNCHECKED have no observed check behind "
                      "them: treat them as advice, and confirm them against the code before relying on them.")
+    if result.get("covers_new_code"):
+        lines.append(f"> {result['covers_new_code']} lesson(s) marked COVERS NEW CODE have a check said to read "
+                     "every file the rule applies to, ones you add included: break one and that check should "
+                     "fail. A lesson with no mark was checked on the code as it stood, not on yours.")
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
@@ -2114,9 +2147,11 @@ def _drift_tag(item: dict) -> str:
 
 
 def _proof_tag(item: dict) -> str:
-    """The mark for a lesson no observed check backs and drift has no verdict on (#222); the
-    briefing's footer says once what it means, so each mark stays one word."""
-    return " *(UNCHECKED)*" if item.get("proof") == "unchecked" else ""
+    """The mark for a lesson no observed check backs and drift has no verdict on (#222), or for
+    one whose check is claimed to cover code not yet written (#524); the briefing's footer says
+    once what each means, so the marks stay short. A lesson with neither has a check that passed
+    on the code as it stood."""
+    return {"unchecked": " *(UNCHECKED)*", "new-code": " *(COVERS NEW CODE)*"}.get(item.get("proof") or "", "")
 
 
 def _id_tag(item: dict) -> str:
@@ -2352,7 +2387,37 @@ def hygiene_report(store: Store, repo: str, top: int = 10) -> dict[str, Any]:
             "lessons": [{"id": n.id, "title": n.title, "signals": sig}
                         for n, sig in sorted(trace, key=lambda x: x[0].id)[:top]],
         },
+        "proof": proof_kinds(store, repo, nodes),
     }
+
+
+def proof_kinds(store: Store, repo: str, nodes: list[Node]) -> dict[str, int]:
+    """How many of the lessons in scope for `repo` are held, and how (#524). Each lesson counts
+    once, under the strongest thing that is true of it:
+
+    - covers_new_code: a passing check claimed to read every file the rule applies to, ones not
+      yet written included;
+    - watched: a passing check and files, so drift asks for the check again when they change;
+    - checked_once: a passing check on the code as it stood, and nothing that looks again;
+    - unchecked: no observed check.
+
+    Counted because the briefing showed the first three alike, and of 28 lessons real changes
+    broke, 20 had a passing check (REPORT §4bm): the check was of the code that existed."""
+    claims = store.coverage_claims()
+    # Advice only: a retraction, a retired identifier and a tag declaration are not rules to hold.
+    mine = [n for n in nodes if n.scope in ("org", f"repo:{repo}") and n.status not in RETIRED_STATUSES
+            and n.type not in NOT_ADVICE]
+    kinds = {"lessons": len(mine), "covers_new_code": 0, "watched": 0, "checked_once": 0, "unchecked": 0}
+    for n in mine:
+        if not _proven(n):
+            kinds["unchecked"] += 1
+        elif claimed_cover(claims, n.id, n.verified_by) == "new-code":
+            kinds["covers_new_code"] += 1
+        elif (n.files or "").strip():
+            kinds["watched"] += 1
+        else:
+            kinds["checked_once"] += 1
+    return kinds
 
 
 def _proven(n: Node) -> bool:

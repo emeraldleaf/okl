@@ -86,6 +86,18 @@
   okl tools from the launcher. The five hooks now ask for the plain value and make it absolute
   themselves. `okl init` (or `okl init --force` over an edited hook) installs the fixed scripts.
   The main checkout was never affected (#510).
+- **A lesson's proof now says whether its check covers code that does not exist yet.** A check
+  that passed says the rule was true of the code then. On 43 real changes that each broke a
+  lesson, 20 of the 28 lessons broken had a passing check, and the briefing showed them like any
+  other proven lesson (REPORT §4bm). `okl verify <id> --run … --covers new-code` records your
+  claim that the check reads every file the rule applies to, new ones included (a lint rule, a
+  contract, a test that sweeps every file). The briefing marks that lesson *COVERS NEW CODE*
+  and leaves one checked once unmarked; `okl show` says which a lesson is; and `okl metric`
+  counts the lessons in scope by kind: claimed to cover new code, watched by drift, checked
+  once, or with no check. The claim is kept with the run in the check log, so `okl reverify`
+  and an older okl keep it, a different check command starts with none, and `--covers instance`
+  takes it back. "Verified" still means a check you chose ran and passed, and a check of one
+  instance still clears *UNCHECKED*. okl cannot prove the claim (#524).
 - **`okl doctor` says when the warm model is on and the okl your hooks run cannot load it.** A
   repo can set `"warm": true` while the okl its config pins for the hooks was installed without
   the `warm` extra. Every briefing then used word search alone, and the only sign was the end of

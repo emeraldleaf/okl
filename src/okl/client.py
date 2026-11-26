@@ -723,12 +723,15 @@ class Client:
 
     def log_check(self, node_id: str, *, passed: bool, command: str, outcome: str,
                   expect: str | None = None, commit: str | None = None,
-                  seconds: float | None = None) -> None:
-        """Keep one run of a lesson's check, pass or fail, and how long it took (core.log_check).
-        Raises ValueError for a run it refuses, or for a service too old to keep them."""
+                  seconds: float | None = None, covers: str | None = None) -> None:
+        """Keep one run of a lesson's check, pass or fail, how long it took, and what the check
+        is claimed to cover (core.log_check). Raises ValueError for a run it refuses, or for a
+        service too old to keep them, or too old to keep the claim."""
         if self.mode == "remote":
             run = {"id": node_id, "passed": passed, "command": command, "outcome": outcome,
                    "expect": expect, "commit": commit}
+            if covers is not None:
+                run["covers"] = covers   # sent only when claimed, so an older service is not sent a field it refuses
             try:
                 self._post_check_run(run, seconds)
             except OKLRejectedError as e:
@@ -738,7 +741,7 @@ class Client:
                 raise
             return
         core.log_check(self._local_store(), node_id, passed=passed, command=command,
-                       outcome=outcome, expect=expect, commit=commit, seconds=seconds)
+                       outcome=outcome, expect=expect, commit=commit, seconds=seconds, covers=covers)
 
     def _post_check_run(self, run: dict[str, Any], seconds: float | None) -> None:
         """POST /check-run with the run's time, and once more without it when a service from
@@ -747,13 +750,15 @@ class Client:
         untimed is kept as one never timed, which --quick never approves. Any other refusal
         stands. Which field was refused is read from the 422's structured detail, never its
         message: a reworded or translated message must not turn a kept run into a lost one."""
-        if seconds is None:
-            self._post("/check-run", run)
-            return
         try:
-            self._post("/check-run", {**run, "seconds": seconds})
+            self._post("/check-run", run if seconds is None else {**run, "seconds": seconds})
         except OKLRejectedError as e:
-            if e.status != 422 or not _refuses_field(e.detail, "seconds"):
+            # A claim the person made is never dropped to get the run kept: a service from before
+            # #524 refuses the field, and the run then reaches it with no claim only if they ask
+            # again without one.
+            if e.status == 422 and _refuses_field(e.detail, "covers"):
+                raise OKLRejectedError(_TOO_OLD.format(what="keeps what a check covers"), status=422) from e
+            if seconds is None or e.status != 422 or not _refuses_field(e.detail, "seconds"):
                 raise
             self._post("/check-run", run)
 

@@ -246,7 +246,7 @@ footer b { color: var(--text); font-weight: 600; }
       <article class="panel runs" style="flex: none">
         <div class="ph"><span class="num">4</span><h3>Briefed before each task</h3><svg class="ic"><use href="#i-bot"/></svg></div>
         <p class="who">okl runs it, in Claude Code</p>
-        <p class="lede">okl shows up to five lessons that share enough of the task's subject, lists the rest that matched in a line each, and puts them in the agent's context first. A lesson no check backs is marked UNCHECKED, as advice rather than proof.</p>
+        <p class="lede">okl shows up to five lessons that share enough of the task's subject, lists the rest that matched in a line each, and puts them in the agent's context first. A lesson no check backs is marked UNCHECKED, as advice rather than proof; one whose check covers new code is marked so.</p>
         <p class="mech"><span class="cc">Claude Code</span> A hook runs on every prompt, and another briefs each file the agent reads that a lesson covers; if okl can't brief, the prompt is blocked or told so. When the agent stops after changing files, another asks for the review after writing: the lessons the change is most likely to break, each checked in a fresh context. Other MCP agents can call <code>okl_check</code>; nothing calls it for them.</p>
       </article>
     </div>
@@ -262,7 +262,7 @@ footer b { color: var(--text); font-weight: 600; }
         <div class="ph"><span class="num">3</span><h3>Proven by your check</h3><svg class="ic"><use href="#i-stamp"/></svg></div>
         <p class="who">okl runs it</p>
         <p class="lede">okl runs the check you chose and stamps the lesson only when it passes, keeping the command, the commit and the time.</p>
-        <p class="mech">A pass is exit 0, plus the text you expect if you name one. For a lesson that covers files, a stamp with no observed run counts as unproven. Every run is logged, pass or fail. In Claude Code, the checks you approve also run after each edit.</p>
+        <p class="mech">A pass is exit 0, plus the text you expect if you name one. For a lesson that covers files, a stamp with no observed run counts as unproven. Every run is logged, pass or fail. A pass speaks for the code as it stood; <code>--covers new-code</code> records that a check reads code not yet written too. In Claude Code, the checks you approve also run after each edit.</p>
       </article>
     </div>
   </section>

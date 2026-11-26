@@ -26,7 +26,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .store import RETIRED_STATUSES, Node, _utc_day, has_observed_check, path_matches, stamp_problem
+from .store import (
+    NOT_ADVICE,
+    RETIRED_STATUSES,
+    Node,
+    _utc_day,
+    has_observed_check,
+    path_matches,
+    stamp_problem,
+)
 
 
 @dataclass
@@ -321,14 +329,15 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
 # lessons without briefing them; none of them is marked.
 _BRIEFED = ("armed_gates", "relevant_defects", "rules", "decisions", "threat_prior_art", "context",
             "also_matched", "standing")
-# Records that are never advice: a withdrawn claim, a retired identifier, a tag declaration. The
-# second tier lists them beside advice, so each entry is tested (review of #316).
-_NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})
+# Records that are never advice (store.NOT_ADVICE). The second tier lists them beside advice, so
+# each entry is tested (review of #316). The name review.py and a replay script import.
+_NOT_ADVICE = NOT_ADVICE
 
 
 def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | None:
     """"unchecked" for a briefed lesson that no observed check backs and drift has no verdict
-    on, or None (#222).
+    on (#222), "new-code" for one whose passing check is claimed to cover code not yet written
+    (#524), or None.
 
     Drift marks only lessons whose governed files are in this checkout, so a lesson with no
     files, or with files elsewhere, was briefed exactly like a proven one whether or not a check
@@ -338,7 +347,11 @@ def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | 
     sends no proof fields: not knowing is not unchecked (review of #316)."""
     if not proof_eligible(rec, verdict):
         return None
-    return None if has_observed_check(rec) else "unchecked"
+    if not has_observed_check(rec):
+        return "unchecked"
+    # A check that passed, and is claimed to read code not yet written (#524): the one kind of
+    # proof that says anything about the change the agent is about to make.
+    return "new-code" if rec.get("covers") == "new-code" else None
 
 
 def proof_eligible(rec: dict[str, Any], verdict: dict[str, Any] | None) -> bool:
@@ -390,9 +403,12 @@ def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") ->
     marked = sum(1 for v in verdicts.values() if v)
     if marked:
         result["drifted"] = marked
-    unchecked = sum(1 for p in proofs.values() if p)
+    unchecked = sum(1 for p in proofs.values() if p == "unchecked")
     if unchecked:
         result["unchecked"] = unchecked
+    held = sum(1 for p in proofs.values() if p == "new-code")
+    if held:
+        result["covers_new_code"] = held
     return marked
 
 

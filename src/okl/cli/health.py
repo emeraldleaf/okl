@@ -232,6 +232,12 @@ def _print_hygiene(report: dict | None) -> None:
           "repository's world in their title, symptom or fix")
     for r in os_["lessons"]:
         print(f"  [{r['id']}] {r['title']} — {'; '.join(r['signals'])}")
+    kinds = report.get("proof")   # a service from before the count sends none, and then nothing is said
+    if kinds and kinds["lessons"]:
+        print(f"proof: of {kinds['lessons']} lessons in scope here, {kinds['covers_new_code']} have a check claimed "
+              f"to cover new code, {kinds['watched']} are watched (a check drift asks for again when their files "
+              f"change), {kinds['checked_once']} were checked once on the code as it stood, and "
+              f"{kinds['unchecked']} have no check")
     ts = report["trace_shaped"]
     if ts["flagged"]:
         print(f"trace-shaped: {ts['flagged']} of {ts['org_lessons']} org lessons read as a pasted "
