@@ -42,6 +42,14 @@ VALID_STATUS = {
 # defect keeps briefing against its return.
 RETIRED_STATUSES = frozenset({"retracted", "obsolete", "superseded"})
 
+# Records that are never advice: a withdrawn claim, a retired identifier, a tag declaration. Kept
+# here, below drift and core, because both ask it and neither may import the other: drift for
+# the UNCHECKED mark, core for the count of how lessons are held (#524).
+NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})
+
+
+# What a check can be claimed to cover (CheckRun.covers, #524).
+COVERS = ("new-code", "instance")
 
 # The evidence stamp `okl verify` writes at the end of verified_by, and the predicate the drift
 # gate, the briefing and the hygiene report share. Here, below drift and core, so both read one
@@ -141,6 +149,23 @@ def path_matches(glob: str, path: str) -> bool:
     if "glob" in magic:
         return bool(_glob_regex(g).match(path))
     return fnmatch.fnmatchcase(path, g)
+
+
+def stored_command(verified_by: str | None) -> str | None:
+    """The command `okl verify` recorded in a lesson's evidence, or None where it names none
+    (never verified, or stamped by an import that carried no evidence)."""
+    if not verified_by or not verified_by.startswith("`"):
+        return None
+    end = verified_by.rfind("` exit 0")
+    return verified_by[1:end] if end > 0 else None
+
+
+def claimed_cover(claims: Mapping[tuple[str, str], str], node_id: str, verified_by: str | None) -> str | None:
+    """What the check behind a lesson's stamp is claimed to cover, or None for no claim. The
+    claim belongs to the lesson and the command that verified it: a different command is a
+    different check, and has to be claimed for anew."""
+    command = stored_command(verified_by)
+    return claims.get((node_id, command)) if command else None
 
 
 def has_observed_check(rule: Mapping[str, Any]) -> bool:
@@ -364,6 +389,12 @@ class CheckRun:
     # How long the run took, in seconds (#467): what `okl on-edit add --quick` chooses by. None
     # for a run logged before okl timed them, or by a client that did not.
     seconds: float | None = None
+    # What the person who ran it says the check covers (#524): "new-code" when it reads every
+    # file the rule could apply to, ones not yet written included (a lint rule, a contract, a
+    # sweep), "instance" when it tests the code that existed. None is no claim. It is a claim:
+    # okl cannot tell the two apart. Kept on the run, not on the lesson's row, for the reason
+    # this table exists: an older okl rewrites that row whole and would blank it.
+    covers: str | None = None
 
 
 @dataclass(frozen=True)
@@ -530,11 +561,17 @@ class Store:
     # -- check runs (okl review R3) ---------------------------------------------
     def log_check(self, node_id: str, passed: bool, command: str, outcome: str, *,
                   expect: str | None = None, commit: str | None = None,
-                  seconds: float | None = None) -> None:
+                  seconds: float | None = None, covers: str | None = None) -> None:
         """Append one run of a lesson's check. Append-only: each run is a row."""
         self._impl.log_check(CheckRun(at=_now_ms(), node_id=node_id, passed=passed,
                                       command=command, outcome=outcome, expect=expect,
-                                      commit=commit, seconds=seconds))
+                                      commit=commit, seconds=seconds, covers=covers))
+
+    def coverage_claims(self) -> dict[tuple[str, str], str]:
+        """What each lesson's check is claimed to cover, by lesson and command: the latest claim
+        made on a passing run of that command. A run that makes no claim changes nothing, so a
+        re-run by `okl reverify`, or by an okl from before the claim existed, keeps it."""
+        return self._impl.coverage_claims()
 
     def checks(self, node_id: str) -> list[CheckRun]:
         """Every check run logged for `node_id`, oldest first."""
@@ -690,6 +727,7 @@ class _Backend(Protocol):
     def log_retirement(self, retirement: Retirement) -> None: ...
     def retirements(self, node_id: str) -> list[Retirement]: ...
     def log_check(self, run: CheckRun) -> None: ...
+    def coverage_claims(self) -> dict[tuple[str, str], str]: ...
     def checks(self, node_id: str) -> list[CheckRun]: ...
     def log_review(self, run: ReviewRun) -> None: ...
     def reviews(self, repo: str | None) -> list[ReviewRun]: ...
@@ -739,7 +777,7 @@ def _row_to_check(r: dict) -> CheckRun:
     """A check_run row as a CheckRun; SQLite stores the flag as 0/1, Postgres as a boolean."""
     return CheckRun(at=r["at"], node_id=r["node_id"], passed=bool(r["passed"]),
                     command=r["command"], outcome=r["outcome"], expect=r["expect"],
-                    commit=r["commit_id"], seconds=r.get("seconds"))
+                    commit=r["commit_id"], seconds=r.get("seconds"), covers=r.get("covers"))
 
 
 def _row_to_review(r: dict) -> ReviewRun:
@@ -859,6 +897,9 @@ class _SQLiteBackend(_Backend):
             seconds REAL)""")
         # How long each run took (#467); a store from before it gains the column, its rows untimed.
         self._add_column("check_run", "seconds", "REAL")
+        # What the check is claimed to cover (#524); a store from before it gains the column, its
+        # rows claiming nothing.
+        self._add_column("check_run", "covers", "TEXT")
         # reverify can run a check hundreds of times; reads are always one lesson's runs.
         c.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
         # What each session's review after writing did (#464): one row per session and repo,
@@ -1133,16 +1174,23 @@ class _SQLiteBackend(_Backend):
         with self._lock:
             self.conn.execute(
                 "INSERT INTO check_run(at, node_id, passed, command, outcome, expect, commit_id, "
-                "seconds) VALUES(?,?,?,?,?,?,?,?)",
+                "seconds, covers) VALUES(?,?,?,?,?,?,?,?,?)",
                 (run.at, run.node_id, int(run.passed), run.command, run.outcome, run.expect,
-                 run.commit, run.seconds))
+                 run.commit, run.seconds, run.covers))
             self.conn.commit()
+
+    def coverage_claims(self) -> dict[tuple[str, str], str]:
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT node_id, command, covers FROM check_run WHERE covers IS NOT NULL AND passed "
+                "ORDER BY at, rowid").fetchall()
+            return {(r["node_id"], r["command"]): r["covers"] for r in rows}
 
     def checks(self, node_id: str) -> list[CheckRun]:
         with self._lock:
             rows = self.conn.execute(
-                "SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds FROM check_run "
-                "WHERE node_id=? ORDER BY at, rowid", (node_id,)).fetchall()
+                "SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds, covers "
+                "FROM check_run WHERE node_id=? ORDER BY at, rowid", (node_id,)).fetchall()
             return [_row_to_check(dict(r)) for r in rows]
 
     def log_review(self, run: ReviewRun) -> None:
@@ -1252,6 +1300,8 @@ class _PostgresBackend(_Backend):
                 expect TEXT, commit_id TEXT, seconds DOUBLE PRECISION)""")
             # How long each run took (#467); a store from before it gains the column.
             cur.execute("ALTER TABLE check_run ADD COLUMN IF NOT EXISTS seconds DOUBLE PRECISION")
+            # What the check is claimed to cover (#524); a store from before it gains the column.
+            cur.execute("ALTER TABLE check_run ADD COLUMN IF NOT EXISTS covers TEXT")
             cur.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
             cur.execute("""CREATE TABLE IF NOT EXISTS review_run(
                 session_id TEXT NOT NULL, repo TEXT NOT NULL, at BIGINT NOT NULL,
@@ -1405,12 +1455,17 @@ class _PostgresBackend(_Backend):
     def log_check(self, run: CheckRun) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO check_run(at, node_id, passed, command, outcome, expect, "
-                        "commit_id, seconds) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
+                        "commit_id, seconds, covers) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                         (run.at, run.node_id, run.passed, run.command, run.outcome, run.expect,
-                         run.commit, run.seconds))
+                         run.commit, run.seconds, run.covers))
+
+    def coverage_claims(self) -> dict[tuple[str, str], str]:
+        rows = self._fetch("SELECT node_id, command, covers FROM check_run "
+                           "WHERE covers IS NOT NULL AND passed ORDER BY at, id", ())
+        return {(r["node_id"], r["command"]): r["covers"] for r in rows}
 
     def checks(self, node_id: str) -> list[CheckRun]:
-        rows = self._fetch("SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds "
+        rows = self._fetch("SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds, covers "
                            "FROM check_run WHERE node_id = %s ORDER BY at, id", (node_id,))
         return [_row_to_check(r) for r in rows]
 

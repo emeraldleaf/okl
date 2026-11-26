@@ -1775,6 +1775,19 @@ def _backend_conformance(store, label):
     assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
     assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
 
+    # ASSERT (11b) — what a check is claimed to cover (#524): kept on the run, read back per lesson and
+    # command as the latest claim made on a passing run; a run that claims nothing changes none, and a
+    # failed run's claim does not count.
+    assert store.coverage_claims() == {}, f"{label}: no claim yet"
+    store.log_check(a, True, "pytest -q", "exit 0", covers="new-code")
+    store.log_check(a, True, "pytest -q", "exit 0")
+    store.log_check(a, False, "pytest -q", "exit 1", covers="instance")
+    store.log_check(b, True, "true", "exit 0", covers="instance")
+    assert store.coverage_claims() == {(a, "pytest -q"): "new-code", (b, "true"): "instance"}, f"{label}: claims"
+    assert [r.covers for r in store.checks(a)][-3:] == ["new-code", None, "instance"], f"{label}: covers reads back"
+    store.log_check(a, True, "pytest -q", "exit 0", covers="instance")
+    assert store.coverage_claims()[(a, "pytest -q")] == "instance", f"{label}: the latest claim stands"
+
     # ASSERT (12) — the review log keeps one row per (session, repo): logging the pair again replaces
     # it, the repo filter is exact, flags read back as bools, a count left out reads back None, and the
     # checks come back as logged (#464).

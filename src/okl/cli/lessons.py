@@ -750,6 +750,12 @@ def _render_lesson(n: dict[str, Any]) -> str:
         evidence = n.get("verified_by") or "(no evidence recorded)"
         stale = " (STALE — past its ttl; re-verify)" if n.get("stale") else ""
         out.append(f"  verified {day(n['verified_at'])}{on}: {evidence}{stale}")
+        # What that proof reaches (#524). A check that passed says the rule was true of the code
+        # then; said or not, only one that reads every file says anything about code written later.
+        out.append("  its check is claimed to cover new code: every file the rule applies to, ones not yet written included"
+                   if n.get("covers") == "new-code" else
+                   "  its check covers the code as it stood: nothing says it reads code written since "
+                   f"(if it does: okl verify {n['id']} --run \"<check>\" --covers new-code)")
     elif n.get("verified_by"):
         out.append(f"  not proven for its current files; its stored check: {n['verified_by']}"
                    " (okl reverify re-runs it)")

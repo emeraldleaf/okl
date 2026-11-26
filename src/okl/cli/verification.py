@@ -194,13 +194,17 @@ def shown(text: str) -> str:
 
 
 def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None,
-               seconds: float | None = None) -> None:
+               seconds: float | None = None) -> bool:
     """Keep this run in the lesson's check log (okl review R3), with how long it took (#467).
     The log records the check; it is never part of it, so a run that cannot be logged warns
-    and changes no verdict."""
+    and changes no verdict. Returns whether it was kept: the claim `--covers` makes lives in
+    this log, and a claim that was not kept has to be said (#524)."""
     try:
+        # A claim is kept only with a run that passed: a check that failed says nothing of what it covers.
         Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
-                           expect=args.expect or None, commit=commit, seconds=seconds)
+                           expect=args.expect or None, commit=commit, seconds=seconds,
+                           covers=(getattr(args, "covers", None) if passed else None))
+        return True
     except OKLNoAnswerError as e:
         print(f"  ! this check's result may not have been logged: {e}", file=sys.stderr)
     # The log is advisory, so nothing it raises may reach the verdict. A full disk, a locked
@@ -209,6 +213,7 @@ def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str
     # reverify at that lesson (review of #170).
     except Exception as e:  # noqa: BLE001 - see above
         print(f"  ! this check's result was not logged: {e}", file=sys.stderr)
+    return False
 
 
 def _clean_commit(root: Path, commit: str | None) -> str | None:
@@ -261,7 +266,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 1
     # Logged before the stamp is sent: the check passed whatever happens to the stamp, and
     # a stamp that fails must not take the record of the run with it (CodeRabbit on #170).
-    _log_check(args, True, outcome, _clean_commit(root, commit), seconds)
+    logged = _log_check(args, True, outcome, _clean_commit(root, commit), seconds)
     stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
@@ -276,6 +281,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
+    return _stamped(args, node, root, commit, logged)
+
+
+def _stamped(args: argparse.Namespace, node: dict, root: Path, commit: str | None, logged: bool) -> int:
+    """What `okl verify` says and does once the stamp is recorded, and its exit code: 0, or 2
+    when a claim made with --covers could not be kept."""
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
     dirty = _uncommitted(root, node.get("files")) if commit else []
     if dirty:
@@ -287,6 +298,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _refresh_snapshot(node)
     if getattr(args, "branch_warning", True):
         _warn_off_branch(Client(), skip=node["id"])
+    claimed = getattr(args, "covers", None)
+    if claimed and not logged:
+        # The stamp is recorded and the claim is not: the lesson reads as checked on the code as it
+        # stood, which is less than was asked for, so it is not reported as done.
+        print(f"OKL: verified, but --covers {claimed} was NOT recorded (reason above): the lesson "
+              "reads as checked on the code as it stood. Run this verify again once that is fixed.",
+              file=sys.stderr)
+        return 2
     return 0
 
 

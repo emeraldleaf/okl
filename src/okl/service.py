@@ -168,6 +168,7 @@ class CheckRunReq(BaseModel):
     expect: str | None = None
     commit: str | None = None
     seconds: float | None = None     # how long the run took (#467); a client from before it sends none
+    covers: str | None = None        # what the check is claimed to cover (#524); sent only when claimed
 
 
 class VerifyReq(BaseModel):
@@ -327,7 +328,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
             with _write:
                 core.log_check(_store, req.id, passed=req.passed, command=req.command,
                                outcome=req.outcome, expect=req.expect, commit=req.commit,
-                               seconds=req.seconds)
+                               seconds=req.seconds, covers=req.covers)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         return {"ok": True}

@@ -30,6 +30,14 @@ folder.) Two clarifications that stop the common misreadings:
    positive signal (exit 0 alone can't self-certify), and stores command + result +
    timestamp on the node (`verified_by`). Every stamp is inspectable and re-runnable;
    a lazy check becomes a visible artifact instead of an invisible belief.
+   A pass says the rule was true of the code that existed, and nothing about code written
+   later: of 28 lessons that real changes in this repo broke, 20 had a passing check
+   ([REPORT §4bm](../evals/REPORT.md)). Only a check that reads every file the rule applies
+   to, new ones included, holds new code: a lint rule, a contract, a test that sweeps every
+   file. `--covers new-code` on `okl verify` records your claim that this check is one, kept
+   with the run in the check log; the briefing then marks the lesson *COVERS NEW CODE*, a
+   lesson checked once carries no mark, and `okl metric` counts each kind. okl cannot tell the
+   two kinds of check apart, so it is a claim, and `--covers instance` takes it back.
 3. **An independent actor re-checks** — with `okl init --ci` (or your own CI), CI runs
    `okl drift --gate` and the method gates on every PR: a mechanical grader with no stake
    in the original claim. The default pre-push hook runs the same gate locally, but it is

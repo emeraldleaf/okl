@@ -11,6 +11,11 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      #   --expect requires a positive success signal in the output, so an
                      #   exit code alone can't self-certify. (`record --verified` is
                      #   refused; historical receipts import through `okl seed`.)
+                     #   --covers new-code records your claim that the check reads every
+                     #   file the rule applies to, ones not yet written included; the
+                     #   briefing then marks the lesson COVERS NEW CODE, and one checked
+                     #   on the code as it stood carries no mark. --covers instance takes
+                     #   the claim back; a run without --covers leaves it as it was.
 okl reverify         # re-run the stored check of every drifted lesson, and of any last checked
                      #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
@@ -137,7 +142,9 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   and hygiene: stale-use (briefings that included a lesson whose
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),
-                     #   each with its denominator and the lessons it flags
+                     #   each with its denominator and the lessons it flags; and proof:
+                     #   how many lessons in scope have a check claimed to cover new code,
+                     #   are watched by drift, were checked once, or have no check
 okl dedup            # pairs of lessons that may say the same thing, for a person to rule on;
                      #   it never merges. Only lessons a briefing can show are compared: a
                      #   superseded or obsolete one is left out, and a retracted one, briefed as
