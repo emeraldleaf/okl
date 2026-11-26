@@ -4,8 +4,8 @@
 Each scenario builds what it needs in a scratch folder and drives okl the way a person and
 their agent do: `okl init` on a monorepo with a folder it cannot read, the prompt and Stop
 hooks fed the JSON Claude Code sends, the loop from record to re-verify with the pre-push
-gate, a stamp made on one branch kept out of another's snapshot, and the MCP server over
-stdio. With gh and a token, it also reads real pull requests through `okl intake`. Every
+gate, a stamp made on one branch kept out of another's snapshot, the MCP server over
+stdio, and `okl doctor` on a repo that turned the warm model on where this install lacks it. With gh and a token, it also reads real pull requests through `okl intake`. Every
 check prints PASS or FAIL; it exits 1 if any failed. It reads nothing from this checkout
 but the okl it is given, so it tests the install, not the source tree.
 
@@ -219,6 +219,29 @@ def scenario_mcp(root: Path) -> None:
             p.kill()
 
 
+def scenario_doctor(root: Path) -> None:
+    """okl doctor says when the repo turned the warm model on and the installed okl cannot load it.
+
+    The okl under test is a real install with the MCP extra and not the warm one, reached through
+    the console script pip wrote: what the unit tests stand in for with a shell script."""
+    config = root / ".okl" / "config.json"
+    kept = config.read_text()
+    try:
+        config.write_text(json.dumps({**json.loads(kept), "warm": True}))
+        r = okl(root, "doctor")
+        out = r.stdout + r.stderr
+        check("doctor exits 1 for a warm model the installed okl cannot load", r.returncode == 1, out[-400:])
+        check("doctor names the okl and the extra it lacks",
+              "the warm model is on here" in out and "cannot load it" in out and OKL[0] in out
+              and "observed-knowledge-ledger[warm]" in out, out[-400:])
+        config.write_text(json.dumps({**json.loads(kept), "warm": False}))
+        off = okl(root, "doctor")
+        check("doctor says nothing of the model once it is turned off", "warm model" not in off.stdout + off.stderr,
+              (off.stdout + off.stderr)[-300:])
+    finally:
+        config.write_text(kept)
+
+
 def scenario_intake(root: Path) -> None:
     """okl intake reads a real merged PR's resolved findings, and refuses a repo that is not OWNER/NAME."""
     if not shutil.which("gh") or not (ENV.get("GH_TOKEN") or ENV.get("GITHUB_TOKEN")):
@@ -257,7 +280,8 @@ def main() -> int:
                     "GIT_COMMITTER_NAME": "e2e", "GIT_COMMITTER_EMAIL": "e2e@example.invalid"})
         scenarios: list[tuple[str, Callable[[Path], None]]] = [
             ("okl init", scenario_init), ("hooks", scenario_hooks), ("the loop", scenario_loop),
-            ("branches", scenario_branches), ("MCP", scenario_mcp), ("intake", scenario_intake)]
+            ("branches", scenario_branches), ("MCP", scenario_mcp), ("okl doctor", scenario_doctor),
+            ("intake", scenario_intake)]
         for name, fn in scenarios:
             print(f"── {name}")  # noqa: T201
             try:

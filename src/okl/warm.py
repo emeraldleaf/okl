@@ -23,6 +23,8 @@ import importlib
 import importlib.util
 import json
 import os
+import re
+import shutil
 import socket
 import struct
 import subprocess
@@ -373,6 +375,93 @@ def _handle(conn: socket.socket, encode: Encoder, state: dict[str, Any]) -> str 
 def installed() -> bool:
     """Whether this environment can load the model at all (the warm extra is installed)."""
     return importlib.util.find_spec("fastembed") is not None
+
+
+def _interpreter_of(okl_bin: str) -> str | None:
+    """The Python an okl command runs under: the one named before ` -m okl`, or the one its
+    script's first line names. pip and uv write that line; where the path is too long for a
+    kernel's `#!` or holds a space, the installer writes `#!/bin/sh` and the interpreter on the next
+    line: pip in double quotes, or bare when the path has no space, and uv in single quotes."""
+    if okl_bin.endswith(" -m okl"):
+        return okl_bin[: -len(" -m okl")].strip() or None
+    # A bare name is a command: the hooks find it on PATH (`command -v`), so it is found the same
+    # way here, and not opened as a file beside wherever this runs.
+    if os.sep not in okl_bin:
+        okl_bin = shutil.which(okl_bin) or ""
+    try:
+        with Path(okl_bin).open("rb") as f:
+            head = f.read(1024).decode("utf-8", "replace").splitlines()
+    except OSError:
+        return None
+    if not head or not head[0].startswith("#!"):
+        return None
+    words = head[0][2:].split()
+    if words and Path(words[0]).name == "sh" and len(head) > 1:
+        named = re.search(r"""exec'?\s+(?:"([^"]+)"|'([^']+)'|([^\s"']+))""", head[1])
+        return next((g for g in named.groups() if g), None) if named else None
+    if words and Path(words[0]).name == "env":
+        return shutil.which(words[-1]) if len(words) > 1 else None
+    return words[0] if words else None
+
+
+def installed_for(okl_bin: str) -> bool | None:
+    """Whether the okl a repo's hooks run (the `okl_bin` its config pins) can load the model,
+    or None when that cannot be told.
+
+    `installed()` answers for the okl that is running, which is not always the one that briefs:
+    on okl's own repo the config pinned a released okl installed without the warm extra, while a
+    development okl with it ran the commands, and every briefing fell back to word search for six
+    days with nothing saying so but the end of a status line (#522). It asks that okl's own
+    interpreter, since an older release has no command to ask."""
+    return _has_module(_interpreter_of(okl_bin), "fastembed")
+
+
+def _has_module(interpreter: str | None, module: str) -> bool | None:
+    """Whether an interpreter can find a module, or None when it cannot be asked."""
+    if not interpreter:
+        return None
+    probe = f"import importlib.util, sys; sys.exit(0 if importlib.util.find_spec({module!r}) else 3)"
+    try:
+        done = subprocess.run([interpreter, "-c", probe], capture_output=True, timeout=COMMAND_TIMEOUT_S, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {0: True, 3: False}.get(done.returncode)
+
+
+def _hooks_take(candidate: object) -> bool:
+    """Whether a hook would run this OKL_BIN, pin or command on PATH (`try_pinned` in the hook
+    scripts). `<python> -m okl` counts only when that Python can import okl: a venv whose okl was
+    uninstalled keeps its Python, and the hooks move on from it. Anything else is a command the
+    hooks run when it is there, so one whose first line cannot be read is taken, and okl then
+    says it could not tell what that okl can load. One whose own Python is gone cannot start,
+    and the hooks go on to the next place (#152).
+
+    Asking any `<python> -m okl` only whether its Python started took a pin the hooks skip, and
+    refusing a command whose first line could not be read skipped one the hooks run: both named
+    an okl the hooks never ran (found by the review at a push on #525)."""
+    if not isinstance(candidate, str) or not candidate.strip():
+        return False
+    if candidate.endswith(" -m okl"):
+        return _has_module(_interpreter_of(candidate), "okl") is True
+    if not shutil.which(candidate):
+        return False
+    interpreter = _interpreter_of(candidate)
+    return interpreter is None or _has_module(interpreter, "sys") is True
+
+
+def hooks_okl(pinned: object) -> str:
+    """The okl a repo's hooks run, found in the order each hook looks (`resolve_okl` in the hook
+    scripts): OKL_BIN, the `okl_bin` the config pins, `okl` on PATH, then `python3 -m okl`. The
+    first the hooks would take is the one; "" when there is none.
+
+    Asking only the pin missed the other three: a session that sets OKL_BIN runs that okl
+    whatever the config says, and a repo with no pin runs the first okl on PATH, which need not
+    be the okl running `okl doctor` (lesson n_ec568941f68a, found by the review at a push)."""
+    python3 = shutil.which("python3")
+    for candidate in (os.environ.get("OKL_BIN"), pinned, shutil.which("okl")):
+        if _hooks_take(candidate):
+            return str(candidate)
+    return f"{python3} -m okl" if python3 and _has_module(python3, "okl") is True else ""
 
 
 def log_path() -> Path:

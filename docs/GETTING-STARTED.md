@@ -99,7 +99,8 @@ You should see a briefing that leads with **FIX:** lines, your own rule among th
 Claude Code you will also see one line per prompt, like *okl · briefed 9 lesson(s): Missing
 ownership scope check…; …* — that is okl telling you what it put in front of the agent
 (`OKL_QUIET=1` turns it off). If the store is empty or nothing matched, see the step above. `okl doctor` reports other agent-memory tools that would collide with okl's hooks, and
-flags okl wired twice (plugin and project hooks).
+flags okl wired twice (plugin and project hooks) and a warm model that is turned on where the
+okl your hooks run cannot load it.
 
 ### Commit the wiring
 
