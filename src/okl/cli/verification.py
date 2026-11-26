@@ -194,11 +194,12 @@ def shown(text: str) -> str:
 
 
 def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None,
-               seconds: float | None = None) -> bool:
+               seconds: float | None = None) -> bool | None:
     """Keep this run in the lesson's check log (okl review R3), with how long it took (#467).
     The log records the check; it is never part of it, so a run that cannot be logged warns
-    and changes no verdict. Returns whether it was kept: the claim `--covers` makes lives in
-    this log, and a claim that was not kept has to be said (#524)."""
+    and changes no verdict. Returns whether it was kept, None when that cannot be told (the
+    run was sent and no answer came back): the claim `--covers` makes lives in this log, and
+    a claim that was not kept has to be said (#524)."""
     try:
         # A claim is kept only with a run that passed: a check that failed says nothing of what it covers.
         Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
@@ -207,6 +208,7 @@ def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str
         return True
     except OKLNoAnswerError as e:
         print(f"  ! this check's result may not have been logged: {e}", file=sys.stderr)
+        return None
     # The log is advisory, so nothing it raises may reach the verdict. A full disk, a locked
     # or read-only store raise sqlite3 or psycopg errors, neither a ValueError nor an
     # outage: they escaped as a traceback, turned a stamped pass into exit 1, and stopped
@@ -284,7 +286,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return _stamped(args, node, root, commit, logged)
 
 
-def _stamped(args: argparse.Namespace, node: dict, root: Path, commit: str | None, logged: bool) -> int:
+def _stamped(args: argparse.Namespace, node: dict, root: Path, commit: str | None, logged: bool | None) -> int:
     """What `okl verify` says and does once the stamp is recorded, and its exit code: 0, or 2
     when a claim made with --covers could not be kept."""
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
@@ -299,11 +301,14 @@ def _stamped(args: argparse.Namespace, node: dict, root: Path, commit: str | Non
     if getattr(args, "branch_warning", True):
         _warn_off_branch(Client(), skip=node["id"])
     claimed = getattr(args, "covers", None)
-    if claimed and not logged:
-        # The stamp is recorded and the claim is not: the lesson reads as checked on the code as it
-        # stood, which is less than was asked for, so it is not reported as done.
-        print(f"OKL: verified, but --covers {claimed} was NOT recorded (reason above): the lesson "
-              "reads as checked on the code as it stood. Run this verify again once that is fixed.",
+    if claimed and logged is not True:
+        # The stamp is recorded and the claim was asked for, so this is not reported as done. What
+        # the lesson reads as now is not said: an earlier claim on this command still stands, and
+        # a run whose answer was lost may have been kept. The first version said "reads as checked
+        # on the code as it stood" in both cases, which is a guess (CodeRabbit on #524).
+        fate = "was NOT recorded" if logged is False else "may not have been recorded"
+        print(f"OKL: verified, but --covers {claimed} {fate} (reason above). `okl show {node['id']}` says "
+              "what this lesson's check is claimed to cover now; run this verify again once that is fixed.",
               file=sys.stderr)
         return 2
     return 0
@@ -475,23 +480,8 @@ def _uncommitted(root: Path, files: str | None) -> list[str]:
 def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
     """The command and expected signal `okl verify` recorded, or None if there is none
     (never verified, or stamped by an import that carried no evidence)."""
-    import ast
-    if not verified_by or not verified_by.startswith("`"):
-        return None
-    end = verified_by.rfind("` exit 0")
-    if end <= 0:
-        return None
-    run = verified_by[1:end]
-    rest = verified_by[end + len("` exit 0"):]
-    expect = None
-    if rest.startswith(", matched "):
-        lit = rest[len(", matched "):].rsplit(" @ ", 1)[0]
-        lit = re.sub(r" on commit [0-9a-f]{7,64}$", "", lit)   # the commit #102 records
-        try:
-            expect = ast.literal_eval(lit)
-        except (ValueError, SyntaxError):
-            return None
-    return run, expect
+    from ..store import stored_check  # one parser, shared with the claim a check run keeps
+    return stored_check(verified_by)
 
 
 def _reverify_permitted(args: argparse.Namespace, planned: bool, manual: bool) -> int | None:

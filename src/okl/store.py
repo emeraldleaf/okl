@@ -10,6 +10,7 @@ promoting SQLite -> Postgres is a one-env-var change, no call-site edits.
 """
 from __future__ import annotations
 
+import ast
 import contextlib
 import datetime as _dt
 import fnmatch
@@ -151,13 +152,45 @@ def path_matches(glob: str, path: str) -> bool:
     return fnmatch.fnmatchcase(path, g)
 
 
-def stored_command(verified_by: str | None) -> str | None:
-    """The command `okl verify` recorded in a lesson's evidence, or None where it names none
-    (never verified, or stamped by an import that carried no evidence)."""
+# What `okl verify` writes after the command it ran: the signal it matched, the commit, the time.
+_AFTER_RUN = re.compile(r"(?:, matched (?P<expect>.+?))?(?: on commit [0-9a-f]{7,64})? @ \d{4}-\d\d-\d\dT\d\d:\d\dZ\Z",
+                        re.DOTALL)
+_RUN_END = "` exit 0"
+
+
+def stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
+    """The command and expected signal `okl verify` recorded in a lesson's evidence, or None
+    where it names none (never verified, or stamped by an import that carried no evidence).
+
+    The command ends at the last "` exit 0" whose remainder reads as what verify writes after
+    a run. The last one in the whole text is not always it: an --expect that holds those same
+    characters puts them in the evidence a second time, and reading from there cut the command
+    short, so `okl reverify` listed a command nobody stored and the claim kept under the real
+    one was never found (CodeRabbit on #524). One parser, here, for reverify and for the claim."""
     if not verified_by or not verified_by.startswith("`"):
         return None
-    end = verified_by.rfind("` exit 0")
-    return verified_by[1:end] if end > 0 else None
+    end = len(verified_by)
+    while (end := verified_by.rfind(_RUN_END, 0, end)) > 0:
+        after = _AFTER_RUN.fullmatch(verified_by, end + len(_RUN_END))
+        if after and after["expect"] is None:
+            return verified_by[1:end], None
+        if after:
+            try:
+                expect = ast.literal_eval(after["expect"])
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(expect, str):
+                return verified_by[1:end], expect
+    # Evidence that does not end the way verify writes it now: read as before, from the last one.
+    end = verified_by.rfind(_RUN_END)
+    rest = verified_by[end + len(_RUN_END):] if end > 0 else ""
+    return (verified_by[1:end], None) if end > 0 and not rest.startswith(", matched ") else None
+
+
+def stored_command(verified_by: str | None) -> str | None:
+    """The command in a lesson's evidence (stored_check), or None where it names none."""
+    check = stored_check(verified_by)
+    return check[0] if check else None
 
 
 def claimed_cover(claims: Mapping[tuple[str, str], str], node_id: str, verified_by: str | None) -> str | None:

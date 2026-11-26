@@ -474,6 +474,39 @@ def test_the_command_a_claim_is_kept_under_is_the_one_reverify_reads():
                      "imported with no evidence", "", None):
         parsed = _stored_check(evidence)
         assert stored_command(evidence) == (parsed[0] if parsed else None), evidence
+    # Evidence that does not end the way verify writes it: read as it always was. Text after the
+    # run that is no signal leaves the command; a signal that is not a quoted string names no check.
+    assert _stored_check("`pytest -q` exit 0, as recorded by hand") == ("pytest -q", None)
+    assert _stored_check("`pytest -q` exit 0, matched 'pas @ 2026-11-25T10:00Z") is None
+    assert _stored_check("`pytest -q` exit 0, matched 5 @ 2026-11-25T10:00Z") is None
+
+
+@pytest.mark.parametrize(("run", "expect"), [
+    ("pytest -q", None), ("pytest -q", "passed"),
+    ("echo '` exit 0' && true", None),                    # the characters that end a run, in the command
+    ("echo ok", "` exit 0"),                              # and in the signal: the second time in the evidence
+    ("echo '` exit 0' && true", "` exit 0, matched 'x"),  # in both, with the words that follow a run
+    ("true", "ok on commit abc1234"), ("true", "a @ 2026-11-25T10:00Z"),
+])
+@pytest.mark.parametrize("commit", [" on commit abc1234def0", ""])
+def test_the_command_is_read_back_whole_whatever_the_signal_holds(run, expect, commit):
+    """`okl verify` writes the command, the signal and the stamp into one line, and both may hold
+    any text. Reading the command back from the last "` exit 0" in the line cut it short when the
+    signal held those characters: `okl reverify` then listed a command nobody stored, and the
+    claim kept under the real one was not found."""
+    from okl.store import stored_check
+    evidence = f"`{run}` exit 0" + (f", matched {expect!r}" if expect else "") + f"{commit} @ 2026-11-25T10:00Z"
+    assert stored_check(evidence) == (run, expect), evidence
+
+
+def test_a_claim_is_found_when_the_signal_holds_the_text_that_ends_a_run(repo):
+    """The whole path, with a real run: a check whose output and --expect hold "` exit 0" keeps
+    its claim, and reverify reads back the command that was run."""
+    from okl.cli.verification import _stored_check
+    run, expect = "echo 'the run printed ` exit 0 here'", "` exit 0"
+    assert main(["verify", "les", "--run", run, "--expect", expect, "--covers", "new-code"]) == 0
+    assert _stored_check(Client().get("les")["verified_by"]) == (run, expect)
+    assert _cover() == "new-code"
 
 
 def test_a_store_from_before_claims_gains_the_column_on_open(tmp_path):
@@ -538,7 +571,37 @@ def test_a_service_too_old_to_keep_a_claim_is_said_and_the_claim_is_not_dropped(
     assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 2
     err = capsys.readouterr().err
     assert "keeps what a check covers" in err and "--covers new-code was NOT recorded" in err, err
+    assert "`okl show les` says" in err and "as it stood" not in err, "what the lesson reads as now is not guessed"
     assert remote.store.checks("les") == [], "the run is not kept with its claim cut off"
     assert remote.store.get_node("les").verified_at is not None, "the stamp is recorded all the same"
     assert main(["verify", "les", "--run", "true"]) == 0
     assert [r.covers for r in remote.store.checks("les")] == [None]
+
+
+def test_a_claim_whose_answer_was_lost_is_not_said_to_be_missing(repo, monkeypatch, capsys):
+    """A run that was sent and never answered may have been kept, so the claim "may not have been
+    recorded"; one that could not be written "was NOT recorded". Neither says what the lesson reads
+    as now: with an earlier claim on the same command, that claim still stands. Both exit 2."""
+    from okl.client import OKLNoAnswerError
+    assert main(["verify", "les", "--run", "true", "--covers", "new-code"]) == 0
+    capsys.readouterr()
+
+    real = Client.log_check
+
+    def lost(self, *a, **k):
+        raise OKLNoAnswerError("no answer came back")
+    monkeypatch.setattr(Client, "log_check", lost)
+    assert main(["verify", "les", "--run", "true", "--covers", "instance"]) == 2
+    err = capsys.readouterr().err
+    assert "--covers instance may not have been recorded" in err and "NOT recorded" not in err, err
+    assert "`okl show les` says" in err and "as it stood" not in err, err
+
+    def full(self, *a, **k):
+        raise OSError("database or disk is full")
+    monkeypatch.setattr(Client, "log_check", full)
+    assert main(["verify", "les", "--run", "true", "--covers", "instance"]) == 2
+    assert "--covers instance was NOT recorded" in capsys.readouterr().err
+    monkeypatch.setattr(Client, "log_check", real)
+    assert _cover() == "new-code", "the earlier claim stands, as the message left open"
+    monkeypatch.setattr(Client, "log_check", lost)
+    assert main(["verify", "les", "--run", "true"]) == 0, "with no claim asked for, a run that is not logged is still a pass"

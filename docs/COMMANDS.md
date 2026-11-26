@@ -15,7 +15,8 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      #   file the rule applies to, ones not yet written included; the
                      #   briefing then marks the lesson COVERS NEW CODE, and one checked
                      #   on the code as it stood carries no mark. --covers instance takes
-                     #   the claim back; a run without --covers leaves it as it was.
+                     #   the claim back; a run of the same command without --covers leaves
+                     #   it as it was; a different check command starts with no claim.
 okl reverify         # re-run the stored check of every drifted lesson, and of any last checked
                      #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
