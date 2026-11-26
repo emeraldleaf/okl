@@ -129,6 +129,79 @@ def test_the_okl_asked_is_the_one_the_hooks_run_in_the_order_they_look(envs, mon
     assert warm.hooks_okl(pin_has) == "okl"
 
 
+HOOKS_THAT_LOOK = ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh", "posttooluse-okl-read.sh",
+                   "posttooluse-okl-edit.sh", "okl-mcp.sh")
+
+
+def _the_hook_picks(hook: str, pin: str | None, folder: Path) -> str:
+    """What one hook script's own `try_pinned` and `resolve_okl` pick, run in bash as the hook
+    runs them: the functions are cut from the shipped script, and only where the config is found
+    is stood in for. The environment is this process's, so the hook and the check look at the
+    same OKL_BIN and PATH."""
+    text = (Path(warm.__file__).parent / "scaffold" / "hooks" / hook).read_text()
+    cut = text[text.index("try_pinned() {"):]
+    cut = cut[:cut.index("\n}\n", cut.index("resolve_okl() {")) + 3]
+    config = folder / "config.json"
+    config.write_text(json.dumps({"okl_bin": pin} if pin else {}))
+    # The edit hook has read the config's path into `config` by the time it looks; the others ask okl_config.
+    script = (f'okl_config() {{ printf "%s\\n" "$CFG"; }}\nconfig="$CFG"\n{cut}\n'
+              'if resolve_okl; then printf "%s" "${OKL[*]}"; fi\n')
+    done = subprocess.run([BASH, "-c", script], capture_output=True, text=True, env={**os.environ, "CFG": str(config)})
+    assert done.returncode == 0, done.stderr
+    return done.stdout
+
+
+BASH = __import__("shutil").which("bash")
+
+
+@pytest.mark.skipif(not BASH, reason="the hooks are bash scripts")
+@pytest.mark.parametrize("hook", HOOKS_THAT_LOOK)
+def test_the_check_names_the_okl_each_hook_script_itself_picks(hook, envs, monkeypatch, tmp_path):
+    """The check says which okl the hooks run, so it must pick the one they pick. Each shipped
+    hook's own lookup is run here beside the check's, case by case: a `<python> -m okl` whose
+    Python cannot import okl is passed over by both, and a command whose first line names no
+    Python is taken by both. Before this, the check took the first and passed over the second."""
+    import shutil
+    has, _lacks, folder = envs
+    no_okl = folder / "python-no-okl"
+    no_okl.write_text('#!/bin/sh\ncase "$2" in *okl*) exit 3 ;; *) exit 0 ;; esac\n')
+    no_okl.chmod(0o755)
+    unreadable = folder / "okl-launcher"
+    unreadable.write_bytes(b"\x7fELF\x02\x01\x01")
+    unreadable.chmod(0o755)
+    good = _okl_script(folder, "okl-good", f"#!{has}\n")
+    bare, with_okl = tmp_path / "bare", tmp_path / "with-okl"
+    for path in (bare, with_okl):
+        path.mkdir()
+        (path / "python3").write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+        (path / "python3").chmod(0o755)
+    on_path = _okl_script(with_okl, "okl", f"#!{has}\n")
+
+    def same(okl_bin: str | None, pin: str | None, path: Path) -> str:
+        monkeypatch.setenv("PATH", str(path))
+        monkeypatch.delenv("OKL_BIN", raising=False)
+        if okl_bin:
+            monkeypatch.setenv("OKL_BIN", okl_bin)
+        picked = _the_hook_picks(hook, pin, tmp_path)
+        # The hook names the last two places by command; the check names the file each is.
+        named = {"okl": shutil.which("okl"), "python3 -m okl": f"{shutil.which('python3')} -m okl"}.get(picked, picked)
+        assert warm.hooks_okl(pin) == named, (okl_bin, pin, path.name, picked)
+        return picked
+
+    assert same(f"{no_okl} -m okl", good, bare) == good, "an OKL_BIN whose Python lost okl: the pin"
+    assert same(None, f"{no_okl} -m okl", with_okl) == "okl", "a pin whose Python lost okl: PATH"
+    assert same(None, str(unreadable), with_okl) == str(unreadable), "a pin the hooks run, whatever its first line"
+    assert same(f"{has} -m okl", good, with_okl) == f"{has} -m okl"
+    assert same(None, good, with_okl) == good
+    assert same(None, "/no/such/okl", with_okl) == "okl"
+    same(None, None, bare)      # the last place, or none: whichever this machine gives, the two agree
+    # The hooks take a command that is there and go on when it cannot start (#152): its Python gone.
+    dead = _okl_script(folder, "okl-dead", "#!/no/such/python\n")
+    monkeypatch.setenv("PATH", str(with_okl))
+    assert warm.hooks_okl(dead) == on_path
+    assert warm.installed_for(str(unreadable)) is None, "and what that okl can load cannot be told"
+
+
 def test_the_docs_the_hooks_and_the_check_name_one_lookup_order():
     """docs/COSTS-AND-KNOBS.md and the changelog say where the okl the hooks run is looked for,
     in order. That order is the prompt hook's own (`resolve_okl`: its four layers), and the check

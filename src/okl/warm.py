@@ -428,18 +428,39 @@ def _has_module(interpreter: str | None, module: str) -> bool | None:
     return {0: True, 3: False}.get(done.returncode)
 
 
+def _hooks_take(candidate: object) -> bool:
+    """Whether a hook would run this OKL_BIN, pin or command on PATH (`try_pinned` in the hook
+    scripts). `<python> -m okl` counts only when that Python can import okl: a venv whose okl was
+    uninstalled keeps its Python, and the hooks move on from it. Anything else is a command the
+    hooks run when it is there, so one whose first line cannot be read is taken, and okl then
+    says it could not tell what that okl can load. One whose own Python is gone cannot start,
+    and the hooks go on to the next place (#152).
+
+    Asking any `<python> -m okl` only whether its Python started took a pin the hooks skip, and
+    refusing a command whose first line could not be read skipped one the hooks run: both named
+    an okl the hooks never ran (found by the review at a push on #525)."""
+    if not isinstance(candidate, str) or not candidate.strip():
+        return False
+    if candidate.endswith(" -m okl"):
+        return _has_module(_interpreter_of(candidate), "okl") is True
+    if not shutil.which(candidate):
+        return False
+    interpreter = _interpreter_of(candidate)
+    return interpreter is None or _has_module(interpreter, "sys") is True
+
+
 def hooks_okl(pinned: object) -> str:
     """The okl a repo's hooks run, found in the order each hook looks (`resolve_okl` in the hook
     scripts): OKL_BIN, the `okl_bin` the config pins, `okl` on PATH, then `python3 -m okl`. The
-    first whose interpreter answers is the one; "" when none does.
+    first the hooks would take is the one; "" when there is none.
 
     Asking only the pin missed the other three: a session that sets OKL_BIN runs that okl
     whatever the config says, and a repo with no pin runs the first okl on PATH, which need not
     be the okl running `okl doctor` (lesson n_ec568941f68a, found by the review at a push)."""
     python3 = shutil.which("python3")
     for candidate in (os.environ.get("OKL_BIN"), pinned, shutil.which("okl")):
-        if isinstance(candidate, str) and candidate.strip() and _has_module(_interpreter_of(candidate), "sys") is True:
-            return candidate
+        if _hooks_take(candidate):
+            return str(candidate)
     return f"{python3} -m okl" if python3 and _has_module(python3, "okl") is True else ""
 
 
