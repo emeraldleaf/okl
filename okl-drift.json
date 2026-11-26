@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1795656245330,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit eb02b771a241 @ 2026-11-26T01:24Z",
-      "verified_commit": "eb02b771a24199efa4dbe299e140d23a79f2899f"
+      "verified_at": 1795656296712,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit bc7a1bb2cd97 @ 2026-11-26T01:24Z",
+      "verified_commit": "bc7a1bb2cd973a95fe50907ce70fe0f5a7e7193b"
     },
     {
       "id": "n_9ba48d85ed19",
