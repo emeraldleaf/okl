@@ -384,6 +384,10 @@ def _interpreter_of(okl_bin: str) -> str | None:
     line: pip in double quotes, or bare when the path has no space, and uv in single quotes."""
     if okl_bin.endswith(" -m okl"):
         return okl_bin[: -len(" -m okl")].strip() or None
+    # A bare name is a command: the hooks find it on PATH (`command -v`), so it is found the same
+    # way here, and not opened as a file beside wherever this runs.
+    if os.sep not in okl_bin:
+        okl_bin = shutil.which(okl_bin) or ""
     try:
         with Path(okl_bin).open("rb") as f:
             head = f.read(1024).decode("utf-8", "replace").splitlines()

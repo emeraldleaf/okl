@@ -123,6 +123,10 @@ def test_the_okl_asked_is_the_one_the_hooks_run_in_the_order_they_look(envs, mon
     assert warm.hooks_okl(None) == script and warm.hooks_okl("/no/such/okl") == script
     assert warm_gap({"warm": True}, None)[1] is True, "no pin: the okl on PATH is asked"
     assert warm.hooks_okl(pin_has) == pin_has, "a pin that answers comes before PATH"
+    # A pin, or OKL_BIN, that is a bare command name is found on PATH, as the hooks find it.
+    assert warm.hooks_okl("okl") == "okl" and warm.installed_for("okl") is False
+    monkeypatch.setenv("OKL_BIN", "okl")
+    assert warm.hooks_okl(pin_has) == "okl"
 
 
 def test_a_repo_a_shared_service_briefs_is_not_asked_about_the_local_model(envs, monkeypatch):
@@ -180,6 +184,10 @@ def test_doctor_exits_1_and_says_so_when_the_hooks_okl_cannot_load_the_model(env
     config.write_text(json.dumps({"repo": "proj", "warm": True, "okl_bin": f"{has} -m okl"}))
     on = _doctor(proj, home)
     assert on.returncode == 0 and "warm model" not in on.stdout, on.stdout + on.stderr
+    # A setting that is neither on nor off is refused as every command refuses it: exit 2, on stderr.
+    config.write_text(json.dumps({"repo": "proj", "warm": "onn", "okl_bin": f"{has} -m okl"}))
+    refused = _doctor(proj, home)
+    assert refused.returncode == 2 and "warm must be on or off" in refused.stderr, refused.stdout + refused.stderr
 
 
 def test_init_says_it_when_it_pins_an_okl_that_cannot_load_the_model(tmp_path, monkeypatch, capsys):
