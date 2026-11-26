@@ -463,17 +463,20 @@ def test_metric_counts_how_each_lesson_is_held(repo, capsys):
 
 
 def test_the_command_a_claim_is_kept_under_is_the_one_reverify_reads():
-    """The claim is looked up by the command in the lesson's evidence, parsed in the store; the
-    command line's own parse of that evidence must give the same command, or a claim would sit
-    under a name nothing asks for."""
+    """The claim is looked up by the command in the lesson's evidence, and `okl reverify` runs the
+    command it reads there: both must read the command that was stored. Each expected command is
+    written out here. The first version took it from the other reader, and once both called one
+    parser the test compared a function with itself (found by the review at a push on #528)."""
     from okl.cli.verification import _stored_check
     from okl.store import stored_command
-    for evidence in ("`pytest -q` exit 0 @ 2026-11-25T10:00Z",
-                     "`pytest -q -k 'a or b'` exit 0, matched 'passed' on commit abc1234 @ 2026-11-25T10:00Z",
-                     "`echo '` exit 0' && true` exit 0 on commit abc1234 @ 2026-11-25T10:00Z",
-                     "imported with no evidence", "", None):
+    for evidence, command in (
+            ("`pytest -q` exit 0 @ 2026-11-25T10:00Z", "pytest -q"),
+            ("`pytest -q -k 'a or b'` exit 0, matched 'passed' on commit abc1234 @ 2026-11-25T10:00Z", "pytest -q -k 'a or b'"),
+            ("`echo '` exit 0' && true` exit 0 on commit abc1234 @ 2026-11-25T10:00Z", "echo '` exit 0' && true"),
+            ("imported with no evidence", None), ("", None), (None, None)):
+        assert stored_command(evidence) == command, evidence
         parsed = _stored_check(evidence)
-        assert stored_command(evidence) == (parsed[0] if parsed else None), evidence
+        assert (parsed[0] if parsed else None) == command, evidence
     # Evidence that does not end the way verify writes it: read as it always was. Text after the
     # run that is no signal leaves the command; a signal that is not a quoted string names no check.
     assert _stored_check("`pytest -q` exit 0, as recorded by hand") == ("pytest -q", None)
