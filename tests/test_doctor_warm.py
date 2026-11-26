@@ -129,6 +129,25 @@ def test_the_okl_asked_is_the_one_the_hooks_run_in_the_order_they_look(envs, mon
     assert warm.hooks_okl(pin_has) == "okl"
 
 
+def test_the_docs_the_hooks_and_the_check_name_one_lookup_order():
+    """docs/COSTS-AND-KNOBS.md and the changelog say where the okl the hooks run is looked for,
+    in order. That order is the prompt hook's own (`resolve_okl`: its four layers), and the check
+    follows it (the test above). Read from the hook script here, so a hook that changes its order
+    fails this until the check and both sentences change with it."""
+    import re
+    repo = Path(__file__).resolve().parents[1]
+    hook = (repo / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh").read_text()
+    body = hook[hook.index("resolve_okl() {"):]
+    body = body[:body.index("\n}\n")]
+    layers = [m.start() for m in (re.search(pattern, body) for pattern in (
+        r'-le 1 \]\] && \[\[ -n "\$\{OKL_BIN:-\}"', r"-le 2 \]\] && cfg=\$\(okl_config\)",
+        r"-le 3 \]\] && command -v okl", r'-le 4 \]\] && python3 -c "import okl"')) if m]
+    assert len(layers) == 4 and layers == sorted(layers), "the hook no longer looks in OKL_BIN, the pin, PATH, python3 -m okl"
+    said = "`OKL_BIN`, the pinned okl, `okl` on PATH, then `python3 -m okl`"
+    for doc in ("docs/COSTS-AND-KNOBS.md", "CHANGELOG.md"):
+        assert said in " ".join((repo / doc).read_text().split()), f"{doc} no longer states the order"
+
+
 def test_a_repo_a_shared_service_briefs_is_not_asked_about_the_local_model(envs, monkeypatch):
     """With a service named in the config or the environment, the service makes the briefing and the
     local model is never asked: a missing extra on this machine is no fault there."""
