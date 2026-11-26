@@ -86,6 +86,16 @@
   okl tools from the launcher. The five hooks now ask for the plain value and make it absolute
   themselves. `okl init` (or `okl init --force` over an edited hook) installs the fixed scripts.
   The main checkout was never affected (#510).
+- **`okl doctor` says when the warm model is on and the okl your hooks run cannot load it.** A
+  repo can set `"warm": true` while the okl its config pins for the hooks was installed without
+  the `warm` extra. Every briefing then used word search alone, and the only sign was the end of
+  the status line under each prompt; on okl's own repo that lasted six days. `okl doctor` now
+  finds the okl your hooks run the way they find it (`OKL_BIN`, the pinned okl, `okl` on PATH,
+  then `python3 -m okl`), asks its interpreter, names that okl and the install line, and exits 1.
+  `okl init` says the same as it pins an okl. Left to its default the model is used only where
+  it loads, so nothing is said there. While a warm server another okl started is answering,
+  doctor says the pinned okl cannot start one again and exits 0; a model stopped with
+  `okl warm stop` is said too; a repo a shared service briefs is not asked (#522).
 - **For people working on okl itself: two of its own checks now do what they say.** Neither is
   installed by `okl init`.
   - **The review before a pull request is recorded and checked.** The developer guide asks for a
